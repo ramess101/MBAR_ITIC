@@ -337,16 +337,22 @@ conv_MBAR = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+s
 
 if conv_MBAR > 0:
 
-    F_current = F_rerun
-    F_previous = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F_it_'+str(iRerun-1))
+    F_all = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F_all',skiprows=1)
+    F_all = np.append(F_all,F_rerun) #Account for the fact that F_all does not yet have the most recent F value
 
-    eps_previous = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_it_'+str(iRerun-1))
-    eps_current = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_it_'+str(iRerun))
+    #F_current = F_rerun
+    #F_previous = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F_it_'+str(iRerun-1))
+
+    #eps_previous = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_it_'+str(iRerun-1))
+    #eps_current = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_it_'+str(iRerun))
  
-    if F_current < F_previous:
-        eps_optimal = eps_current
-    else:
-        eps_optimal = eps_previous
+    #if F_current < F_previous:
+    #    eps_optimal = eps_current
+    #else:
+    #    eps_optimal = eps_previous
+
+    eps_all = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_all',skiprows=1)
+    eps_optimal = eps_all[np.argmin(F_all)]
 
     f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_optimal','w')
 

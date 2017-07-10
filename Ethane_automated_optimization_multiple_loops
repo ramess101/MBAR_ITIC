@@ -26,7 +26,7 @@ sigma_guess=0.377 #nm
 
 conv_eps=0
 
-#for iEpsref in $(seq 1 1)
+#for iEpsref in $(seq 0 0)
 #do
 
 while [ "$conv_eps" -lt 1 ] #Checks to see if the loop has converged for epsilon
@@ -37,7 +37,7 @@ cd "$output_path" || exit
 echo "$iEpsref" > iEpsref
 echo "$iSigref" > iSigref
 
-if [ $iEpsref -gt 1 ]
+if [ $iEpsref -gt 0 ] #Have already done direct simulations for e0s0
 
 then
 
@@ -144,7 +144,13 @@ sed -i -e s/some_iEpsSig_top/"${iteration}"/ EthaneRerunITIC_all
 sed -i -e s/some_iRefSig_top/"${iSigref}"/ EthaneRerunITIC_all
 sed -i -e s/some_iRefEps_top/"${iEpsref}"/ EthaneRerunITIC_all
 
+if [ $iEpsref -gt 0 ] #Have already done the reruns for e0s0
+
+then
+
 ./EthaneRerunITIC_all
+
+fi
 
 # Perform MBAR and calculate objective function
 
