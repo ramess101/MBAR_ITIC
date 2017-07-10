@@ -1,0 +1,45 @@
+#!/bin/bash
+
+Compound=some_compound
+
+Model=some_model
+
+iEpsSig=some_iEpsSig
+iEpsref=some_iRefEps
+iSigref=some_iRefSig
+
+Temp=(360 360 360 360 360 360 360 360 360)
+
+j_start=0
+j_end=8
+
+####
+
+# Production period for isotherm
+
+for j in $(seq $j_start $j_end)
+
+do
+
+cd ~/"$Compound"/Gromacs/"$Model"/e"$iEpsref"s"$iSigref"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
+
+cp ~/Elliott/md_nocord.mdp md_nocord.mdp 
+
+sed -i -e s/some_temperature/"${Temp[j]}"/ md_nocord.mdp #Temperature might not matter in rerun
+
+gmx grompp -f md_nocord.mdp -p ../../../../ethane_e"$iEpsref"s"$iSigref"it"$iEpsSig".top -c nvt_prod.gro -o prod_e"$iEpsref"s"$iSigref"it"$iEpsSig" -maxwarn 1
+
+gmx mdrun -nt 1 -rerun nvt_prod.trr -deffnm prod_e"$iEpsref"s"$iSigref"it"$iEpsSig"
+
+echo "1
+3
+5
+7
+8
+0" | gmx energy -dp -f prod_e"$iEpsref"s"$iSigref"it"$iEpsSig".edr -o energy_press_e"$iEpsref"s"$iSigref"it"$iEpsSig".xvg
+
+rm -f \#*
+
+done
+
+exit 0
