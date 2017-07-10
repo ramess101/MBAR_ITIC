@@ -163,7 +163,7 @@ for run_type in ITIC:
 
                 nSnaps = len(en_p) #Number of snapshots
     
-                if iter == 0: #For the first loop we initialize these arrays
+                if iSet == 0: #For the first loop we initialize these arrays
 
                     t = np.zeros([nSets,nSnaps])
                     en = np.zeros([nSets,nSnaps])
