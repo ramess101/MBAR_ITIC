@@ -39,6 +39,9 @@ echo "1
 0" | gmx energy -dp -f prod_e"$iEpsref"s"$iSigref"it"$iEpsSig".edr -o energy_press_e"$iEpsref"s"$iSigref"it"$iEpsSig".xvg
 
 rm -f \#*
+rm -f prod_e*s*it*.log
+rm -f prod_e*s*it*.tpr
+rm -f prod_e*s*it*.edr
 
 done
 
