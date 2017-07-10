@@ -1,0 +1,142 @@
+#!/bin/bash
+
+Compound=Ethane
+
+#MolWt=30.0698
+
+Model=TraPPEfs
+iSigma=0
+iEps=1
+
+N=400
+
+#========Isochore Settings=====
+
+   Tic0=(137 198.5)		#
+   Tic1=(174 234.6)		#	 
+   Tic2=(207 262.9)		# 			
+   Tic3=(236 285.1)		# 			
+   Tic4=(260 301.9)		# 			
+
+rhoIC=(0.60000 0.55714 0.51429 0.47143 0.42857)
+
+#Vbox(nm3) = N*MolWt/602.22/rho(g/cc)
+#boxLen(nm) = Vbox^(1/3)
+
+liquid_box=(3.2168 3.2973 3.3864 3.4861 3.5986) # 3.8765 4.2666 4.8841 6.1536) 
+
+#for j in $(seq $j_start $j_end)
+
+#do
+#echo liquid_box{$[j] Tic$j[0} Tic$j[1} >> IsochoreSettings.txt
+#done
+
+#========End Isochore Settings=====
+
+#jretemp 
+j_start=0
+#jretemp 
+j_end=4
+
+
+####
+
+echo "NMol" "Length (nm)" "Temp (K)" > /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEps"s"$iSigma"/IsochoreSettings.txt
+
+# Initialize the folders
+
+for j in $(seq $j_start $j_end)
+
+do
+
+cd /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEps"s"$iSigma" || exit #presumes this dir was made during Isotherm simulation
+
+#jretemp 
+mkdir Isochore  
+cd Isochore || exit
+
+mkdir rho"$j"
+cd    rho"$j" || exit
+
+if [ "$j" -eq "0" ]; then Tic="${Tic0[@]}"; fi  
+if [ "$j" -eq "1" ]; then Tic="${Tic1[@]}"; fi #JRE: Evidently, the @ assigns the address of Tic1 to Tic. This statement uses strings when numbers might work simpler.
+if [ "$j" -eq "2" ]; then Tic="${Tic2[@]}"; fi  
+if [ "$j" -eq "3" ]; then Tic="${Tic3[@]}"; fi  
+if [ "$j" -eq "4" ]; then Tic="${Tic4[@]}"; fi  
+
+t=-1  #do not put space after equal sign. 
+for Temp in ${Tic} 
+do
+t=$((t+1))
+
+echo "$N" "${liquid_box[j]}" "$Temp" >> /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEps"s"$iSigma"/IsochoreSettings.txt
+
+cd /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEps"s"$iSigma"/Isochore/rho"$j" || exit  #start fresh for do cycle instead of multiple "cd .."'s
+
+#jretemp 
+mkdir T"$t"  #JRE: using generic "T1" and "T2" for folder names to facilitate later reading/post-processing.
+cd    T"$t" || exit
+
+#JRE: cd to here because later cycles may be way deep.
+#cd /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEps"s"$iSigma"/Isochore/rho"$j"/T"$t" || exit
+gmx insert-molecules -ci ../../../ethane.gro -nmol $N -box "${liquid_box[j]}" "${liquid_box[j]}" "${liquid_box[j]}" -o ethane_box.gro
+
+#Copy the minimization files
+
+cp /home/ram9/"$Compound"/Gromacs/Force_switch/em_steep.mdp em_steep.mdp
+cp /home/ram9/"$Compound"/Gromacs/Force_switch/em_l-bfgs.mdp em_l-bfgs.mdp
+
+#jretemp 
+mkdir NVT_eq
+cd NVT_eq || exit
+
+# Copy the equilibration files and edit the temperature
+
+cp /home/ram9/"$Compound"/Gromacs/Force_switch/nvt_eq_force_switch.mdp nvt_eq.mdp
+sed -i -e s/some_temperature/"$Temp"/ nvt_eq.mdp
+
+#jretemp 
+mkdir NVT_prod
+cd NVT_prod || exit
+
+# Copy the production files and edit the temperature
+
+cp /home/ram9/"$Compound"/Gromacs/Force_switch/nvt_prod_force_switch.mdp nvt_prod.mdp
+sed -i -e s/some_temperature/"$Temp"/ nvt_prod.mdp
+
+cd .. #back to NVT_eq level
+cd .. #back to Tic[t] level
+
+# Energy minimization
+gmx grompp -f em_steep.mdp -c ethane_box.gro -p ../../../ethane.top -o em_steep.tpr
+gmx mdrun -nt 1 -deffnm em_steep &
+sleep 10s
+
+# Second run the em_l-bfgs
+gmx grompp -f em_l-bfgs.mdp -c em_steep.gro -p ../../../ethane.top -o em_l_bfgs.tpr -maxwarn 1
+gmx mdrun -nt 1 -deffnm em_l_bfgs &
+sleep 10s
+
+# Equilibration period
+cd NVT_eq
+gmx grompp -f nvt_eq.mdp -c ../em_l_bfgs.gro -p ../../../../ethane.top -o nvt_eq.tpr
+gmx mdrun -nt 4 -deffnm nvt_eq &
+#sleep 5s
+sleep 1m
+
+# Production period
+cd NVT_prod 
+gmx grompp -f nvt_prod.mdp -c ../nvt_eq.gro -p ../../../../../ethane.top -o nvt_prod.tpr
+gmx mdrun -nt 1 -deffnm nvt_prod & #Can use more cores in liquid phase since vapor phase will have already finished
+#sleep 6m
+
+done #for t
+
+#sleep 11m
+
+done #for j
+
+exit 0
+
+#######
+

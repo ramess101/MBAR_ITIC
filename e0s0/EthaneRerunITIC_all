@@ -1,0 +1,33 @@
+#!/bin/bash
+
+Compound=Ethane
+
+#MolWt=30.0698
+
+Model=TraPPEfs
+iEpsSig=13
+iEpsref=0
+iSigref=0
+
+cp /home/ram9/Elliott/EthaneRerunIsochore EthaneRerunIsochore
+cp /home/ram9/Elliott/EthaneRerunIsotherm EthaneRerunIsotherm
+
+sed -i -e s/some_compound/"${Compound}"/ EthaneRerunIsochore
+sed -i -e s/some_model/"${Model}"/ EthaneRerunIsochore
+sed -i -e s/some_iEpsSig/"${iEpsSig}"/ EthaneRerunIsochore
+sed -i -e s/some_iRefEps/"${iEpsref}"/ EthaneRerunIsochore
+sed -i -e s/some_iRefSig/"${iSigref}"/ EthaneRerunIsochore
+
+sed -i -e s/some_compound/"${Compound}"/ EthaneRerunIsotherm
+sed -i -e s/some_model/"${Model}"/ EthaneRerunIsotherm
+sed -i -e s/some_iEpsSig/"${iEpsSig}"/ EthaneRerunIsotherm
+sed -i -e s/some_iRefEps/"${iEpsref}"/ EthaneRerunIsotherm
+sed -i -e s/some_iRefSig/"${iSigref}"/ EthaneRerunIsotherm
+
+./EthaneRerunIsochore
+./EthaneRerunIsotherm
+
+exit 0
+
+#######
+

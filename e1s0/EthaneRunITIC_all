@@ -1,0 +1,57 @@
+#!/bin/bash
+
+Compound=Ethane
+
+#MolWt=30.0698
+
+Model=TraPPEfs
+iSigma=0
+iEps=1
+
+
+
+
+cp /home/ram9/Elliott/EthaneRunIsochore EthaneRunIsochore
+cp /home/ram9/Elliott/EthaneRunIsotherm EthaneRunIsotherm
+cp /home/ram9/Elliott/EthaneRunVirial EthaneRunVirial
+
+sed -i -e s/some_compound/"${Compound}"/ EthaneRunIsochore
+sed -i -e s/some_model/"${Model}"/ EthaneRunIsochore
+sed -i -e s/some_iSigma/"${iSigma}"/ EthaneRunIsochore
+sed -i -e s/some_iEps/"${iEps}"/ EthaneRunIsochore
+
+sed -i -e s/some_compound/"${Compound}"/ EthaneRunIsotherm
+sed -i -e s/some_model/"${Model}"/ EthaneRunIsotherm
+sed -i -e s/some_iSigma/"${iSigma}"/ EthaneRunIsotherm
+sed -i -e s/some_iEps/"${iEps}"/ EthaneRunIsotherm
+
+sed -i -e s/some_compound/"${Compound}"/ EthaneRunVirial
+sed -i -e s/some_model/"${Model}"/ EthaneRunVirial
+sed -i -e s/some_iSigma/"${iSigma}"/ EthaneRunVirial
+sed -i -e s/some_iEps/"${iEps}"/ EthaneRunVirial
+
+#jretemp 
+./EthaneRunIsochore
+echo "Waiting for isochore productions"
+#jretemp
+#sleep 5s
+sleep 7m #sleep
+
+#jretemp 
+./EthaneRunIsotherm
+#jretemp echo "Waiting for next epsilon."
+#jretemp 
+#sleep 5s
+sleep 7m #If multiple epsilons, uncomment sleep
+
+#jretemp 
+#./EthaneRunVirial
+#jretemp 
+#echo "Virial: Waiting for next epsilon."
+#jretemp 
+#sleep 2m #If multiple epsilons, uncomment sleep
+
+exit 0
+
+#######
+
