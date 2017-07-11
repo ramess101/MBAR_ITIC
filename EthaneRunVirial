@@ -1,25 +1,35 @@
 #!/bin/bash
 
 Compound=some_compound
-
 Model=some_model
+#Compound=Ethane
+Model=TraPPEfs
 
 iSigma=some_iSigma
 iEps=some_iEps
+#jretemp iSigma=0
+#jretemp iEps=0
+#Note: The eps and sigma values are stored in the gro file created at the iEps,iSigma level, so we just need to know iEps,iSigma.
 
 input_path=some_input_path
 output_path=some_output_path
 
 N=400
 
-supercritical_box=(6.1536 4.8841 4.2666 3.8765 3.5986 3.4861 3.3864 3.2973 3.2168) #boxLens(nm)
+supercritical_box=(9.7682 8.8750 7.7530 6.1536) #boxLens(nm) such that V(nm3) = {4,3,2}*V(rhoLo)
 
-nCores=(1 1 1 2 2 2 2 2 2)
+nCores=(1 1 1)
 
-Temp=(360 360 360 360 360 360 360 360 360)
+Temp=(360 259)
+
+echo e"$iEps"s"$iSigma"
+sleep 2s
+
+iTempStart=0
+iTempEnd=1
 
 j_start=0
-j_end=8
+j_end=2   #we only simulate 3 densities for Virial. Isotherm can use rhoLo for 4th.
 
 ####
 
@@ -27,18 +37,22 @@ j_end=8
 
 cd "$output_path"/e"$iEps"s"$iSigma"  || exit
 
-echo "NMol" "Length (nm)" "Temp (K)" > IsothermSettings.txt
+echo "NMol" "Length (nm)" "Temp (K)" > VirialSettings.txt
 
-mkdir Isotherm
-cd Isotherm || exit
+mkdir Virial
+cd Virial || exit
+
+for iTemp in $(seq $iTempStart $iTempEnd)
+
+do
 
 for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isotherm/ || exit
+cd "$output_path"/e"$iEps"s"$iSigma"/Virial/ || exit
 
-echo "$N" "${supercritical_box[j]}" "${Temp[j]}" >> ../IsothermSettings.txt
+echo "$N" "${supercritical_box[j]}" "${Temp[iTemp]}" >> ../VirialSettings.txt
 
 mkdir rho_"$j"
 
@@ -54,10 +68,12 @@ cp "$input_path"/em_l-bfgs.mdp em_l-bfgs.mdp
 mkdir NVT_eq
 cd NVT_eq || exit
 
+mkdir T"$iTemp"
+cd    T"$iTemp" || exit
 # Copy the equilibration files and edit the temperature
 
 cp "$input_path"/nvt_eq_force_switch.mdp nvt_eq.mdp
-sed -i -e s/some_temperature/"${Temp[j]}"/ nvt_eq.mdp
+sed -i -e s/some_temperature/"${Temp[iTemp]}"/ nvt_eq.mdp
 
 mkdir NVT_prod
 cd NVT_prod || exit
@@ -65,9 +81,11 @@ cd NVT_prod || exit
 # Copy the production files and edit the temperature
 
 cp "$input_path"/nvt_prod_force_switch.mdp nvt_prod.mdp
-sed -i -e s/some_temperature/"${Temp[j]}"/ nvt_prod.mdp
+sed -i -e s/some_temperature/"${Temp[iTemp]}"/ nvt_prod.mdp
 
-done
+done #copied files for each temperature.
+
+done #created all dirs and temperature files.
 
 #######
 
@@ -79,7 +97,7 @@ for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isotherm/rho_"$j" || exit
+cd "$output_path"/e"$iEps"s"$iSigma"/Virial/rho_"$j" || exit
 
 gmx grompp -f em_steep.mdp -c ethane_box.gro -p ../../ethane.top -o em_steep.tpr
 gmx mdrun -nt 1 -deffnm em_steep &
@@ -98,7 +116,7 @@ for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isotherm/rho_"$j" || exit
+cd "$output_path"/e"$iEps"s"$iSigma"/Virial/rho_"$j" || exit
 
 gmx grompp -f em_l-bfgs.mdp -c em_steep.gro -p ../../ethane.top -o em_l_bfgs.tpr -maxwarn 1
 gmx mdrun -nt 1 -deffnm em_l_bfgs &
@@ -113,16 +131,22 @@ sleep 10s
 
 # Equilibration period
 
+for iTemp in $(seq $iTempStart $iTempEnd)
+
+do
+
 for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isotherm/rho_"$j"/NVT_eq || exit
+cd "$output_path"/e"$iEps"s"$iSigma"/Virial/rho_"$j"/NVT_eq/T"$iTemp" || exit
 
-gmx grompp -f nvt_eq.mdp -c ../em_l_bfgs.gro -p ../../../ethane.top -o nvt_eq.tpr
+gmx grompp -f nvt_eq.mdp -c ../../em_l_bfgs.gro -p ../../../../ethane.top -o nvt_eq.tpr
 gmx mdrun -nt "${nCores[j]}" -deffnm nvt_eq &
 
-done
+done #iTemp=0 1
+
+done #rho=rho_0,rho_1,rho_2
 
 sleep 2m # At 360 K and isochore_0 it takes about 2 m with a single thread
 echo "Waiting for NVT_eq: Energy equilibration"
@@ -130,17 +154,23 @@ echo "Waiting for NVT_eq: Energy equilibration"
 
 # Production period for liquid phase
 
+for iTemp in $(seq $iTempStart $iTempEnd)
+
+do
+
 for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
+cd "$output_path"/e"$iEps"s"$iSigma"/Virial/rho_"$j"/NVT_eq/T"$iTemp"/NVT_prod || exit
 
 # Could give more resources to denser phase
 
-gmx grompp -f nvt_prod.mdp -c ../nvt_eq.gro -p ../../../../ethane.top -o nvt_prod.tpr
+gmx grompp -f nvt_prod.mdp -c ../nvt_eq.gro -p ../../../../../ethane.top -o nvt_prod.tpr
 gmx mdrun -nt "${nCores[j]}" -deffnm nvt_prod & #Can use more cores in liquid phase since vapor phase will have already finished
 
-done
+done #iTemp=0 1
+
+done #rho=rho_0,rho_1,rho_2
 
 exit 0

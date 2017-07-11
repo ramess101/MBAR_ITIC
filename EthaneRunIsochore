@@ -7,6 +7,8 @@ Compound=some_compound
 Model=some_model
 iSigma=some_iSigma
 iEps=some_iEps
+input_path=some_input_path
+output_path=some_output_path
 
 N=400
 
@@ -41,7 +43,7 @@ j_end=4
 
 ####
 
-echo "NMol" "Length (nm)" "Temp (K)" > /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEps"s"$iSigma"/IsochoreSettings.txt
+echo "NMol" "Length (nm)" "Temp (K)" > "$output_path"/e"$iEps"s"$iSigma"/IsochoreSettings.txt
 
 # Initialize the folders
 
@@ -49,7 +51,7 @@ for j in $(seq $j_start $j_end)
 
 do
 
-cd /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEps"s"$iSigma" || exit #presumes this dir was made during Isotherm simulation
+cd "$output_path"/e"$iEps"s"$iSigma" || exit #presumes this dir was made during Isotherm simulation
 
 #jretemp 
 mkdir Isochore  
@@ -69,22 +71,22 @@ for Temp in ${Tic}
 do
 t=$((t+1))
 
-echo "$N" "${liquid_box[j]}" "$Temp" >> /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEps"s"$iSigma"/IsochoreSettings.txt
+echo "$N" "${liquid_box[j]}" "$Temp" >> "$output_path"/e"$iEps"s"$iSigma"/IsochoreSettings.txt
 
-cd /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEps"s"$iSigma"/Isochore/rho"$j" || exit  #start fresh for do cycle instead of multiple "cd .."'s
+cd "$output_path"/e"$iEps"s"$iSigma"/Isochore/rho"$j" || exit  #start fresh for do cycle instead of multiple "cd .."'s
 
 #jretemp 
 mkdir T"$t"  #JRE: using generic "T1" and "T2" for folder names to facilitate later reading/post-processing.
 cd    T"$t" || exit
 
 #JRE: cd to here because later cycles may be way deep.
-#cd /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEps"s"$iSigma"/Isochore/rho"$j"/T"$t" || exit
+#cd "$output_path"/e"$iEps"s"$iSigma"/Isochore/rho"$j"/T"$t" || exit
 gmx insert-molecules -ci ../../../ethane.gro -nmol $N -box "${liquid_box[j]}" "${liquid_box[j]}" "${liquid_box[j]}" -o ethane_box.gro
 
 #Copy the minimization files
 
-cp /home/ram9/"$Compound"/Gromacs/Force_switch/em_steep.mdp em_steep.mdp
-cp /home/ram9/"$Compound"/Gromacs/Force_switch/em_l-bfgs.mdp em_l-bfgs.mdp
+cp "$input_path"/em_steep.mdp em_steep.mdp
+cp "$input_path"/em_l-bfgs.mdp em_l-bfgs.mdp
 
 #jretemp 
 mkdir NVT_eq
@@ -92,7 +94,7 @@ cd NVT_eq || exit
 
 # Copy the equilibration files and edit the temperature
 
-cp /home/ram9/"$Compound"/Gromacs/Force_switch/nvt_eq_force_switch.mdp nvt_eq.mdp
+cp "$input_path"/nvt_eq_force_switch.mdp nvt_eq.mdp
 sed -i -e s/some_temperature/"$Temp"/ nvt_eq.mdp
 
 #jretemp 
@@ -101,7 +103,7 @@ cd NVT_prod || exit
 
 # Copy the production files and edit the temperature
 
-cp /home/ram9/"$Compound"/Gromacs/Force_switch/nvt_prod_force_switch.mdp nvt_prod.mdp
+cp "$input_path"/nvt_prod_force_switch.mdp nvt_prod.mdp
 sed -i -e s/some_temperature/"$Temp"/ nvt_prod.mdp
 
 cd .. #back to NVT_eq level

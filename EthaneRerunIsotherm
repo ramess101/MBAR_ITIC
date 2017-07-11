@@ -8,6 +8,9 @@ iEpsSig=some_iEpsSig
 iEpsref=some_iRefEps
 iSigref=some_iRefSig
 
+scripts_path=some_scripts_path
+output_path=some_output_path
+
 Temp=(360 360 360 360 360 360 360 360 360)
 
 j_start=0
@@ -21,9 +24,9 @@ for j in $(seq $j_start $j_end)
 
 do
 
-cd ~/"$Compound"/Gromacs/"$Model"/e"$iEpsref"s"$iSigref"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
+cd "$output_path"/e"$iEpsref"s"$iSigref"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
 
-cp ~/Elliott/md_nocord.mdp md_nocord.mdp 
+cp "$scripts_path"/md_nocord.mdp md_nocord.mdp 
 
 sed -i -e s/some_temperature/"${Temp[j]}"/ md_nocord.mdp #Temperature might not matter in rerun
 
@@ -39,6 +42,9 @@ echo "1
 0" | gmx energy -dp -f prod_e"$iEpsref"s"$iSigref"it"$iEpsSig".edr -o energy_press_e"$iEpsref"s"$iSigref"it"$iEpsSig".xvg
 
 rm -f \#*
+rm -f prod_e*s*it*.log
+rm -f prod_e*s*it*.tpr
+rm -f prod_e*s*it*.edr
 
 done
 

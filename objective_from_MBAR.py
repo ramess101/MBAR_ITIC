@@ -11,7 +11,9 @@ import CoolProp.CoolProp as CP
 
 compound='ETHANE'
 
-CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH,'/home/ram9/REFPROP-cmake/build/')
+REFPROP_path='/home/ram9/REFPROP-cmake/build/' #Change this for a different system
+
+CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH,REFPROP_path)
 
 Mw = CP.PropsSI('M','REFPROP::'+compound) #[kg/mol]
 
@@ -38,7 +40,7 @@ def REFPROP_UP(TSim,rho_mass,NmolSim,compound,iEpsRef,iSigmaRef):
     RP_P = CP.PropsSI('P','T',TSim,'D',rho_mass,'REFPROP::'+compound) / 1e5 #[bar]
     RP_Z1rho = (RP_Z - 1.)/rho_mass
 
-    f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/REFPROP_UPZ','w')
+    f = open('REFPROP_UPZ','w')
 
     for iState, Temp in enumerate(TSim):
 
@@ -70,9 +72,9 @@ g_en = 2 #Column where the potential energy is located
 g_T = 4 #Column where T is located
 g_p = 5 #Column where p is located
 
-iEpsRef = int(np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/iEpsref'))
-iSigmaRef = int(np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/iSigref'))
-iRerun = int(np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/iEps_iteration'))
+iEpsRef = int(np.loadtxt('../iEpsref'))
+iSigmaRef = int(np.loadtxt('../iSigref'))
+iRerun = int(np.loadtxt('iEps_iteration'))
 
 iSets = [0, int(iRerun)]
 
@@ -98,7 +100,7 @@ Nmol_sim = np.empty(0)
 
 for run_type in ITIC:
 
-    run_type_Settings = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/'+run_type+'Settings.txt',skiprows=1)
+    run_type_Settings = np.loadtxt(run_type+'Settings.txt',skiprows=1)
 
     Nmol[run_type] = run_type_Settings[:,0]
     Lbox = run_type_Settings[:,1] #[nm]
@@ -149,11 +151,11 @@ for run_type in ITIC:
 
             if run_type == 'Isochore':
 
-                fpath = '/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/'+run_type+'/rho'+str(irho)+'/T'+str(iTemp)+'/NVT_eq/NVT_prod/'
+                fpath = run_type+'/rho'+str(irho)+'/T'+str(iTemp)+'/NVT_eq/NVT_prod/'
 
             else:
 
-                fpath = '/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/'+run_type+'/rho_'+str(irho)+'/NVT_eq/NVT_prod/'    
+                fpath = run_type+'/rho_'+str(irho)+'/NVT_eq/NVT_prod/'    
 
             for iSet, iter in enumerate(iSets):
     
@@ -260,21 +262,21 @@ dP_rerun = dP_MBAR[:,1]
 F_rerun = objective(RP_U_depN, RP_P, U_rerun,P_rerun)#,dU_rerun,dP_rerun)
 #print(F_rerun)
 
-f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F_it_'+str(iRerun),'w')
+f = open('F_it_'+str(iRerun),'w')
 
 f.write(str(F_rerun))
 f.close()
 
 if iRerun > 1:
 
-    F2 = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F2_previous')
-    F1 = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F1_previous')
+    F2 = np.loadtxt('F2_previous')
+    F1 = np.loadtxt('F1_previous')
 
     if F2 < F1:
 
         F2 = F_rerun
         
-        f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F2_current','w')
+        f = open('F2_current','w')
 
         f.write(str(F2))
         f.close()
@@ -283,7 +285,7 @@ if iRerun > 1:
 
         F1 = F_rerun
         
-        f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F1_current','w')
+        f = open('F1_current','w')
 
         f.write(str(F1))
         f.close()
@@ -294,7 +296,7 @@ else:
 
         F1 = F_rerun
         
-        f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F1_current','w')
+        f = open('F1_current','w')
 
         f.write(str(F1))
         f.close()
@@ -303,7 +305,7 @@ else:
 
         F2 = F_rerun
         
-        f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F2_current','w')
+        f = open('F2_current','w')
 
         f.write(str(F2))
         f.close()
@@ -312,7 +314,7 @@ else:
 
 for iSet, iter in enumerate(iSets):
 
-    f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/MBAR_e'+str(iEpsRef)+'s'+str(iSigmaRef)+'it'+str(iter),'w')
+    f = open('MBAR_e'+str(iEpsRef)+'s'+str(iSigmaRef)+'it'+str(iter),'w')
 
     iState = 0
 
@@ -333,28 +335,28 @@ for iSet, iter in enumerate(iSets):
 
 f.close()
 
-conv_MBAR = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/conv_MBAR')
+conv_MBAR = np.loadtxt('conv_MBAR')
 
 if conv_MBAR > 0:
 
-    F_all = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F_all',skiprows=1)
+    F_all = np.loadtxt('F_all',skiprows=1)
     F_all = np.append(F_all,F_rerun) #Account for the fact that F_all does not yet have the most recent F value
 
     #F_current = F_rerun
-    #F_previous = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/F_it_'+str(iRerun-1))
+    #F_previous = np.loadtxt('F_it_'+str(iRerun-1))
 
-    #eps_previous = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_it_'+str(iRerun-1))
-    #eps_current = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_it_'+str(iRerun))
+    #eps_previous = np.loadtxt('eps_it_'+str(iRerun-1))
+    #eps_current = np.loadtxt('eps_it_'+str(iRerun))
  
     #if F_current < F_previous:
     #    eps_optimal = eps_current
     #else:
     #    eps_optimal = eps_previous
 
-    eps_all = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_all',skiprows=1)
+    eps_all = np.loadtxt('eps_all',skiprows=1)
     eps_optimal = eps_all[np.argmin(F_all)]
 
-    f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_optimal','w')
+    f = open('eps_optimal','w')
 
     f.write(str(eps_optimal))
     f.close()
@@ -362,13 +364,13 @@ if conv_MBAR > 0:
     conv_eps = 0
 
     if iEpsRef > 0:
-        eps_opt_previous = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef-1)+'s'+str(iSigmaRef)+'/eps_optimal')
+        eps_opt_previous = np.loadtxt('../e'+str(iEpsRef-1)+'s'+str(iSigmaRef)+'/eps_optimal')
         eps_opt_current = eps_optimal
-        TOL_eps = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/TOL_eps')
+        TOL_eps = np.loadtxt('TOL_eps')
         if np.abs(eps_opt_previous - eps_opt_current) < TOL_eps:
             conv_eps = 1
     
-    f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/conv_eps','w')
+    f = open('conv_eps','w')
     f.write(str(conv_eps))
     f.close()
 

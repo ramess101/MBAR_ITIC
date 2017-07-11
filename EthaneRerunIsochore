@@ -10,6 +10,9 @@ iEpsSig=some_iEpsSig
 iEpsref=some_iRefEps
 iSigref=some_iRefSig
 
+scripts_path=some_scripts_path
+output_path=some_output_path
+
 #========Isochore Settings=====
 
    Tic0=(137 198.5)		#
@@ -43,9 +46,9 @@ for Temp in ${Tic}
 do
 t=$((t+1))
 
-cd /home/ram9/"$Compound"/Gromacs/"$Model"/e"$iEpsref"s"$iSigref"/Isochore/rho"$j"/T"$t"/NVT_eq/NVT_prod || exit
+cd "$output_path"/e"$iEpsref"s"$iSigref"/Isochore/rho"$j"/T"$t"/NVT_eq/NVT_prod || exit
 
-cp ~/Elliott/md_nocord.mdp md_nocord.mdp 
+cp "$scripts_path"/md_nocord.mdp md_nocord.mdp 
 
 sed -i -e s/some_temperature/"$Temp"/ md_nocord.mdp #Temperature might not matter in rerun
 
@@ -61,6 +64,9 @@ echo "1
 0" | gmx energy -dp -f prod_e"$iEpsref"s"$iSigref"it"$iEpsSig".edr -o energy_press_e"$iEpsref"s"$iSigref"it"$iEpsSig".xvg
 
 rm -f \#*
+rm -f prod_e*s*it*.log
+rm -f prod_e*s*it*.tpr
+rm -f prod_e*s*it*.edr
 
 done #for t
 
