@@ -120,14 +120,14 @@ sleep 10s
 # Equilibration period
 cd NVT_eq
 gmx grompp -f nvt_eq.mdp -c ../em_l_bfgs.gro -p ../../../../ethane.top -o nvt_eq.tpr
-gmx mdrun -pin on -nt 4 -deffnm nvt_eq &
+gmx mdrun -nt 4 -deffnm nvt_eq &
 #sleep 5s
 sleep 1m
 
 # Production period
 cd NVT_prod 
 gmx grompp -f nvt_prod.mdp -c ../nvt_eq.gro -p ../../../../../ethane.top -o nvt_prod.tpr
-gmx mdrun -pin on -nt 1 -deffnm nvt_prod & #Can use more cores in liquid phase since vapor phase will have already finished
+gmx mdrun -nt 1 -deffnm nvt_prod & #Can use more cores in liquid phase since vapor phase will have already finished
 #sleep 6m
 
 done #for t
