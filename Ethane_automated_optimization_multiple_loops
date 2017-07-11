@@ -12,7 +12,7 @@ output_path=~/"$Compound"/Gromacs/"$Model"
 #MolWt=30.0698
 
 iEpsref=0
-iSigref=1
+#iSigref=2
 
 eps_low=0.8
 eps_high=1.2
@@ -20,9 +20,14 @@ eps_high=1.2
 TOL_eps=0.001
 TOL_MBAR=0.001
 
+sigma_values=(0.377 0.375 0.376 0.378 0.3765 0.3775) #nm
+
+for iSigref in $(seq 2 5)
+do
+
 eps_guess=1.0143 #122 K
 
-sigma_guess=0.375 #nm
+sigma_guess="${sigma_values[iSigref]}" 
 
 conv_eps=0
 
@@ -182,6 +187,8 @@ echo "$conv_eps"
 #done #for iEpsref of direct simulations
 
 done #for while loop of direct simulations
+
+done #for loop of sigmas
 
 exit 0
 
