@@ -12,9 +12,9 @@ output_path=~/"$Compound"/Gromacs/"$Model"
 #MolWt=30.0698
 
 iEpsref=0
-iSigref=0
+iSigref=1
 
-eps_low=0.85
+eps_low=0.8
 eps_high=1.2
 
 TOL_eps=0.001
@@ -22,11 +22,11 @@ TOL_MBAR=0.001
 
 eps_guess=1.0143 #122 K
 
-sigma_guess=0.377 #nm
+sigma_guess=0.375 #nm
 
 conv_eps=0
 
-#for iEpsref in $(seq 0 0)
+#for iEpsref in $(seq 0 1)
 #do
 
 while [ "$conv_eps" -lt 1 ] #Checks to see if the loop has converged for epsilon
@@ -37,7 +37,7 @@ cd "$output_path" || exit
 echo "$iEpsref" > iEpsref
 echo "$iSigref" > iSigref
 
-if [ $iEpsref -gt 0 ] #Have already done direct simulations for e0s0
+if [ $iEpsref -ge 0 ] #Have already done direct simulations for e0s0 and e1s0
 
 then
 
@@ -54,6 +54,7 @@ cd e"$iEpsref"s"$iSigref" || exit
 #Create files with force field parameters
 
 echo "$eps_guess" "$sigma_guess" > eps_Sigma
+echo "$eps_guess" > eps_guess
 
 cp "$input_path"/ethane_temp.top ethane.top 
 cp "$input_path"/ethane.gro ethane.gro 
@@ -144,7 +145,7 @@ sed -i -e s/some_iEpsSig_top/"${iteration}"/ EthaneRerunITIC_all
 sed -i -e s/some_iRefSig_top/"${iSigref}"/ EthaneRerunITIC_all
 sed -i -e s/some_iRefEps_top/"${iEpsref}"/ EthaneRerunITIC_all
 
-if [ $iEpsref -gt 0 ] #Have already done the reruns for e0s0
+if [ $iEpsref -ge 0 ] #Have already done the reruns for e0s0
 
 then
 

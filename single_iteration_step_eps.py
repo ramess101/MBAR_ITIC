@@ -73,19 +73,23 @@ if iEpsRerun > 1:
     f.close()
 
 
-else:
+#else:
 
-    if iEpsRerun == 0:
+    #eps_guess = np.loadtxt('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_guess')
 
-        eps_it = X1
+    #if iEpsRerun == 0:
+
+    #    eps_it = eps_guess
     
-    elif iEpsRerun == 1:
+    #elif iEpsRerun == 1:
 
-        eps_it = X2
+    #    X_interior = np.array([X1 X2])
 
-    f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_it_'+str(iEpsRerun),'w')
-    f.write(str(eps_it))
-    f.close()
+    #    eps_it = X_interior[X_interior <> eps_guess]
+
+    #f = open('/home/ram9/Ethane/Gromacs/TraPPEfs/e'+str(iEpsRef)+'s'+str(iSigmaRef)+'/eps_it_'+str(iEpsRerun),'w')
+    #f.write(str(eps_it))
+    #f.close()
 
 
 if np.abs(X3-X0) > TOL_MBAR*(np.abs(X1)+np.abs(X2)):
