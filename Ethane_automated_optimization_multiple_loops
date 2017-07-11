@@ -22,7 +22,7 @@ TOL_MBAR=0.001
 
 sigma_values=(0.377 0.375 0.376 0.378 0.3765 0.3775) #nm
 
-for iSigref in $(seq 2 5)
+for iSigref in $(seq 3 3)
 do
 
 eps_guess=1.0143 #122 K
@@ -42,8 +42,7 @@ cd "$output_path" || exit
 echo "$iEpsref" > iEpsref
 echo "$iSigref" > iSigref
 
-if [ $iEpsref -ge 0 ] #Have already done direct simulations for e0s0 and e1s0
-
+if [ $iEpsref -ge 0 ] #If you have already run (i.e. just rerunning the optimization)
 then
 
 #### Start the mdrun simulations for the initial epsilon and sigma values
@@ -150,7 +149,7 @@ sed -i -e s/some_iEpsSig_top/"${iteration}"/ EthaneRerunITIC_all
 sed -i -e s/some_iRefSig_top/"${iSigref}"/ EthaneRerunITIC_all
 sed -i -e s/some_iRefEps_top/"${iEpsref}"/ EthaneRerunITIC_all
 
-if [ $iEpsref -ge 0 ] #Have already done the reruns for e0s0
+if [ $iEpsref -ge 1 ] #If you have already rerun (i.e. just rerunning the optimization)
 
 then
 
