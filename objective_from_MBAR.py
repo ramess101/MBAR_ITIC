@@ -292,23 +292,47 @@ if iRerun > 1:
 
 else:
 
+    swap_initial = np.loadtxt('swap_initial')
+
     if iRerun == 0:
 
-        F1 = F_rerun
+        if swap_initial == 0:
         
-        f = open('F1_current','w')
-
-        f.write(str(F1))
-        f.close()
-    
+            F1 = F_rerun
+            
+            f = open('F1_current','w')
+        
+            f.write(str(F1))
+            f.close()
+           
+        elif swap_initial == 1:
+        
+            F2 = F_rerun
+            
+            f = open('F2_current','w')
+        
+            f.write(str(F2))
+            f.close()
+        
     elif iRerun == 1:
-
-        F2 = F_rerun
         
-        f = open('F2_current','w')
+        if swap_initial == 0:
 
-        f.write(str(F2))
-        f.close()
+            F2 = F_rerun
+            
+            f = open('F2_current','w')
+    
+            f.write(str(F2))
+            f.close()
+   
+        elif swap_initial == 1:
+
+            F1 = F_rerun
+            
+            f = open('F1_current','w')
+    
+            f.write(str(F1))
+            f.close()
 
 
 

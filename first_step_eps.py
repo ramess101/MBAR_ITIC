@@ -21,6 +21,10 @@ if np.abs(X3-X1) > np.abs(X1-X0):
     f.write(str(X2))
     f.close()
 
+    f = open('swap_initial','w')
+    f.write(str(0))
+    f.close()
+
 else:
     X2 = X1
     X1 = X2 - C_ratio*(X2-X0)
@@ -31,6 +35,10 @@ else:
 
     f = open('eps_it_1','w')
     f.write(str(X1))
+    f.close()
+
+    f = open('swap_initial','w')
+    f.write(str(1))
     f.close()
 
 f = open('X0_current','w')
