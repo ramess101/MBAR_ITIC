@@ -7,6 +7,7 @@ from pymbar import timeseries
 import CoolProp.CoolProp as CP
 #from REFPROP_values import *
 import subprocess
+import time
 
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
@@ -67,10 +68,15 @@ def objective_old(RP_U_depN, RP_P, USim,PSim,dUSim=1.,dPSim=1.):
     #print(devP)
     return SSE
 
-def objective(eps,iRerun): 
+def objective(eps,iRerun,weighted=False): 
     USim, dUSim, PSim, dPSim, RP_U_depN, RP_P = MBAR_estimates(eps,iRerun)
-    devU = (USim - RP_U_depN)/dUSim
-    devP = (PSim - RP_P)/dPSim
+
+    if weighted:
+        devU = (USim - RP_U_depN)/dUSim
+        devP = (PSim - RP_P)/dPSim
+    else:
+        devU = USim - RP_U_depN
+        devP = PSim - RP_P
     SSEU = np.sum(np.power(devU,2))
     SSEP = np.sum(np.power(devP,2)) 
     SSE = 0
@@ -100,12 +106,21 @@ def GOLDEN(AX,BX,CX,TOL):
         F1 = objective(X1,iRerun)
         iRerun += 1
         F2 = objective(X2,iRerun)
+        f = open('F_all','a')
+        f.write('\n'+str(F1))
+        f.write('\n'+str(F2))
+        f.close()
     else:
         X2 = BX
         X1 = BX - C_ratio*(BX-AX)
         F2 = objective(X2,iRerun)
         iRerun += 1
         F1 = objective(X1,iRerun)
+        f = open('F_all','a')
+        f.write('\n'+str(F2))
+        f.write('\n'+str(F1))
+        f.close()
+
     #F1 = rerun_GROMACS(X1)
     #F2 = rerun_GROMACS(X2) 
     print(X0,X1,X2,X3)
@@ -132,7 +147,7 @@ def GOLDEN(AX,BX,CX,TOL):
         iRerun += 1
         
         f = open('F_all','a')
-        f.write(str(F_it))
+        f.write('\n'+str(F_it))
         f.close()
         
     if F1 < F2:
@@ -150,7 +165,7 @@ iSigmaRef = int(np.loadtxt('../iSigref'))
 def MBAR_estimates(eps,iRerun):
     
     f = open('eps_it','w')
-    f.write('\n'+str(eps))
+    f.write(str(eps))
     f.close()
     
     f = open('eps_all','a')
@@ -158,7 +173,7 @@ def MBAR_estimates(eps,iRerun):
     f.close()
     
     f = open('iRerun','w')
-    f.write('\n'+str(iRerun))
+    f.write(str(iRerun))
     f.close()
     
     subprocess.call("./EthaneRerunITIC_subprocess")
@@ -496,6 +511,9 @@ def MBAR_estimates(eps,iRerun):
 #        f = open('conv_eps','w')
 #        f.write(str(conv_eps))
 #        f.close()
+
+print(os.getcwd())
+time.sleep(2)
 
 eps_opt, F_opt = GOLDEN(eps_low,eps_guess,eps_high,TOL)
 
