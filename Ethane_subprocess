@@ -1,0 +1,133 @@
+#!/bin/bash
+
+# Must change all ram9 to jre4 and Elliott to Gromacs or Gromacs/MBAR
+
+Compound=Ethane
+Model=TraPPEfs
+
+#Specify the path location, note do not include a space at the end of the line
+
+scripts_path=~/Elliott
+input_path=~/"$Compound"/Gromacs/Force_switch
+output_path=~/"$Compound"/Gromacs/"$Model"
+
+#MolWt=30.0698
+
+eps_low=0.8
+eps_high=1.2
+
+TOL_eps=0.001
+TOL_MBAR=0.001
+
+sigma_values=(0.377 0.375 0.376 0.378 0.38 0.381 0.382 0.385 0.379) #nm
+
+for iSigref in $(seq 4 4)
+do
+
+iEpsref=0
+
+eps_guess=1.0143 #122 K
+
+sigma_guess="${sigma_values[iSigref]}" 
+
+conv_eps=0
+
+#for iEpsref in $(seq 0 1)
+#do
+
+while [ "$conv_eps" -lt 1 ] #Checks to see if the loop has converged for epsilon
+do
+
+cd "$output_path" || exit
+
+echo "$iEpsref" > iEpsref
+echo "$iSigref" > iSigref
+
+if [ $iEpsref -ge 0 ] #If you have already run (i.e. just rerunning the optimization)
+then
+
+#### Start the mdrun simulations for the initial epsilon and sigma values
+
+echo Run ITIC for Epsilon = "$eps_guess" sigma = "$sigma_guess"
+sleep 2s
+
+####
+
+mkdir e"$iEpsref"s"$iSigref"
+cd e"$iEpsref"s"$iSigref" || exit
+
+#Create files with force field parameters
+
+echo "$eps_guess" "$sigma_guess" > eps_Sigma
+echo "$eps_guess" > eps_guess
+
+cp "$input_path"/ethane_temp.top ethane.top 
+cp "$input_path"/ethane.gro ethane.gro 
+sed -i -e s/some_epsilon/"$eps_guess"/ ethane.top
+sed -i -e s/some_sigma/"$sigma_guess"/ ethane.top
+
+cp "$scripts_path"/EthaneRunITIC_all EthaneRunITIC_all
+
+sed -i -e s/some_compound_top/"${Compound}"/ EthaneRunITIC_all
+sed -i -e s/some_model_top/"${Model}"/ EthaneRunITIC_all
+sed -i -e s/some_iSigma_top/"${iSigref}"/ EthaneRunITIC_all
+sed -i -e s/some_iEps_top/"${iEpsref}"/ EthaneRunITIC_all
+sed -i -e s@some_scripts_path_top@"$scripts_path"@ EthaneRunITIC_all
+sed -i -e s@some_input_path_top@"$input_path"@ EthaneRunITIC_all
+sed -i -e s@some_output_path_top@"$output_path"@ EthaneRunITIC_all
+
+./EthaneRunITIC_all
+
+
+fi
+
+cd "$output_path"/e"$iEpsref"s"$iSigref" || exit # Must be in correct directory for python script and file generation
+
+echo "Eps (kJ/mol)" > eps_all
+echo "Objective" > F_all
+echo $TOL_eps > TOL_eps
+echo $TOL_MBAR > TOL_MBAR 
+
+echo "$eps_low" > eps_low
+echo "$eps_high" > eps_high
+echo "$eps_guess" > eps_guess
+
+echo "Sigma (nm)" > sig_all
+echo "$sigma_guess" > sig_all
+echo "$sigma_guess" > sig_guess
+cp sig_guess sig_it
+
+cp "$scripts_path"/EthaneRerunITIC_subprocess EthaneRerunITIC_subprocess
+
+sed -i -e s/some_compound_top/"${Compound}"/ EthaneRerunITIC_subprocess
+sed -i -e s/some_model_top/"${Model}"/ EthaneRerunITIC_subprocess
+sed -i -e s/some_iRefSig_top/"${iSigref}"/ EthaneRerunITIC_subprocess
+sed -i -e s/some_iRefEps_top/"${iEpsref}"/ EthaneRerunITIC_subprocess
+sed -i -e s@some_scripts_path_top@"$scripts_path"@ EthaneRerunITIC_subprocess
+sed -i -e s@some_input_path_top@"$input_path"@ EthaneRerunITIC_subprocess
+sed -i -e s@some_output_path_top@"$output_path"@ EthaneRerunITIC_subprocess
+
+cd "$output_path"/e"$iEpsref"s"$iSigref" || exit #Must cd back to original location for python script
+
+python "$scripts_path"/optimization_subprocess.py
+
+eps_optimal=$(<eps_optimal)
+iEpsref=$((iEpsref + 1))
+conv_eps=$(<conv_eps)
+#conv_eps=1 #If you just want to do a single iteration, for practice
+
+eps_guess=$eps_optimal
+
+echo "$eps_guess"
+echo "$conv_eps"
+
+#done #for iEpsref of direct simulations
+
+done #for while loop of direct simulations
+
+done #for loop of sigmas
+
+exit 0
+
+#######
+
