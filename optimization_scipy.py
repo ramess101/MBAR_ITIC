@@ -103,12 +103,14 @@ iSigmaRef = int(np.loadtxt('../iSigref'))
 
 def MBAR_estimates(eps,iRerun):
     
+    #eps = eps.tolist()
+
     f = open('eps_it','w')
-    f.write(str(eps))
+    f.write(str(eps[0]))
     f.close()
     
     f = open('eps_all','a')
-    f.write('\n'+str(eps))
+    f.write('\n'+str(eps[0]))
     f.close()
     
     f = open('iRerun','w')
@@ -340,14 +342,21 @@ eps_low = np.loadtxt('eps_low')
 eps_guess = np.loadtxt('eps_guess')
 eps_high = np.loadtxt('eps_high')
 
-bnds = [eps_low,eps_high]
+
 
 TOL = np.loadtxt('TOL_MBAR') 
 
 #sol = minimize(objective,np.array(eps_guess),method='BFGS')
 #eps_opt = sol.x[0]
 
-sol = minimize_scalar(objective,eps_guess,method='bounded',bounds=bnds) #6 function evaluations
+#bnds = [eps_low,eps_high]
+#sol = minimize_scalar(objective,eps_guess,method='bounded',bounds=bnds) #This has problems because the first iteration is not actually the reference system
+#eps_opt = sol.x
+
+bnds = ((eps_low,eps_high),)
+
+sol = minimize(objective,eps_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-3,'ftol':1}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
+eps_opt = sol.x[0]
 
 f = open('eps_optimal','w')
 f.write(str(eps_opt))

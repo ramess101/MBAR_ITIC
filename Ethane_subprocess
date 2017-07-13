@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Must change all ram9 to jre4 and Elliott to Gromacs or Gromacs/MBAR
-
 Compound=Ethane
 Model=TraPPEfs
 
@@ -43,7 +41,7 @@ cd "$output_path" || exit
 echo "$iEpsref" > iEpsref
 echo "$iSigref" > iSigref
 
-if [ $iEpsref -ge 0 ] #If you have already run (i.e. just rerunning the optimization)
+if [ $iEpsref -ge 1 ] #If you have already run (i.e. just rerunning the optimization)
 then
 
 #### Start the mdrun simulations for the initial epsilon and sigma values
@@ -109,7 +107,8 @@ sed -i -e s@some_output_path_top@"$output_path"@ EthaneRerunITIC_subprocess
 
 cd "$output_path"/e"$iEpsref"s"$iSigref" || exit #Must cd back to original location for python script
 
-python "$scripts_path"/optimization_subprocess.py
+#python "$scripts_path"/optimization_subprocess.py
+python "$scripts_path"/optimization_scipy.py
 
 eps_optimal=$(<eps_optimal)
 iEpsref=$((iEpsref + 1))

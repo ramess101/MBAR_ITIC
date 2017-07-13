@@ -131,7 +131,7 @@ def GOLDEN(AX,BX,CX,TOL):
             eps_it = X2
             F2 = objective(X2,iRerun)
             F_it = F2
-            print(X0,X1,X2,X3)
+            #print(X0,X1,X2,X3)
         else:
             X3 = X2
             X2 = X1
@@ -140,7 +140,7 @@ def GOLDEN(AX,BX,CX,TOL):
             eps_it = X1
             F1 = objective(X1,iRerun)
             F_it = F1
-            print(X0,X1,X2,X3)
+            #print(X0,X1,X2,X3)
         iRerun += 1
         
         f = open('F_all','a')
