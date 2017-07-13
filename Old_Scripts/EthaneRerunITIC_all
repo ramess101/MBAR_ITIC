@@ -1,0 +1,40 @@
+#!/bin/bash
+
+Compound=some_compound_top
+
+#MolWt=30.0698
+
+Model=some_model_top
+iEpsSig=some_iEpsSig_top
+iEpsref=some_iRefEps_top
+iSigref=some_iRefSig_top
+scripts_path=some_scripts_path_top
+input_path=some_input_path_top
+output_path=some_output_path_top
+
+cp "$scripts_path"/EthaneRerunIsochore EthaneRerunIsochore
+cp "$scripts_path"/EthaneRerunIsotherm EthaneRerunIsotherm
+
+sed -i -e s/some_compound/"${Compound}"/ EthaneRerunIsochore
+sed -i -e s/some_model/"${Model}"/ EthaneRerunIsochore
+sed -i -e s/some_iEpsSig/"${iEpsSig}"/ EthaneRerunIsochore
+sed -i -e s/some_iRefEps/"${iEpsref}"/ EthaneRerunIsochore
+sed -i -e s/some_iRefSig/"${iSigref}"/ EthaneRerunIsochore
+sed -i -e s@some_scripts_path@"$scripts_path"@ EthaneRerunIsochore
+sed -i -e s@some_output_path@"$output_path"@ EthaneRerunIsochore
+
+sed -i -e s/some_compound/"${Compound}"/ EthaneRerunIsotherm
+sed -i -e s/some_model/"${Model}"/ EthaneRerunIsotherm
+sed -i -e s/some_iEpsSig/"${iEpsSig}"/ EthaneRerunIsotherm
+sed -i -e s/some_iRefEps/"${iEpsref}"/ EthaneRerunIsotherm
+sed -i -e s/some_iRefSig/"${iSigref}"/ EthaneRerunIsotherm
+sed -i -e s@some_scripts_path@"$scripts_path"@ EthaneRerunIsotherm
+sed -i -e s@some_output_path@"$output_path"@ EthaneRerunIsotherm
+
+./EthaneRerunIsochore
+./EthaneRerunIsotherm
+
+exit 0
+
+#######
+

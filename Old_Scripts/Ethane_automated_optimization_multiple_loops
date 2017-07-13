@@ -1,0 +1,203 @@
+#!/bin/bash
+
+# Must change all ram9 to jre4 and Elliott to Gromacs or Gromacs/MBAR
+
+Compound=Ethane
+Model=TraPPEfs
+
+#Specify the path location, note do not include a space at the end of the line
+
+scripts_path=~/Elliott
+input_path=~/"$Compound"/Gromacs/Force_switch
+output_path=~/"$Compound"/Gromacs/"$Model"
+
+#MolWt=30.0698
+
+iEpsref=0
+#iSigref=2
+
+eps_low=0.8
+eps_high=1.2
+
+TOL_eps=0.001
+TOL_MBAR=0.001
+
+sigma_values=(0.377 0.375 0.376 0.378 0.38) #nm
+
+for iSigref in $(seq 4 4)
+do
+
+eps_guess=1.0143 #122 K
+
+sigma_guess="${sigma_values[iSigref]}" 
+
+conv_eps=0
+
+#for iEpsref in $(seq 0 1)
+#do
+
+while [ "$conv_eps" -lt 1 ] #Checks to see if the loop has converged for epsilon
+do
+
+cd "$output_path" || exit
+
+echo "$iEpsref" > iEpsref
+echo "$iSigref" > iSigref
+
+if [ $iEpsref -ge 1 ] #If you have already run (i.e. just rerunning the optimization)
+then
+
+#### Start the mdrun simulations for the initial epsilon and sigma values
+
+echo Run ITIC for Epsilon = "$eps_guess" sigma = "$sigma_guess"
+sleep 2s
+
+####
+
+mkdir e"$iEpsref"s"$iSigref"
+cd e"$iEpsref"s"$iSigref" || exit
+
+#Create files with force field parameters
+
+echo "$eps_guess" "$sigma_guess" > eps_Sigma
+echo "$eps_guess" > eps_guess
+
+cp "$input_path"/ethane_temp.top ethane.top 
+cp "$input_path"/ethane.gro ethane.gro 
+sed -i -e s/some_epsilon/"$eps_guess"/ ethane.top
+sed -i -e s/some_sigma/"$sigma_guess"/ ethane.top
+
+cp "$scripts_path"/EthaneRunITIC_all EthaneRunITIC_all
+
+sed -i -e s/some_compound_top/"${Compound}"/ EthaneRunITIC_all
+sed -i -e s/some_model_top/"${Model}"/ EthaneRunITIC_all
+sed -i -e s/some_iSigma_top/"${iSigref}"/ EthaneRunITIC_all
+sed -i -e s/some_iEps_top/"${iEpsref}"/ EthaneRunITIC_all
+sed -i -e s@some_scripts_path_top@"$scripts_path"@ EthaneRunITIC_all
+sed -i -e s@some_input_path_top@"$input_path"@ EthaneRunITIC_all
+sed -i -e s@some_output_path_top@"$output_path"@ EthaneRunITIC_all
+
+./EthaneRunITIC_all
+
+
+fi
+
+#Obtain the REFPROP values at the ITIC conditions
+
+#python ~/Elliott/generate_REFPROP_values.py #Antequated code that is no longer necessary but might be useful someday
+
+
+
+cd "$output_path"/e"$iEpsref"s"$iSigref" || exit # Must be in correct directory for python script and file generation
+
+echo "Eps (kJ/mol)" > eps_all
+echo "Objective" > F_all
+echo $TOL_eps > TOL_eps
+echo $TOL_MBAR > TOL_MBAR 
+
+echo "$eps_low" > X0_current
+echo "$eps_high" > X3_current
+echo "$eps_guess" > X1_current
+
+python "$scripts_path"/first_step_eps.py
+
+sleep 5s
+
+iteration=0
+conv_MBAR=0
+
+# Iterate to optimize epsilon only
+
+#for iteration in $(seq 0 0)
+#do
+
+while [ "$conv_MBAR" -lt 1 ] #Checks to see if the loop has converged for epsilon
+
+do
+
+cd "$output_path"/e"$iEpsref"s"$iSigref" || exit # Must be in correct directory for python script and file generation
+
+echo "$iteration" > iEps_iteration
+
+python "$scripts_path"/single_iteration_step_eps.py
+
+conv_MBAR=$(<conv_MBAR)
+
+eps_it=$(<eps_it_"$iteration")
+echo "$eps_it" >> eps_all
+sig_it="$sigma_guess" #Sigma is held constant
+
+# Perform the rerun simulations 
+
+
+echo Reference Epsilon = "$eps_guess" sigma = "$sigma_guess"
+echo MBAR rerun Epsilon = "$eps_it" sigma = "$sig_it"
+sleep 2s
+
+####
+
+# copy and set force field files
+
+cd "$output_path"/e"$iEpsref"s"$iSigref" || exit #Must cd back 
+
+echo "$eps_it" "$sig_it" >> eps_Sigma_all
+
+cp "$input_path"/ethane_temp.top ethane_e"$iEpsref"s"$iSigref"it"$iteration".top
+sed -i -e s/some_epsilon/"$eps_it"/ ethane_e"$iEpsref"s"$iSigref"it"$iteration".top 
+sed -i -e s/some_sigma/"$sig_it"/ ethane_e"$iEpsref"s"$iSigref"it"$iteration".top
+
+cp "$scripts_path"/EthaneRerunITIC_all EthaneRerunITIC_all
+
+sed -i -e s/some_compound_top/"${Compound}"/ EthaneRerunITIC_all
+sed -i -e s/some_model_top/"${Model}"/ EthaneRerunITIC_all
+sed -i -e s/some_iEpsSig_top/"${iteration}"/ EthaneRerunITIC_all
+sed -i -e s/some_iRefSig_top/"${iSigref}"/ EthaneRerunITIC_all
+sed -i -e s/some_iRefEps_top/"${iEpsref}"/ EthaneRerunITIC_all
+sed -i -e s@some_scripts_path_top@"$scripts_path"@ EthaneRerunITIC_all
+sed -i -e s@some_input_path_top@"$input_path"@ EthaneRerunITIC_all
+sed -i -e s@some_output_path_top@"$output_path"@ EthaneRerunITIC_all
+
+if [ $iEpsref -ge 1 ] #If you have already rerun (i.e. just rerunning the optimization)
+
+then
+
+./EthaneRerunITIC_all
+
+fi
+
+# Perform MBAR and calculate objective function
+
+cd "$output_path"/e"$iEpsref"s"$iSigref" || exit #Must cd back to original location for python script
+
+python "$scripts_path"/objective_from_MBAR.py
+
+F_new=$(<F_it_"$iteration")
+
+echo "$F_new" >> F_all
+
+iteration=$((iteration + 1))
+
+done #for while loop
+
+eps_optimal=$(<eps_optimal)
+iEpsref=$((iEpsref + 1))
+conv_eps=$(<conv_eps)
+#conv_eps=1 #If you just want to do a single iteration, for practice
+
+eps_guess=$eps_optimal
+
+echo "$eps_guess"
+echo "$conv_eps"
+
+#done #for iteration
+
+#done #for iEpsref of direct simulations
+
+done #for while loop of direct simulations
+
+done #for loop of sigmas
+
+exit 0
+
+#######
+
