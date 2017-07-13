@@ -99,7 +99,6 @@ def GOLDEN(AX,BX,CX,TOL):
     X0 = AX
     X3 = CX
     iRerun=0
-    conv_MBAR=False
     if np.abs(CX-BX) > np.abs(BX-AX):
         X1 = BX
         X2 = BX + C_ratio*(CX-BX)
@@ -121,8 +120,6 @@ def GOLDEN(AX,BX,CX,TOL):
         f.write('\n'+str(F1))
         f.close()
 
-    #F1 = rerun_GROMACS(X1)
-    #F2 = rerun_GROMACS(X2) 
     print(X0,X1,X2,X3)
     while np.abs(X3-X0) > TOL*(np.abs(X1)+np.abs(X2)):
     #for i in np.arange(0,50):
@@ -393,124 +390,6 @@ def MBAR_estimates(eps,iRerun):
         f.close()
     
     return U_rerun, dU_rerun, P_rerun, dP_rerun, RP_U_depN, RP_P
-    
-#    F_rerun = objective(RP_U_depN, RP_P, U_rerun,P_rerun)#,dU_rerun,dP_rerun)
-#    #print(F_rerun)
-#    
-#    f = open('F_it_'+str(iRerun),'w')
-#    
-#    f.write(str(F_rerun))
-#    f.close()
-#    
-#    if iRerun > 1:
-#    
-#        F2 = np.loadtxt('F2_previous')
-#        F1 = np.loadtxt('F1_previous')
-#    
-#        if F2 < F1:
-#    
-#            F2 = F_rerun
-#            
-#            f = open('F2_current','w')
-#    
-#            f.write(str(F2))
-#            f.close()
-#    
-#        else:
-#    
-#            F1 = F_rerun
-#            
-#            f = open('F1_current','w')
-#    
-#            f.write(str(F1))
-#            f.close()
-#    
-#    else:
-#    
-#        swap_initial = np.loadtxt('swap_initial')
-#    
-#        if iRerun == 0:
-#    
-#            if swap_initial == 0:
-#            
-#                F1 = F_rerun
-#                
-#                f = open('F1_current','w')
-#            
-#                f.write(str(F1))
-#                f.close()
-#               
-#            elif swap_initial == 1:
-#            
-#                F2 = F_rerun
-#                
-#                f = open('F2_current','w')
-#            
-#                f.write(str(F2))
-#                f.close()
-#            
-#        elif iRerun == 1:
-#            
-#            if swap_initial == 0:
-#    
-#                F2 = F_rerun
-#                
-#                f = open('F2_current','w')
-#        
-#                f.write(str(F2))
-#                f.close()
-#       
-#            elif swap_initial == 1:
-#    
-#                F1 = F_rerun
-#                
-#                f = open('F1_current','w')
-#        
-#                f.write(str(F1))
-#                f.close()
-#    
-#    
-#    
-#    
-#    
-#    conv_MBAR = np.loadtxt('conv_MBAR')
-#    
-#    if conv_MBAR > 0:
-#    
-#        F_all = np.loadtxt('F_all',skiprows=1)
-#        F_all = np.append(F_all,F_rerun) #Account for the fact that F_all does not yet have the most recent F value
-#    
-#        #F_current = F_rerun
-#        #F_previous = np.loadtxt('F_it_'+str(iRerun-1))
-#    
-#        #eps_previous = np.loadtxt('eps_it_'+str(iRerun-1))
-#        #eps_current = np.loadtxt('eps_it_'+str(iRerun))
-#     
-#        #if F_current < F_previous:
-#        #    eps_optimal = eps_current
-#        #else:
-#        #    eps_optimal = eps_previous
-#    
-#        eps_all = np.loadtxt('eps_all',skiprows=1)
-#        eps_optimal = eps_all[np.argmin(F_all)]
-#    
-#        f = open('eps_optimal','w')
-#    
-#        f.write(str(eps_optimal))
-#        f.close()
-#    
-#        conv_eps = 0
-#    
-#        if iEpsRef > 0:
-#            eps_opt_previous = np.loadtxt('../e'+str(iEpsRef-1)+'s'+str(iSigmaRef)+'/eps_optimal')
-#            eps_opt_current = eps_optimal
-#            TOL_eps = np.loadtxt('TOL_eps')
-#            if np.abs(eps_opt_previous - eps_opt_current) < TOL_eps:
-#                conv_eps = 1
-#        
-#        f = open('conv_eps','w')
-#        f.write(str(conv_eps))
-#        f.close()
 
 print(os.getcwd())
 time.sleep(2)
