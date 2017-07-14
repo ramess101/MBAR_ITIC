@@ -9,6 +9,7 @@ import CoolProp.CoolProp as CP
 import subprocess
 import time
 from scipy.optimize import minimize, minimize_scalar
+import scipy.integrate as integrate
 
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
@@ -33,7 +34,7 @@ def U_to_u(U,T): #Converts internal energy into reduced potential energy in NVT 
     u = beta*(U)
     return u
 
-def REFPROP_UP(TSim,rho_mass,NmolSim,compound,iEpsRef,iSigmaRef):
+def REFPROP_UP(TSim,rho_mass,NmolSim,compound):
     RP_U = CP.PropsSI('UMOLAR','T',TSim,'D',rho_mass,'REFPROP::'+compound) / 1e3 #[kJ/mol]
     RP_U_ig = CP.PropsSI('UMOLAR','T',TSim,'D',0,'REFPROP::'+compound) / 1e3 #[kJ/mol]
     RP_U_dep = RP_U - RP_U_ig
@@ -101,9 +102,9 @@ def objective(eps,weighted=False):
 def objective_ITIC(eps): 
     global iRerun
     
-    USim, dUSim, PSim, dPSim, RP_U_depN, RP_P, TSim, rhoSim, ZSim = MBAR_estimates(eps,iRerun)
+    USim, dUSim, PSim, dPSim, RP_U_depN, RP_P, ZSim = MBAR_estimates(eps,iRerun)
     
-    Tsat, rhoLSim, PsatSim = ITIC_calc(TSim, rhoSim, USim, ZSim)
+    Tsat, rhoLSim, PsatSim = ITIC_calc(USim, ZSim)
 
     RP_rhoL = CP.PropsSI('D','T',Tsat,'Q',0,'REFPROP::'+compound) #[kg/m3]   
     RP_rhov = CP.PropsSI('D','T',Tsat,'Q',1,'REFPROP::'+compound) #[kg/m3]
@@ -127,12 +128,131 @@ def objective_ITIC(eps):
     iRerun += 1
     
     return SSE
+
+    
+ITIC = np.array(['Isotherm', 'Isochore'])
+Temp_ITIC = {'Isochore':[],'Isotherm':[]}
+rho_ITIC = {'Isochore':[],'Isotherm':[]}
+Nmol = {'Isochore':[],'Isotherm':[]}
+Temps = {'Isochore':[],'Isotherm':[]}
+rhos_ITIC = {'Isochore':[],'Isotherm':[]}
+nTemps = {'Isochore':[],'Isotherm':[]}
+nrhos = {'Isochore':[],'Isotherm':[]}
+
+Temp_sim = np.empty(0)
+rho_sim = np.empty(0)
+Nmol_sim = np.empty(0)
+
+#Extract state points from ITIC files
+# Move this outside of this loop so that we can just call it once, also may be easier for REFPROP
+# Then again, with ITIC in the future Tsat will depend on force field
+
+for run_type in ITIC:
+
+    run_type_Settings = np.loadtxt(run_type+'Settings.txt',skiprows=1)
+
+    Nmol[run_type] = run_type_Settings[:,0]
+    Lbox = run_type_Settings[:,1] #[nm]
+    Temp_ITIC[run_type] = run_type_Settings[:,2] #[K]
+    Vol = Lbox**3 #[nm3]
+    rho_ITIC[run_type] = Nmol[run_type] / Vol #[molecules/nm3]
+    rhos_ITIC[run_type] = np.unique(rho_ITIC[run_type])
+    nrhos[run_type] = len(rhos_ITIC[run_type])
+    Temps[run_type] = np.unique(Temp_ITIC[run_type])
+    nTemps[run_type] = len(Temps[run_type]) 
+ 
+    Temp_sim = np.append(Temp_sim,Temp_ITIC[run_type])
+    rho_sim = np.append(rho_sim,rho_ITIC[run_type])
+    Nmol_sim = np.append(Nmol_sim,Nmol[run_type])
+
+nTemps['Isochore']=2 #Need to figure out how to get this without hardcoding
+    
+rho_mass = rho_sim * Mw / N_A * nm3_to_m3 #[kg/m3]
+rhos_mass_ITIC = rhos_ITIC * Mw / N_A * nm3_to_m3 #[kg/m3]
+
+#Generate REFPROP values, prints out into a file in the correct directory
+
+RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
+
+###
+
+nStates = len(Temp_sim)
+
+#rho_mass = rho_sim * Mw / N_A * nm3_to_ml #[gm/ml]
+
+def ITIC_calc(USim,ZSim):
+    #global Temp_sim, rho_mass, Temp_ITIC, rhos_mass_ITIC, nrhos, Mw
+    Temp_IT = Temp_ITIC['Isotherm']
+    rho_IT = rhos_mass_ITIC['Isotherm']
+    Z1rho = (ZSim[0:len(rho_IT)]-1.)/rho_IT #[m3/kg]
+    
+    Z1rho_hat = np.poly1d(np.polyfit(rho_IT,Z1rho,4)) #4th order polynomial fit
+    
+    #Since REFPROP won't give me B2 above TC for some reason, I will simply 
+    RP_Adep_IT_0 = CP.PropsSI('ALPHAR','T',Temp_IT,'D',rho_IT[0],'REFPROP::'+compound)
+    
+    Adep_IT = lambda rhoL: integrate.quad(Z1rho_hat,rho_IT[0],rhoL)[0] + RP_Adep_IT_0
+    
+    beta_IT = 1./Temp_IT
+                                         
+    Tsat = np.zeros(nrhos['Isochore']) 
+    Psat = np.zeros(nrhos['Isochore'])                                
+    rhoL = np.zeros(nrhos['Isochore'])
+                                         
+    for iIC, rho_IC in enumerate(rhos_mass_ITIC['Isochore']):
+        Temp_IC = Temp_sim[rho_mass == rho_IC]
+        U_IC = USim[rho_mass == rho_IC]
+        Z_IC = ZSim[rho_mass == rho_IC]
+        
+        beta_IC = 1./Temp_IC
+                                          
+        #U_IC = UT_IC * Temp_IC / 1000.
+        UT_IC = U_IC / Temp_IC     
+        
+        p_Z_IC = np.polyfit(beta_IC,Z_IC,2)
+        p_UT_IC = np.polyfit(beta_IC,UT_IC,1)
+        Z_IC_hat = np.poly1d(p_Z_IC)
+        UT_IC_hat = np.poly1d(p_UT_IC)
+        U_IC_hat = lambda beta: UT_IC_hat(beta)/beta                                     
+                                             
+        beta_sat = np.roots(p_Z_IC).max() #We want the positive root
+        Adep_IC = integrate.quad(U_IC_hat,beta_IT,beta_sat)[0]
+        Adep_ITIC = Adep_IT(rho_IC) + Adep_IC
+        
+        print(Adep_IT(rho_IC))
+        print(beta_sat)
+        print(Adep_IC)
+        print(Adep_ITIC)
+        
+        Z_L = Z_IC_hat(beta_sat) # Should be 0, but really we should iteratively solve for self-consistency
+        
+        Tsat[iIC] = 1./beta_sat
+        rhoL[iIC] = rho_IC
+        
+        B2 = CP.PropsSI('BVIRIAL','T',Tsat,'Q',1,'REFPROP::'+compound) #[m3/mol]
+        B2 /= Mw #[m3/kg]
+        B3 = CP.PropsSI('CVIRIAL','T',Tsat,'Q',1,'REFPROP::'+compound) #[m3/mol]2
+        B3 /= Mw**2 #[m3/kg]
+        eq2_14 = lambda(rhov): Adep_ITIC + Z_L - 1 + np.log(rhoL/rhov) - 2*B2*rhov + 1.5*B3*rhov**2
+        eq2_15 = lambda(rhov): rhov - rhoL*np.exp(Adep_ITIC + Z_L - 1 - 2*B2*rhov - 1.5*B3*rhov**2)               
+        SE = lambda rhov: (eq2_15(rhov) - 0.)**2
+        guess = (0.1,)
+        rho_c_RP = CP.PropsSI('RHOCRIT','REFPROP::'+compound)
+        bnds = ((0., rho_c_RP),)
+        opt = minimize(SE,guess,bounds=bnds)
+        rhov = opt.x[0] #[kg/m3]
+        
+        Zv = (1. + B2*rhov + B3*rhov**2)
+        Psat[iIC] = Zv * rhov * R_g * Tsat / Mw #[kPa]
+        Psat[iIC] /= 100. #[bar]
+        
+    return Tsat, rhoL, Psat
           
 iEpsRef = int(np.loadtxt('../iEpsref'))
 iSigmaRef = int(np.loadtxt('../iSigref'))
 
 def MBAR_estimates(eps,iRerun):
-    
+        
     #eps = eps.tolist()
 
     f = open('eps_it','w')
@@ -160,57 +280,7 @@ def MBAR_estimates(eps,iRerun):
     nSets = len(iSets)
     
     N_k = [0]*nSets #This makes a list of nSets elements, need to be 0 not 0. for MBAR to work
-    
-    
-    ITIC = np.array(['Isotherm', 'Isochore'])
-    Temp_ITIC = {'Isochore':[],'Isotherm':[]}
-    rho_ITIC = {'Isochore':[],'Isotherm':[]}
-    Nmol = {'Isochore':[],'Isotherm':[]}
-    Temps = {'Isochore':[],'Isotherm':[]}
-    rhos = {'Isochore':[],'Isotherm':[]}
-    nTemps = {'Isochore':[],'Isotherm':[]}
-    nrhos = {'Isochore':[],'Isotherm':[]}
-    
-    Temp_sim = np.empty(0)
-    rho_sim = np.empty(0)
-    Nmol_sim = np.empty(0)
-    
-    #Extract state points from ITIC files
-    # Move this outside of this loop so that we can just call it once, also may be easier for REFPROP
-    # Then again, with ITIC in the future Tsat will depend on force field
-    
-    for run_type in ITIC:
-    
-        run_type_Settings = np.loadtxt(run_type+'Settings.txt',skiprows=1)
-    
-        Nmol[run_type] = run_type_Settings[:,0]
-        Lbox = run_type_Settings[:,1] #[nm]
-        Temp_ITIC[run_type] = run_type_Settings[:,2] #[K]
-        Vol = Lbox**3 #[nm3]
-        rho_ITIC[run_type] = Nmol[run_type] / Vol #[molecules/nm3]
-        rhos[run_type] = np.unique(rho_ITIC[run_type])
-        nrhos[run_type] = len(rhos[run_type])
-        Temps[run_type] = np.unique(Temp_ITIC[run_type])
-        nTemps[run_type] = len(Temps[run_type]) 
-     
-        Temp_sim = np.append(Temp_sim,Temp_ITIC[run_type])
-        rho_sim = np.append(rho_sim,rho_ITIC[run_type])
-        Nmol_sim = np.append(Nmol_sim,Nmol[run_type])
-    
-    nTemps['Isochore']=2 #Need to figure out how to get this without hardcoding
         
-    rho_mass = rho_sim * Mw / N_A * nm3_to_m3 #[kg/m3]
-    
-    #Generate REFPROP values, prints out into a file in the correct directory
-    
-    RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound,iEpsRef,iSigmaRef)
-    
-    ###
-    
-    nStates = len(Temp_sim)
-    
-    #rho_mass = rho_sim * Mw / N_A * nm3_to_ml #[gm/ml]
-    
     # Analyze snapshots
     
     U_MBAR = np.empty([nStates,nSets])
@@ -364,7 +434,7 @@ def MBAR_estimates(eps,iRerun):
     
         f.close()
     
-    return U_rerun, dU_rerun, P_rerun, dP_rerun, RP_U_depN, RP_P, Temp_sim, rho_sim, Z_rerun
+    return U_rerun, dU_rerun, P_rerun, dP_rerun, RP_U_depN, RP_P, Z_rerun
 
 print(os.getcwd())
 time.sleep(2)
