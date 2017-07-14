@@ -13,11 +13,11 @@ import scipy.integrate as integrate
 
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
-compound='ETHANE'
+#compound='ETHANE'
+compound='ethane'
+#REFPROP_path='/home/ram9/REFPROP-cmake/build/' #Change this for a different system
 
-REFPROP_path='/home/ram9/REFPROP-cmake/build/' #Change this for a different system
-
-CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH,REFPROP_path)
+#CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH,REFPROP_path)
 
 Mw = CP.PropsSI('M','REFPROP::'+compound) #[kg/mol]
 
@@ -102,9 +102,10 @@ def objective(eps,weighted=False):
 def objective_ITIC(eps): 
     global iRerun
     
-    USim, dUSim, PSim, dPSim, RP_U_depN, RP_P, ZSim = MBAR_estimates(eps,iRerun)
-    
-    Tsat, rhoLSim, PsatSim = ITIC_calc(USim, ZSim)
+    #USim, dUSim, PSim, dPSim, RP_U_depN, RP_P, ZSim = MBAR_estimates(eps,iRerun)
+    USim = np.array([-951.717582,-1772.47135,-2472.33725,-3182.829818,-3954.981049,-4348.541215,-4718.819719,-5048.007819,-5302.871063,-6305.502455,-5993.535972,-5711.665352,-5475.703544,-5160.608038,-4988.807891,-4646.560864,-4519.582458,-4174.794714,-4071.662753])
+    ZSim = np.array([0.67064977,0.479303687,0.401264805,0.476499285,1.0267111,1.603610151,2.543291165,3.870781635,5.759734141,-0.431893514,3.077724536,-0.458331725,1.893955078,-0.454276082,1.119877239,-0.384795952,0.643115142,-0.275134489,0.378439128])
+    Tsat, rhoLSim, PsatSim, rhovSim = ITIC_calc(USim, ZSim)
 
     RP_rhoL = CP.PropsSI('D','T',Tsat,'Q',0,'REFPROP::'+compound) #[kg/m3]   
     RP_rhov = CP.PropsSI('D','T',Tsat,'Q',1,'REFPROP::'+compound) #[kg/m3]
@@ -136,6 +137,7 @@ rho_ITIC = {'Isochore':[],'Isotherm':[]}
 Nmol = {'Isochore':[],'Isotherm':[]}
 Temps = {'Isochore':[],'Isotherm':[]}
 rhos_ITIC = {'Isochore':[],'Isotherm':[]}
+rhos_mass_ITIC = {'Isochore':[],'Isotherm':[]}
 nTemps = {'Isochore':[],'Isotherm':[]}
 nrhos = {'Isochore':[],'Isotherm':[]}
 
@@ -157,6 +159,7 @@ for run_type in ITIC:
     Vol = Lbox**3 #[nm3]
     rho_ITIC[run_type] = Nmol[run_type] / Vol #[molecules/nm3]
     rhos_ITIC[run_type] = np.unique(rho_ITIC[run_type])
+    rhos_mass_ITIC[run_type] = rhos_ITIC[run_type] * Mw / N_A * nm3_to_m3 #[kg/m3]
     nrhos[run_type] = len(rhos_ITIC[run_type])
     Temps[run_type] = np.unique(Temp_ITIC[run_type])
     nTemps[run_type] = len(Temps[run_type]) 
@@ -168,7 +171,6 @@ for run_type in ITIC:
 nTemps['Isochore']=2 #Need to figure out how to get this without hardcoding
     
 rho_mass = rho_sim * Mw / N_A * nm3_to_m3 #[kg/m3]
-rhos_mass_ITIC = rhos_ITIC * Mw / N_A * nm3_to_m3 #[kg/m3]
 
 #Generate REFPROP values, prints out into a file in the correct directory
 
@@ -182,9 +184,13 @@ nStates = len(Temp_sim)
 
 def ITIC_calc(USim,ZSim):
     #global Temp_sim, rho_mass, Temp_ITIC, rhos_mass_ITIC, nrhos, Mw
-    Temp_IT = Temp_ITIC['Isotherm']
-    rho_IT = rhos_mass_ITIC['Isotherm']
-    Z1rho = (ZSim[0:len(rho_IT)]-1.)/rho_IT #[m3/kg]
+    Temp_IT = Temp_ITIC['Isotherm'].astype(float)[0]
+    rho_IT = rhos_mass_ITIC['Isotherm'].astype(float)
+    Z1rho = ((ZSim[0:len(rho_IT)]-1.)/rho_IT).astype(float) #[m3/kg]
+    
+    #print(Temp_IT)
+    #print(rho_IT)
+    #print(Z1rho)
     
     Z1rho_hat = np.poly1d(np.polyfit(rho_IT,Z1rho,4)) #4th order polynomial fit
     
@@ -194,12 +200,13 @@ def ITIC_calc(USim,ZSim):
     Adep_IT = lambda rhoL: integrate.quad(Z1rho_hat,rho_IT[0],rhoL)[0] + RP_Adep_IT_0
     
     beta_IT = 1./Temp_IT
-                                         
+                                       
     Tsat = np.zeros(nrhos['Isochore']) 
     Psat = np.zeros(nrhos['Isochore'])                                
     rhoL = np.zeros(nrhos['Isochore'])
+    rhov = np.zeros(nrhos['Isochore'])
                                          
-    for iIC, rho_IC in enumerate(rhos_mass_ITIC['Isochore']):
+    for iIC, rho_IC in enumerate(rhos_mass_ITIC['Isochore'].astype(float)):
         Temp_IC = Temp_sim[rho_mass == rho_IC]
         U_IC = USim[rho_mass == rho_IC]
         Z_IC = ZSim[rho_mass == rho_IC]
@@ -207,7 +214,12 @@ def ITIC_calc(USim,ZSim):
         beta_IC = 1./Temp_IC
                                           
         #U_IC = UT_IC * Temp_IC / 1000.
-        UT_IC = U_IC / Temp_IC     
+        UT_IC = U_IC / Temp_IC  
+        
+        #print(Temp_IC)
+        #print(U_IC)
+        #print(Z_IC)
+        #print(beta_IC)
         
         p_Z_IC = np.polyfit(beta_IC,Z_IC,2)
         p_UT_IC = np.polyfit(beta_IC,UT_IC,1)
@@ -216,37 +228,48 @@ def ITIC_calc(USim,ZSim):
         U_IC_hat = lambda beta: UT_IC_hat(beta)/beta                                     
                                              
         beta_sat = np.roots(p_Z_IC).max() #We want the positive root
+        
+        #print(U_IC_hat(beta_IT))
+        #print(beta_IT)
+        #print(beta_sat)
+                           
         Adep_IC = integrate.quad(U_IC_hat,beta_IT,beta_sat)[0]
         Adep_ITIC = Adep_IT(rho_IC) + Adep_IC
         
-        print(Adep_IT(rho_IC))
-        print(beta_sat)
-        print(Adep_IC)
-        print(Adep_ITIC)
+        #print(Adep_IT(rho_IC))
+        #print(beta_sat)
+        #print(Adep_IC)
+        #print(Adep_ITIC)
         
         Z_L = Z_IC_hat(beta_sat) # Should be 0, but really we should iteratively solve for self-consistency
         
         Tsat[iIC] = 1./beta_sat
         rhoL[iIC] = rho_IC
+            
+        #print(Tsat)
+        #print(rhoL)
+        #print(Psat)
         
-        B2 = CP.PropsSI('BVIRIAL','T',Tsat,'Q',1,'REFPROP::'+compound) #[m3/mol]
+        B2 = CP.PropsSI('BVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]
         B2 /= Mw #[m3/kg]
-        B3 = CP.PropsSI('CVIRIAL','T',Tsat,'Q',1,'REFPROP::'+compound) #[m3/mol]2
+        B3 = CP.PropsSI('CVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]2
         B3 /= Mw**2 #[m3/kg]
-        eq2_14 = lambda(rhov): Adep_ITIC + Z_L - 1 + np.log(rhoL/rhov) - 2*B2*rhov + 1.5*B3*rhov**2
-        eq2_15 = lambda(rhov): rhov - rhoL*np.exp(Adep_ITIC + Z_L - 1 - 2*B2*rhov - 1.5*B3*rhov**2)               
+        eq2_14 = lambda(rhov): Adep_ITIC + Z_L - 1 + np.log(rhoL[iIC]/rhov) - 2*B2*rhov + 1.5*B3*rhov**2
+        eq2_15 = lambda(rhov): rhov - rhoL[iIC]*np.exp(Adep_ITIC + Z_L - 1 - 2*B2*rhov - 1.5*B3*rhov**2)               
         SE = lambda rhov: (eq2_15(rhov) - 0.)**2
         guess = (0.1,)
         rho_c_RP = CP.PropsSI('RHOCRIT','REFPROP::'+compound)
         bnds = ((0., rho_c_RP),)
         opt = minimize(SE,guess,bounds=bnds)
-        rhov = opt.x[0] #[kg/m3]
+        rhov[iIC] = opt.x[0] #[kg/m3]
         
-        Zv = (1. + B2*rhov + B3*rhov**2)
-        Psat[iIC] = Zv * rhov * R_g * Tsat / Mw #[kPa]
+        Zv = (1. + B2*rhov[iIC] + B3*rhov[iIC]**2)
+        Psat[iIC] = Zv * rhov[iIC] * R_g * Tsat[iIC] / Mw #[kPa]
         Psat[iIC] /= 100. #[bar]
         
-    return Tsat, rhoL, Psat
+    return Tsat, rhoL, Psat, rhov
+
+print(objective_ITIC(1.))
           
 iEpsRef = int(np.loadtxt('../iEpsref'))
 iSigmaRef = int(np.loadtxt('../iSigref'))
@@ -456,7 +479,7 @@ TOL = np.loadtxt('TOL_MBAR')
 
 bnds = ((eps_low,eps_high),)
 
-sol = minimize(objective,eps_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-3,'ftol':1}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
+sol = minimize(objective_ITIC,eps_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-3,'ftol':1}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
 eps_opt = sol.x[0]
 
 f = open('eps_optimal','w')
