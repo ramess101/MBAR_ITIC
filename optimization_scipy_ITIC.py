@@ -164,10 +164,10 @@ def objective_ITIC(eps):
     
     Tsat, rhoLSim, PsatSim, rhovSim = ITIC_calc(USim, ZSim)
     
-    print(Tsat)
-    print(rhoLSim)
-    print(PsatSim)
-    print(rhovSim)
+    #print(Tsat)
+    #print(rhoLSim)
+    #print(PsatSim)
+    #print(rhovSim)
 
     RP_rhoL = CP.PropsSI('D','T',Tsat,'Q',0,'REFPROP::'+compound) #[kg/m3]   
     RP_rhov = CP.PropsSI('D','T',Tsat,'Q',1,'REFPROP::'+compound) #[kg/m3]
@@ -194,8 +194,8 @@ def objective_ITIC(eps):
     
     iRerun += 1
     
-    print(RP_rhoL)
-    print(RP_Psat)
+    #print(RP_rhoL)
+    #print(RP_Psat)
     
     return SSE
 
@@ -588,13 +588,13 @@ C_ratio=1.-R_ratio
 def GOLDEN(AX,BX,CX,TOL):
     X0 = AX
     X3 = CX
-    iRerun=0
+    #iRerun=0
     if np.abs(CX-BX) > np.abs(BX-AX):
         X1 = BX
         X2 = BX + C_ratio*(CX-BX)
-        F1 = objective(X1,iRerun)
-        iRerun += 1
-        F2 = objective(X2,iRerun)
+        F1 = objective_ITIC(X1)
+        #iRerun += 1
+        F2 = objective_ITIC(X2)
         f = open('F_all','a')
         f.write('\n'+str(F1))
         f.write('\n'+str(F2))
@@ -602,9 +602,9 @@ def GOLDEN(AX,BX,CX,TOL):
     else:
         X2 = BX
         X1 = BX - C_ratio*(BX-AX)
-        F2 = objective(X2,iRerun)
-        iRerun += 1
-        F1 = objective(X1,iRerun)
+        F2 = objective_ITIC(X2)
+        #iRerun += 1
+        F1 = objective_ITIC(X1)
         f = open('F_all','a')
         f.write('\n'+str(F2))
         f.write('\n'+str(F1))
@@ -619,7 +619,7 @@ def GOLDEN(AX,BX,CX,TOL):
             X2 = R_ratio*X1 + C_ratio*X3
             F1 = F2
             eps_it = X2
-            F2 = objective(X2,iRerun)
+            F2 = objective_ITIC(X2)
             F_it = F2
             #print(X0,X1,X2,X3)
         else:
@@ -628,10 +628,10 @@ def GOLDEN(AX,BX,CX,TOL):
             X1 = R_ratio*X2 + C_ratio*X0
             F2 = F1
             eps_it = X1
-            F1 = objective(X1,iRerun)
+            F1 = objective_ITIC(X1)
             F_it = F1
             #print(X0,X1,X2,X3)
-        iRerun += 1
+        #iRerun += 1
         
         f = open('F_ITIC_all','a')
         f.write('\n'+str(F_it))
@@ -646,7 +646,7 @@ def GOLDEN(AX,BX,CX,TOL):
     
     return XMIN, GOLDEN  
 
-eps_opt, F_opt = GOLDEN(eps_low,eps_guess,eps_high,TOL)
+eps_opt, F_opt = GOLDEN(np.array([eps_low]),np.array([eps_guess]),np.array([eps_high]),TOL)
 
 #sol = minimize(objective,np.array(eps_guess),method='BFGS')
 #eps_opt = sol.x[0]
