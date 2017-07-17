@@ -20,6 +20,8 @@ REFPROP_path='/home/ram9/REFPROP-cmake/build/' #Change this for a different syst
 CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH,REFPROP_path)
 
 Mw = CP.PropsSI('M','REFPROP::'+compound) #[kg/mol]
+RP_TC = CP.PropsSI('TCRIT','REFPROP::'+compound)
+RP_Tmin =  CP.PropsSI('TMIN','REFPROP::'+compound)
 
 
 # Physical constants
@@ -346,10 +348,14 @@ def ITIC_calc(USim,ZSim):
             #print(rhoL)
             #print(Psat)
             
-            B2 = CP.PropsSI('BVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]
-            B2 /= Mw #[m3/kg]
-            B3 = CP.PropsSI('CVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]2
-            B3 /= Mw**2 #[m3/kg]
+            if Tsat[iIC] > RP_Tmin and Tsat[iIC] < RP_TC:
+                B2 = CP.PropsSI('BVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]
+                B2 /= Mw #[m3/kg]
+                B3 = CP.PropsSI('CVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]2
+                B3 /= Mw**2 #[m3/kg]
+            else:
+                B2 = 0.
+                B3 = 0.
             eq2_14 = lambda(rhov): Adep_ITIC[iIC] + Z_L - 1 + np.log(rhoL[iIC]/rhov) - 2*B2*rhov + 1.5*B3*rhov**2
             eq2_15 = lambda(rhov): rhov - rhoL[iIC]*np.exp(Adep_ITIC[iIC] + Z_L - 1 - 2*B2*rhov - 1.5*B3*rhov**2)               
             SE = lambda rhov: (eq2_15(rhov) - 0.)**2
@@ -595,20 +601,20 @@ def GOLDEN(AX,BX,CX,TOL):
         F1 = objective_ITIC(X1)
         #iRerun += 1
         F2 = objective_ITIC(X2)
-        f = open('F_all','a')
-        f.write('\n'+str(F1))
-        f.write('\n'+str(F2))
-        f.close()
+        #f = open('F_all','a')
+        #f.write('\n'+str(F1))
+        #f.write('\n'+str(F2))
+        #f.close()
     else:
         X2 = BX
         X1 = BX - C_ratio*(BX-AX)
         F2 = objective_ITIC(X2)
         #iRerun += 1
         F1 = objective_ITIC(X1)
-        f = open('F_all','a')
-        f.write('\n'+str(F2))
-        f.write('\n'+str(F1))
-        f.close()
+        #f = open('F_all','a')
+        #f.write('\n'+str(F2))
+        #f.write('\n'+str(F1))
+        #f.close()
 
     #print(X0,X1,X2,X3)
     while np.abs(X3-X0) > TOL*(np.abs(X1)+np.abs(X2)):
@@ -633,9 +639,9 @@ def GOLDEN(AX,BX,CX,TOL):
             #print(X0,X1,X2,X3)
         #iRerun += 1
         
-        f = open('F_ITIC_all','a')
-        f.write('\n'+str(F_it))
-        f.close()
+        #f = open('F_ITIC_all','a')
+        #f.write('\n'+str(F_it))
+        #f.close()
         
     if F1 < F2:
         GOLDEN = F1
