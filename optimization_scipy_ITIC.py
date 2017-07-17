@@ -29,6 +29,53 @@ nm3_to_m3 = 10**27
 bar_nm3_to_kJ_per_mole = 0.0602214086
 R_g = 8.3144598 / 1000. #[kJ/mol/K]
 
+#Read in the simulation specifications
+
+ITIC = np.array(['Isotherm', 'Isochore'])
+Temp_ITIC = {'Isochore':[],'Isotherm':[]}
+rho_ITIC = {'Isochore':[],'Isotherm':[]}
+Nmol = {'Isochore':[],'Isotherm':[]}
+Temps = {'Isochore':[],'Isotherm':[]}
+rhos_ITIC = {'Isochore':[],'Isotherm':[]}
+rhos_mass_ITIC = {'Isochore':[],'Isotherm':[]}
+nTemps = {'Isochore':[],'Isotherm':[]}
+nrhos = {'Isochore':[],'Isotherm':[]}
+
+Temp_sim = np.empty(0)
+rho_sim = np.empty(0)
+Nmol_sim = np.empty(0)
+
+#Extract state points from ITIC files
+# Move this outside of this loop so that we can just call it once, also may be easier for REFPROP
+# Then again, with ITIC in the future Tsat will depend on force field
+
+for run_type in ITIC:
+
+    run_type_Settings = np.loadtxt(run_type+'Settings.txt',skiprows=1)
+
+    Nmol[run_type] = run_type_Settings[:,0]
+    Lbox = run_type_Settings[:,1] #[nm]
+    Temp_ITIC[run_type] = run_type_Settings[:,2] #[K]
+    Vol = Lbox**3 #[nm3]
+    rho_ITIC[run_type] = Nmol[run_type] / Vol #[molecules/nm3]
+    rhos_ITIC[run_type] = np.unique(rho_ITIC[run_type])
+    rhos_mass_ITIC[run_type] = rhos_ITIC[run_type] * Mw / N_A * nm3_to_m3 #[kg/m3]
+    nrhos[run_type] = len(rhos_ITIC[run_type])
+    Temps[run_type] = np.unique(Temp_ITIC[run_type])
+    nTemps[run_type] = len(Temps[run_type]) 
+ 
+    Temp_sim = np.append(Temp_sim,Temp_ITIC[run_type])
+    rho_sim = np.append(rho_sim,rho_ITIC[run_type])
+    Nmol_sim = np.append(Nmol_sim,Nmol[run_type])
+
+nTemps['Isochore']=2 #Need to figure out how to get this without hardcoding
+    
+rho_mass = rho_sim * Mw / N_A * nm3_to_m3 #[kg/m3]
+
+nStates = len(Temp_sim)
+
+#rho_mass = rho_sim * Mw / N_A * nm3_to_ml #[gm/ml]
+
 def U_to_u(U,T): #Converts internal energy into reduced potential energy in NVT ensemble
     beta = 1./(R_g*T)
     u = beta*(U)
@@ -57,6 +104,11 @@ def REFPROP_UP(TSim,rho_mass,NmolSim,compound):
 
     return RP_U_depN, RP_P, RP_Z, RP_Z1rho
 
+#Generate REFPROP values, prints out into a file in the correct directory
+
+RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
+
+###
 
 def objective_old(RP_U_depN, RP_P, USim,PSim,dUSim=1.,dPSim=1.): 
     devU = (USim - RP_U_depN)/dUSim
@@ -103,24 +155,40 @@ def objective_ITIC(eps):
     global iRerun
     
     #USim, dUSim, PSim, dPSim, RP_U_depN, RP_P, ZSim = MBAR_estimates(eps,iRerun)
+    # From e0s0
     USim = np.array([-951.717582,-1772.47135,-2472.33725,-3182.829818,-3954.981049,-4348.541215,-4718.819719,-5048.007819,-5302.871063,-6305.502455,-5993.535972,-5711.665352,-5475.703544,-5160.608038,-4988.807891,-4646.560864,-4519.582458,-4174.794714,-4071.662753])
     ZSim = np.array([0.67064977,0.479303687,0.401264805,0.476499285,1.0267111,1.603610151,2.543291165,3.870781635,5.759734141,-0.431893514,3.077724536,-0.458331725,1.893955078,-0.454276082,1.119877239,-0.384795952,0.643115142,-0.275134489,0.378439128])
+    # From REFPROP
+    USim = RP_U_depN
+    ZSim = RP_Z
+    #USim, PSim, ZSim, Z1rhoSim = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
+    #USim = np.array([-0.742955704,-1.382310544,-1.954293134,-2.529838039,-3.141190987,-3.446631354,-3.733633231,-3.981584737,-4.167686607,-13.3816471,-8.727239468,-9.522223286,-6.729774885,-7.218892864,-5.460911451,-5.692389671,-4.558101709,-4.634012009,-3.87725385])
+    #ZSim = np.array([0.714490829,0.553913243,0.514096776,0.668209741,1.270751247,1.879832258,2.793348257,4.09053785,5.856279542,0.002878251,3.418694486,0.013918863,2.256705411,0.010014904,1.478057625,0.027713462,0.975758364,0.055557876,0.664544532])
     Tsat, rhoLSim, PsatSim, rhovSim = ITIC_calc(USim, ZSim)
+    
+    print(Tsat)
+    print(rhoLSim)
+    print(PsatSim)
+    print(rhovSim)
 
     RP_rhoL = CP.PropsSI('D','T',Tsat,'Q',0,'REFPROP::'+compound) #[kg/m3]   
     RP_rhov = CP.PropsSI('D','T',Tsat,'Q',1,'REFPROP::'+compound) #[kg/m3]
-    RP_Psat = CP.PropsSI('P','T',Tsat,'Q',1,'REFPROP::'+compound)/100000 #[bar]
+    RP_Psat = CP.PropsSI('P','T',Tsat,'Q',1,'REFPROP::'+compound)/100000. #[bar]
 
     devrhoL = rhoLSim - RP_rhoL
     devPsat = PsatSim - RP_Psat
+    devrhov = rhovSim - RP_rhov
     
     SSErhoL = np.sum(np.power(devrhoL,2))
     SSEPsat = np.sum(np.power(devPsat,2)) 
+    SSErhov = np.sum(np.power(devrhov,2)) 
     SSE = 0
     SSE += SSErhoL
     #SSE += SSEPsat
+    #SSE += SSErhov
     #print(devrhoL)
     #print(devPsat)
+    #print(devrhov)
     
     f = open('F_ITIC_all','a')
     f.write('\n'+str(SSE))
@@ -128,59 +196,10 @@ def objective_ITIC(eps):
     
     iRerun += 1
     
+    print(RP_rhoL)
+    print(RP_Psat)
+    
     return SSE
-
-    
-ITIC = np.array(['Isotherm', 'Isochore'])
-Temp_ITIC = {'Isochore':[],'Isotherm':[]}
-rho_ITIC = {'Isochore':[],'Isotherm':[]}
-Nmol = {'Isochore':[],'Isotherm':[]}
-Temps = {'Isochore':[],'Isotherm':[]}
-rhos_ITIC = {'Isochore':[],'Isotherm':[]}
-rhos_mass_ITIC = {'Isochore':[],'Isotherm':[]}
-nTemps = {'Isochore':[],'Isotherm':[]}
-nrhos = {'Isochore':[],'Isotherm':[]}
-
-Temp_sim = np.empty(0)
-rho_sim = np.empty(0)
-Nmol_sim = np.empty(0)
-
-#Extract state points from ITIC files
-# Move this outside of this loop so that we can just call it once, also may be easier for REFPROP
-# Then again, with ITIC in the future Tsat will depend on force field
-
-for run_type in ITIC:
-
-    run_type_Settings = np.loadtxt(run_type+'Settings.txt',skiprows=1)
-
-    Nmol[run_type] = run_type_Settings[:,0]
-    Lbox = run_type_Settings[:,1] #[nm]
-    Temp_ITIC[run_type] = run_type_Settings[:,2] #[K]
-    Vol = Lbox**3 #[nm3]
-    rho_ITIC[run_type] = Nmol[run_type] / Vol #[molecules/nm3]
-    rhos_ITIC[run_type] = np.unique(rho_ITIC[run_type])
-    rhos_mass_ITIC[run_type] = rhos_ITIC[run_type] * Mw / N_A * nm3_to_m3 #[kg/m3]
-    nrhos[run_type] = len(rhos_ITIC[run_type])
-    Temps[run_type] = np.unique(Temp_ITIC[run_type])
-    nTemps[run_type] = len(Temps[run_type]) 
- 
-    Temp_sim = np.append(Temp_sim,Temp_ITIC[run_type])
-    rho_sim = np.append(rho_sim,rho_ITIC[run_type])
-    Nmol_sim = np.append(Nmol_sim,Nmol[run_type])
-
-nTemps['Isochore']=2 #Need to figure out how to get this without hardcoding
-    
-rho_mass = rho_sim * Mw / N_A * nm3_to_m3 #[kg/m3]
-
-#Generate REFPROP values, prints out into a file in the correct directory
-
-RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
-
-###
-
-nStates = len(Temp_sim)
-
-#rho_mass = rho_sim * Mw / N_A * nm3_to_ml #[gm/ml]
 
 def ITIC_calc(USim,ZSim):
     #global Temp_sim, rho_mass, Temp_ITIC, rhos_mass_ITIC, nrhos, Mw
@@ -199,27 +218,51 @@ def ITIC_calc(USim,ZSim):
     
     Adep_IT = lambda rhoL: integrate.quad(Z1rho_hat,rho_IT[0],rhoL)[0] + RP_Adep_IT_0
     
+    # Verifying that the curves look like they should                                     
+#    import matplotlib.pyplot as plt                                     
+#    rhoL_plot = np.linspace(0,600,100)
+#    Adep_plot = np.zeros(len(rhoL_plot))
+#    for i, rho in enumerate(rhoL_plot):
+#        Adep_plot[i] = Adep_IT(rho)
+#        
+#    rhoL_sim = rhos_mass_ITIC['Isochore'].astype(float)
+#    Adep_sim = np.zeros(len(rhoL_sim))    
+#    for i, rho in enumerate(rhoL_sim):
+#        Adep_sim[i] = Adep_IT(rho)
+#
+#    plt.plot(rhoL_plot,Adep_plot)
+#    plt.plot(rhoL_sim,Adep_sim,marker='o')
+#    plt.show()                                     
+    
     beta_IT = 1./Temp_IT
                                        
     Tsat = np.zeros(nrhos['Isochore']) 
     Psat = np.zeros(nrhos['Isochore'])                                
     rhoL = np.zeros(nrhos['Isochore'])
     rhov = np.zeros(nrhos['Isochore'])
+    Adep_IC = np.zeros(nrhos['Isochore'])
+    Adep_ITIC = np.zeros(nrhos['Isochore'])
                                          
     for iIC, rho_IC in enumerate(rhos_mass_ITIC['Isochore'].astype(float)):
         Temp_IC = Temp_sim[rho_mass == rho_IC]
         U_IC = USim[rho_mass == rho_IC]
         Z_IC = ZSim[rho_mass == rho_IC]
+        N_IC = Nmol_sim[rho_mass == rho_IC]
         
         beta_IC = 1./Temp_IC
                                           
         #U_IC = UT_IC * Temp_IC / 1000.
-        UT_IC = U_IC / Temp_IC  
+        UT_IC = U_IC / R_g/ Temp_IC/ N_IC
+        #UT_IC = U_IC * N_IC
         
         #print(Temp_IC)
         #print(U_IC)
         #print(Z_IC)
         #print(beta_IC)
+        #print(UT_IC)
+        #plt.scatter(beta_IC,UT_IC,label=rho_IC)
+        #plt.legend()
+        #plt.show()
         
         p_Z_IC = np.polyfit(beta_IC,Z_IC,2)
         p_UT_IC = np.polyfit(beta_IC,UT_IC,1)
@@ -233,8 +276,8 @@ def ITIC_calc(USim,ZSim):
         #print(beta_IT)
         #print(beta_sat)
                            
-        Adep_IC = integrate.quad(U_IC_hat,beta_IT,beta_sat)[0]
-        Adep_ITIC = Adep_IT(rho_IC) + Adep_IC
+        Adep_IC[iIC] = integrate.quad(U_IC_hat,beta_IT,beta_sat)[0]
+        Adep_ITIC[iIC] = Adep_IT(rho_IC) + Adep_IC[iIC]
         
         #print(Adep_IT(rho_IC))
         #print(beta_sat)
@@ -254,8 +297,8 @@ def ITIC_calc(USim,ZSim):
         B2 /= Mw #[m3/kg]
         B3 = CP.PropsSI('CVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]2
         B3 /= Mw**2 #[m3/kg]
-        eq2_14 = lambda(rhov): Adep_ITIC + Z_L - 1 + np.log(rhoL[iIC]/rhov) - 2*B2*rhov + 1.5*B3*rhov**2
-        eq2_15 = lambda(rhov): rhov - rhoL[iIC]*np.exp(Adep_ITIC + Z_L - 1 - 2*B2*rhov - 1.5*B3*rhov**2)               
+        eq2_14 = lambda(rhov): Adep_ITIC[iIC] + Z_L - 1 + np.log(rhoL[iIC]/rhov) - 2*B2*rhov + 1.5*B3*rhov**2
+        eq2_15 = lambda(rhov): rhov - rhoL[iIC]*np.exp(Adep_ITIC[iIC] + Z_L - 1 - 2*B2*rhov - 1.5*B3*rhov**2)               
         SE = lambda rhov: (eq2_15(rhov) - 0.)**2
         guess = (0.1,)
         rho_c_RP = CP.PropsSI('RHOCRIT','REFPROP::'+compound)
@@ -266,7 +309,15 @@ def ITIC_calc(USim,ZSim):
         Zv = (1. + B2*rhov[iIC] + B3*rhov[iIC]**2)
         Psat[iIC] = Zv * rhov[iIC] * R_g * Tsat[iIC] / Mw #[kPa]
         Psat[iIC] /= 100. #[bar]
-        
+    
+    #plt.plot(rhoL,Adep_IC,label='IC')
+    #plt.plot(rhoL,Adep_ITIC,label='ITIC')
+    #plt.legend()
+    #plt.show()
+    
+    #print(Adep_IC)
+    #print(Adep_ITIC)
+    
     return Tsat, rhoL, Psat, rhov
 
 print(objective_ITIC(1.))
