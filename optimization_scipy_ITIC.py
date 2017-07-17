@@ -159,8 +159,8 @@ def objective_ITIC(eps):
     USim = np.array([-951.717582,-1772.47135,-2472.33725,-3182.829818,-3954.981049,-4348.541215,-4718.819719,-5048.007819,-5302.871063,-6305.502455,-5993.535972,-5711.665352,-5475.703544,-5160.608038,-4988.807891,-4646.560864,-4519.582458,-4174.794714,-4071.662753])
     ZSim = np.array([0.67064977,0.479303687,0.401264805,0.476499285,1.0267111,1.603610151,2.543291165,3.870781635,5.759734141,-0.431893514,3.077724536,-0.458331725,1.893955078,-0.454276082,1.119877239,-0.384795952,0.643115142,-0.275134489,0.378439128])
     # From REFPROP
-    USim = RP_U_depN
-    ZSim = RP_Z
+    #USim = RP_U_depN
+    #ZSim = RP_Z
     #USim, PSim, ZSim, Z1rhoSim = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
     #USim = np.array([-0.742955704,-1.382310544,-1.954293134,-2.529838039,-3.141190987,-3.446631354,-3.733633231,-3.981584737,-4.167686607,-13.3816471,-8.727239468,-9.522223286,-6.729774885,-7.218892864,-5.460911451,-5.692389671,-4.558101709,-4.634012009,-3.87725385])
     #ZSim = np.array([0.714490829,0.553913243,0.514096776,0.668209741,1.270751247,1.879832258,2.793348257,4.09053785,5.856279542,0.002878251,3.418694486,0.013918863,2.256705411,0.010014904,1.478057625,0.027713462,0.975758364,0.055557876,0.664544532])
@@ -211,7 +211,7 @@ def ITIC_calc(USim,ZSim):
     #print(rho_IT)
     #print(Z1rho)
     
-    Z1rho_hat = np.poly1d(np.polyfit(rho_IT,Z1rho,4)) #4th order polynomial fit
+    Z1rho_hat = np.poly1d(np.polyfit(rho_IT,Z1rho,3)) #3rd or 4th order polynomial fit
     
     #Since REFPROP won't give me B2 above TC for some reason, I will simply 
     RP_Adep_IT_0 = CP.PropsSI('ALPHAR','T',Temp_IT,'D',rho_IT[0],'REFPROP::'+compound)
@@ -264,51 +264,114 @@ def ITIC_calc(USim,ZSim):
         #plt.legend()
         #plt.show()
         
-        p_Z_IC = np.polyfit(beta_IC,Z_IC,2)
-        p_UT_IC = np.polyfit(beta_IC,UT_IC,1)
-        Z_IC_hat = np.poly1d(p_Z_IC)
-        UT_IC_hat = np.poly1d(p_UT_IC)
-        U_IC_hat = lambda beta: UT_IC_hat(beta)/beta                                     
-                                             
-        beta_sat = np.roots(p_Z_IC).max() #We want the positive root
+#        p_Z_IC = np.polyfit(beta_IC,Z_IC-min(Z_IC),2) #Uses the REFPROP ZL
+#        p_UT_IC = np.polyfit(beta_IC,UT_IC,1)
+#        Z_IC_hat = np.poly1d(p_Z_IC)+min(Z_IC)
+#        UT_IC_hat = np.poly1d(p_UT_IC)
+#        U_IC_hat = lambda beta: UT_IC_hat(beta)/beta                                     
+#                                             
+#        beta_sat = np.roots(p_Z_IC).max() #We want the positive root
+#        
+#        #print(U_IC_hat(beta_IT))
+#        #print(beta_IT)
+#        #print(beta_sat)
+#                           
+#        Adep_IC[iIC] = integrate.quad(U_IC_hat,beta_IT,beta_sat)[0]
+#        Adep_ITIC[iIC] = Adep_IT(rho_IC) + Adep_IC[iIC]
+#        
+#        #print(Adep_IT(rho_IC))
+#        #print(beta_sat)
+#        #print(Adep_IC)
+#        #print(Adep_ITIC)
+#        
+#        Z_L = Z_IC_hat(beta_sat) # Should be 0, but really we should iteratively solve for self-consistency
+#        #Z_L = min(Z_IC)
+#        #print(Z_L)
+#        Tsat[iIC] = 1./beta_sat
+#        rhoL[iIC] = rho_IC
+#            
+#        #print(Tsat)
+#        #print(rhoL)
+#        #print(Psat)
+#        
+#        B2 = CP.PropsSI('BVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]
+#        B2 /= Mw #[m3/kg]
+#        B3 = CP.PropsSI('CVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]2
+#        B3 /= Mw**2 #[m3/kg]
+#        eq2_14 = lambda(rhov): Adep_ITIC[iIC] + Z_L - 1 + np.log(rhoL[iIC]/rhov) - 2*B2*rhov + 1.5*B3*rhov**2
+#        eq2_15 = lambda(rhov): rhov - rhoL[iIC]*np.exp(Adep_ITIC[iIC] + Z_L - 1 - 2*B2*rhov - 1.5*B3*rhov**2)               
+#        SE = lambda rhov: (eq2_15(rhov) - 0.)**2
+#        guess = (0.1,)
+#        rho_c_RP = CP.PropsSI('RHOCRIT','REFPROP::'+compound)
+#        bnds = ((0., rho_c_RP),)
+#        opt = minimize(SE,guess,bounds=bnds)
+#        rhov[iIC] = opt.x[0] #[kg/m3]
+#        
+#        Zv = (1. + B2*rhov[iIC] + B3*rhov[iIC]**2)
+#        Psat[iIC] = Zv * rhov[iIC] * R_g * Tsat[iIC] / Mw #[kPa]
+#        Psat[iIC] /= 100. #[bar]
         
-        #print(U_IC_hat(beta_IT))
-        #print(beta_IT)
-        #print(beta_sat)
-                           
-        Adep_IC[iIC] = integrate.quad(U_IC_hat,beta_IT,beta_sat)[0]
-        Adep_ITIC[iIC] = Adep_IT(rho_IC) + Adep_IC[iIC]
-        
-        #print(Adep_IT(rho_IC))
-        #print(beta_sat)
-        #print(Adep_IC)
-        #print(Adep_ITIC)
-        
-        Z_L = Z_IC_hat(beta_sat) # Should be 0, but really we should iteratively solve for self-consistency
-        
-        Tsat[iIC] = 1./beta_sat
-        rhoL[iIC] = rho_IC
+        ### Attempt to avoid relying on REFPROP ZL
+        conv_ZL = False
+        Z_L = 0.
+        iterations = 0
+        while not conv_ZL:
             
-        #print(Tsat)
-        #print(rhoL)
-        #print(Psat)
-        
-        B2 = CP.PropsSI('BVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]
-        B2 /= Mw #[m3/kg]
-        B3 = CP.PropsSI('CVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]2
-        B3 /= Mw**2 #[m3/kg]
-        eq2_14 = lambda(rhov): Adep_ITIC[iIC] + Z_L - 1 + np.log(rhoL[iIC]/rhov) - 2*B2*rhov + 1.5*B3*rhov**2
-        eq2_15 = lambda(rhov): rhov - rhoL[iIC]*np.exp(Adep_ITIC[iIC] + Z_L - 1 - 2*B2*rhov - 1.5*B3*rhov**2)               
-        SE = lambda rhov: (eq2_15(rhov) - 0.)**2
-        guess = (0.1,)
-        rho_c_RP = CP.PropsSI('RHOCRIT','REFPROP::'+compound)
-        bnds = ((0., rho_c_RP),)
-        opt = minimize(SE,guess,bounds=bnds)
-        rhov[iIC] = opt.x[0] #[kg/m3]
-        
-        Zv = (1. + B2*rhov[iIC] + B3*rhov[iIC]**2)
-        Psat[iIC] = Zv * rhov[iIC] * R_g * Tsat[iIC] / Mw #[kPa]
-        Psat[iIC] /= 100. #[bar]
+            p_Z_IC = np.polyfit(beta_IC,Z_IC-Z_L,2)
+            p_UT_IC = np.polyfit(beta_IC,UT_IC,1)
+            Z_IC_hat = np.poly1d(p_Z_IC)+Z_L
+            UT_IC_hat = np.poly1d(p_UT_IC)
+            U_IC_hat = lambda beta: UT_IC_hat(beta)/beta                                     
+                                                 
+            beta_sat = np.roots(p_Z_IC).max() #We want the positive root
+            
+            #print(U_IC_hat(beta_IT))
+            #print(beta_IT)
+            #print(beta_sat)
+                               
+            Adep_IC[iIC] = integrate.quad(U_IC_hat,beta_IT,beta_sat)[0]
+            Adep_ITIC[iIC] = Adep_IT(rho_IC) + Adep_IC[iIC]
+            
+            #print(Adep_IT(rho_IC))
+            #print(beta_sat)
+            #print(Adep_IC)
+            #print(Adep_ITIC)
+            
+            Z_L = Z_IC_hat(beta_sat) # Should be 0 for first iteration
+#            print('Z_L = '+str(Z_L))
+            Tsat[iIC] = 1./beta_sat
+            rhoL[iIC] = rho_IC
+                
+            #print(Tsat)
+            #print(rhoL)
+            #print(Psat)
+            
+            B2 = CP.PropsSI('BVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]
+            B2 /= Mw #[m3/kg]
+            B3 = CP.PropsSI('CVIRIAL','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[m3/mol]2
+            B3 /= Mw**2 #[m3/kg]
+            eq2_14 = lambda(rhov): Adep_ITIC[iIC] + Z_L - 1 + np.log(rhoL[iIC]/rhov) - 2*B2*rhov + 1.5*B3*rhov**2
+            eq2_15 = lambda(rhov): rhov - rhoL[iIC]*np.exp(Adep_ITIC[iIC] + Z_L - 1 - 2*B2*rhov - 1.5*B3*rhov**2)               
+            SE = lambda rhov: (eq2_15(rhov) - 0.)**2
+            guess = (0.1,)
+            rho_c_RP = CP.PropsSI('RHOCRIT','REFPROP::'+compound)
+            bnds = ((0., rho_c_RP),)
+            opt = minimize(SE,guess,bounds=bnds)
+            rhov[iIC] = opt.x[0] #[kg/m3]
+            
+            Zv = (1. + B2*rhov[iIC] + B3*rhov[iIC]**2)
+            Psat[iIC] = Zv * rhov[iIC] * R_g * Tsat[iIC] / Mw #[kPa]
+            Psat[iIC] /= 100. #[bar]
+            
+            #Z_L_it = Psat[iIC]/rhoL[iIC]/R_g/Tsat[iIC]*Mw
+            Z_L_it = Zv * rhov[iIC]/rhoL[iIC]
+            
+            if np.abs(Z_L - Z_L_it) < 0.00000001 or iterations > 20:
+                conv_ZL = True
+            
+            Z_L = Z_L_it
+            iterations += 1
+#            print('Z_L_it = '+str(Z_L_it))
     
     #plt.plot(rhoL,Adep_IC,label='IC')
     #plt.plot(rhoL,Adep_ITIC,label='ITIC')
