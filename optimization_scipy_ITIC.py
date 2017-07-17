@@ -13,11 +13,11 @@ import scipy.integrate as integrate
 
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
-#compound='ETHANE'
-compound='ethane'
-#REFPROP_path='/home/ram9/REFPROP-cmake/build/' #Change this for a different system
+compound='ETHANE'
 
-#CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH,REFPROP_path)
+REFPROP_path='/home/ram9/REFPROP-cmake/build/' #Change this for a different system
+
+CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH,REFPROP_path)
 
 Mw = CP.PropsSI('M','REFPROP::'+compound) #[kg/mol]
 
@@ -154,16 +154,14 @@ def objective(eps,weighted=False):
 def objective_ITIC(eps): 
     global iRerun
     
-    #USim, dUSim, PSim, dPSim, RP_U_depN, RP_P, ZSim = MBAR_estimates(eps,iRerun)
+    USim, dUSim, PSim, dPSim, RP_U_depN, RP_P, ZSim = MBAR_estimates(eps,iRerun)
     # From e0s0
-    USim = np.array([-951.717582,-1772.47135,-2472.33725,-3182.829818,-3954.981049,-4348.541215,-4718.819719,-5048.007819,-5302.871063,-6305.502455,-5993.535972,-5711.665352,-5475.703544,-5160.608038,-4988.807891,-4646.560864,-4519.582458,-4174.794714,-4071.662753])
-    ZSim = np.array([0.67064977,0.479303687,0.401264805,0.476499285,1.0267111,1.603610151,2.543291165,3.870781635,5.759734141,-0.431893514,3.077724536,-0.458331725,1.893955078,-0.454276082,1.119877239,-0.384795952,0.643115142,-0.275134489,0.378439128])
+    #USim = np.array([-951.717582,-1772.47135,-2472.33725,-3182.829818,-3954.981049,-4348.541215,-4718.819719,-5048.007819,-5302.871063,-6305.502455,-5993.535972,-5711.665352,-5475.703544,-5160.608038,-4988.807891,-4646.560864,-4519.582458,-4174.794714,-4071.662753])
+    #ZSim = np.array([0.67064977,0.479303687,0.401264805,0.476499285,1.0267111,1.603610151,2.543291165,3.870781635,5.759734141,-0.431893514,3.077724536,-0.458331725,1.893955078,-0.454276082,1.119877239,-0.384795952,0.643115142,-0.275134489,0.378439128])
     # From REFPROP
     #USim = RP_U_depN
     #ZSim = RP_Z
-    #USim, PSim, ZSim, Z1rhoSim = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
-    #USim = np.array([-0.742955704,-1.382310544,-1.954293134,-2.529838039,-3.141190987,-3.446631354,-3.733633231,-3.981584737,-4.167686607,-13.3816471,-8.727239468,-9.522223286,-6.729774885,-7.218892864,-5.460911451,-5.692389671,-4.558101709,-4.634012009,-3.87725385])
-    #ZSim = np.array([0.714490829,0.553913243,0.514096776,0.668209741,1.270751247,1.879832258,2.793348257,4.09053785,5.856279542,0.002878251,3.418694486,0.013918863,2.256705411,0.010014904,1.478057625,0.027713462,0.975758364,0.055557876,0.664544532])
+    
     Tsat, rhoLSim, PsatSim, rhovSim = ITIC_calc(USim, ZSim)
     
     print(Tsat)
@@ -315,6 +313,8 @@ def ITIC_calc(USim,ZSim):
         conv_ZL = False
         Z_L = 0.
         iterations = 0
+        TOL_ZL = 1e-6
+        max_IT = 10
         while not conv_ZL:
             
             p_Z_IC = np.polyfit(beta_IC,Z_IC-Z_L,2)
@@ -363,10 +363,10 @@ def ITIC_calc(USim,ZSim):
             Psat[iIC] = Zv * rhov[iIC] * R_g * Tsat[iIC] / Mw #[kPa]
             Psat[iIC] /= 100. #[bar]
             
-            #Z_L_it = Psat[iIC]/rhoL[iIC]/R_g/Tsat[iIC]*Mw
-            Z_L_it = Zv * rhov[iIC]/rhoL[iIC]
+            #Z_L_it = Psat[iIC]*100./rhoL[iIC]/R_g/Tsat[iIC]*Mw
+            Z_L_it = Zv * rhov[iIC]/rhoL[iIC] #Simpler to just scale with saturated vapor since same pressure and temperature
             
-            if np.abs(Z_L - Z_L_it) < 0.00000001 or iterations > 20:
+            if np.abs(Z_L - Z_L_it) < TOL_ZL or iterations > max_IT:
                 conv_ZL = True
             
             Z_L = Z_L_it
