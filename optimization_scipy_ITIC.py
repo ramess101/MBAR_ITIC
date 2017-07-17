@@ -383,7 +383,7 @@ def ITIC_calc(USim,ZSim):
     
     return Tsat, rhoL, Psat, rhov
 
-print(objective_ITIC(1.))
+#print(objective_ITIC(1.))
           
 iEpsRef = int(np.loadtxt('../iEpsref'))
 iSigmaRef = int(np.loadtxt('../iSigref'))
@@ -580,9 +580,73 @@ eps_low = np.loadtxt('eps_low')
 eps_guess = np.loadtxt('eps_guess')
 eps_high = np.loadtxt('eps_high')
 
-
-
 TOL = np.loadtxt('TOL_MBAR') 
+
+R_ratio=0.61803399
+C_ratio=1.-R_ratio
+
+def GOLDEN(AX,BX,CX,TOL):
+    X0 = AX
+    X3 = CX
+    iRerun=0
+    if np.abs(CX-BX) > np.abs(BX-AX):
+        X1 = BX
+        X2 = BX + C_ratio*(CX-BX)
+        F1 = objective(X1,iRerun)
+        iRerun += 1
+        F2 = objective(X2,iRerun)
+        f = open('F_all','a')
+        f.write('\n'+str(F1))
+        f.write('\n'+str(F2))
+        f.close()
+    else:
+        X2 = BX
+        X1 = BX - C_ratio*(BX-AX)
+        F2 = objective(X2,iRerun)
+        iRerun += 1
+        F1 = objective(X1,iRerun)
+        f = open('F_all','a')
+        f.write('\n'+str(F2))
+        f.write('\n'+str(F1))
+        f.close()
+
+    #print(X0,X1,X2,X3)
+    while np.abs(X3-X0) > TOL*(np.abs(X1)+np.abs(X2)):
+    #for i in np.arange(0,50):
+        if F2 < F1:
+            X0 = X1
+            X1 = X2
+            X2 = R_ratio*X1 + C_ratio*X3
+            F1 = F2
+            eps_it = X2
+            F2 = objective(X2,iRerun)
+            F_it = F2
+            #print(X0,X1,X2,X3)
+        else:
+            X3 = X2
+            X2 = X1
+            X1 = R_ratio*X2 + C_ratio*X0
+            F2 = F1
+            eps_it = X1
+            F1 = objective(X1,iRerun)
+            F_it = F1
+            #print(X0,X1,X2,X3)
+        iRerun += 1
+        
+        f = open('F_ITIC_all','a')
+        f.write('\n'+str(F_it))
+        f.close()
+        
+    if F1 < F2:
+        GOLDEN = F1
+        XMIN = X1
+    else:
+        GOLDEN = F2
+        XMIN = X2
+    
+    return XMIN, GOLDEN  
+
+eps_opt, F_opt = GOLDEN(eps_low,eps_guess,eps_high,TOL)
 
 #sol = minimize(objective,np.array(eps_guess),method='BFGS')
 #eps_opt = sol.x[0]
@@ -591,10 +655,10 @@ TOL = np.loadtxt('TOL_MBAR')
 #sol = minimize_scalar(objective,eps_guess,method='bounded',bounds=bnds) #This has problems because the first iteration is not actually the reference system
 #eps_opt = sol.x
 
-bnds = ((eps_low,eps_high),)
+#bnds = ((eps_low,eps_high),)
 
-sol = minimize(objective_ITIC,eps_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-3,'ftol':1}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
-eps_opt = sol.x[0]
+#sol = minimize(objective_ITIC,eps_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-3,'ftol':1}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
+#eps_opt = sol.x[0]
 
 f = open('eps_optimal','w')
 f.write(str(eps_opt))
