@@ -14,7 +14,7 @@ import scipy.integrate as integrate
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
 compound='ETHANE'
-
+#compound='Ethane'
 REFPROP_path='/home/ram9/REFPROP-cmake/build/' #Change this for a different system
 
 CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH,REFPROP_path)
@@ -160,6 +160,9 @@ def objective_ITIC(eps):
     # From e0s0
     #USim = np.array([-951.717582,-1772.47135,-2472.33725,-3182.829818,-3954.981049,-4348.541215,-4718.819719,-5048.007819,-5302.871063,-6305.502455,-5993.535972,-5711.665352,-5475.703544,-5160.608038,-4988.807891,-4646.560864,-4519.582458,-4174.794714,-4071.662753])
     #ZSim = np.array([0.67064977,0.479303687,0.401264805,0.476499285,1.0267111,1.603610151,2.543291165,3.870781635,5.759734141,-0.431893514,3.077724536,-0.458331725,1.893955078,-0.454276082,1.119877239,-0.384795952,0.643115142,-0.275134489,0.378439128])
+    # eps = 0.925 sig = 0.377, the Tsat[1] was problematic with old code because of concavity
+    #USim = np.array([-816.049438,-1549.934965,-2191.476435,-2851.822775,-3547.998367,-3907.713473,-4235.273897,-4521.887026,-4697.156908,-5702.583036,-5403.108685,-5139.894986,-4918.18643,-4655.74991,-4498.777318,-4184.347089,-4076.720214,-3765.608436,-3665.575747,])
+    #ZSim = np.array([0.738163935,0.596420397,0.547142197,0.693496956,1.365347839,1.913485127,2.818171987,4.118326937,6.114410971,0.518005855,3.634704592,0.47347307,2.526576993,0.259872236,1.572262794,0.217710563,1.030553571,0.086080502,0.742335511])
     # From REFPROP
     #USim = RP_U_depN
     #ZSim = RP_Z
@@ -170,6 +173,15 @@ def objective_ITIC(eps):
     #print(rhoLSim)
     #print(PsatSim)
     #print(rhovSim)
+    
+    f = open('ITIC_'+str(iRerun),'w')
+    f.write('Tsat (K)\trhoL (kg/m3)\tPsat (bar)\trhov (kg/m3)')
+    for Tsatprint,rhoLprint,Psatprint,rhovprint in zip(Tsat,rhoLSim,PsatSim,rhovSim):
+        f.write('\n'+str(Tsatprint))
+        f.write('\t'+str(rhoLprint))
+        f.write('\t'+str(Psatprint))
+        f.write('\t'+str(rhovprint))
+    f.close()
 
     RP_rhoL = CP.PropsSI('D','T',Tsat,'Q',0,'REFPROP::'+compound) #[kg/m3]   
     RP_rhov = CP.PropsSI('D','T',Tsat,'Q',1,'REFPROP::'+compound) #[kg/m3]
@@ -320,12 +332,14 @@ def ITIC_calc(USim,ZSim):
         while not conv_ZL:
             
             p_Z_IC = np.polyfit(beta_IC,Z_IC-Z_L,2)
+            if p_Z_IC[0] > 0.: # If the concavity is not correct then just use a linear fit since it should be concave down
+                p_Z_IC = np.polyfit(beta_IC,Z_IC-Z_L,1)
             p_UT_IC = np.polyfit(beta_IC,UT_IC,1)
             Z_IC_hat = np.poly1d(p_Z_IC)+Z_L
             UT_IC_hat = np.poly1d(p_UT_IC)
             U_IC_hat = lambda beta: UT_IC_hat(beta)/beta                                     
-                                                 
-            beta_sat = np.roots(p_Z_IC).max() #We want the positive root
+            
+            beta_sat = np.roots(p_Z_IC).max() #We want the positive root, this has problems when concave up, so I included an if statement above (alternatively could use if statement here with .min)
             
             #print(U_IC_hat(beta_IT))
             #print(beta_IT)
