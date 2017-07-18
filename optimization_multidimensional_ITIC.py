@@ -183,13 +183,13 @@ def objective_ITIC(eps_sig):
         f.write('\t'+str(rhovprint))
     f.close()
 
-    RP_rhoL = CP.PropsSI('D','T',Tsat,'Q',0,'REFPROP::'+compound) #[kg/m3]   
-    RP_rhov = CP.PropsSI('D','T',Tsat,'Q',1,'REFPROP::'+compound) #[kg/m3]
-    RP_Psat = CP.PropsSI('P','T',Tsat,'Q',1,'REFPROP::'+compound)/100000. #[bar]
+    RP_rhoL = CP.PropsSI('D','T',Tsat[Tsat<RP_TC],'Q',0,'REFPROP::'+compound) #[kg/m3]   
+    RP_rhov = CP.PropsSI('D','T',Tsat[Tsat<RP_TC],'Q',1,'REFPROP::'+compound) #[kg/m3]
+    RP_Psat = CP.PropsSI('P','T',Tsat[Tsat<RP_TC],'Q',1,'REFPROP::'+compound)/100000. #[bar]
 
-    devrhoL = rhoLSim - RP_rhoL
-    devPsat = PsatSim - RP_Psat
-    devrhov = rhovSim - RP_rhov
+    devrhoL = rhoLSim[Tsat<RP_TC] - RP_rhoL #In case Tsat is greater than RP_TC
+    devPsat = PsatSim[Tsat<RP_TC] - RP_Psat
+    devrhov = rhovSim[Tsat<RP_TC] - RP_rhov
     
     SSErhoL = np.sum(np.power(devrhoL,2))
     SSEPsat = np.sum(np.power(devPsat,2)) 
@@ -211,7 +211,7 @@ def objective_ITIC(eps_sig):
     #print(RP_rhoL)
     #print(RP_Psat)
     
-    return SSE
+    return SSE#, SSE #This is the only way to get fsolve to work
 
 def ITIC_calc(USim,ZSim):
     #global Temp_sim, rho_mass, Temp_ITIC, rhos_mass_ITIC, nrhos, Mw
@@ -332,7 +332,7 @@ def ITIC_calc(USim,ZSim):
         while not conv_ZL:
             
             p_Z_IC = np.polyfit(beta_IC,Z_IC-Z_L,2)
-            if p_Z_IC[0] > 0.: # If the concavity is not correct then just use a linear fit since it should be concave down
+            if p_Z_IC[0] > 0. or p_Z_IC[1]**2. - 4.*p_Z_IC[0]*p_Z_IC[2] < 0.: # If the concavity is not correct then just use a linear fit since it should be concave down. Also, if no root then this is problematic.
                 p_Z_IC = np.polyfit(beta_IC,Z_IC-Z_L,1)
             p_UT_IC = np.polyfit(beta_IC,UT_IC,1)
             Z_IC_hat = np.poly1d(p_Z_IC)+Z_L
@@ -608,7 +608,9 @@ eps_low = np.loadtxt('eps_low')
 eps_guess = np.loadtxt('eps_guess')
 eps_high = np.loadtxt('eps_high')
 
+sig_low = np.loadtxt('sig_low')
 sig_guess = np.loadtxt('sig_guess')
+sig_high = np.loadtxt('sig_high')
 
 TOL = np.loadtxt('TOL_MBAR') 
 
@@ -676,23 +678,94 @@ def GOLDEN(AX,BX,CX,TOL):
     
     return XMIN, GOLDEN  
 
-#eps_opt, F_opt = GOLDEN(np.array([eps_low]),np.array([eps_guess]),np.array([eps_high]),TOL)
+# Updates after each step
+def deriv_xj(fun,f0,x,dx,j,equation='5.93'):
+    dx_j = 0*dx
+    dx_j[j] = dx[j]
+    if equation == '5.93':
+        f_plus1 = fun(x+dx_j)
+        deriv = (f_plus1 - f0)/dx[j]
+    elif equation == '5.96':
+        f_plus1 = fun(x+dx_j)
+        f_minus1 = fun(x-dx_j)
+        deriv = (f_plus1 - f_minus1)/2./dx[j]
+    elif equation == '5.106':
+        f = np.empty([4])
+        f[0] = fun(x-2.*dx_j)
+        f[1] = fun(x-dx_j)
+        f[2] = fun(x+dx_j)
+        f[3] = fun(x+2.*dx_j)
+        deriv = (f[0] - 8.*f[1] + 8.*f[2] - f[3])/12./dx[j]
+    return deriv
 
-#sol = minimize(objective,np.array(eps_guess),method='BFGS')
+def steep_descent(fun,x_guess,bounds,dx,tol,tx,max_it=20,max_fun=30):
+    global iRerun
+    conv = False
+    x_n = x_guess
+    deltax = np.zeros(len(x_n))
+    it = 0
+    f0 = fun(x_n) #Since this method needs f0 anyways, might be better to use Equation 5.93 instead of 5.96
+    while not conv and it < max_it and iRerun < max_fun:
+        for j, xj in enumerate(x_n):
+            conv_tx = False
+            while not conv_tx:
+                deltax[j] = tx[j]*deriv_xj(fun,f0,x_n,dx,j)
+                x_n[j] = xj - deltax[j] 
+        #            x_n[j] = min(np.array([max(np.array([bounds[j][0],x_n[j]])),bounds[j][1]]))
+        #            deltax[j] = xj - x_n[j]
+                if x_n[j] < bounds[j][0]:
+                    x_n[j] = bounds[j][0]
+                    deltax[j] = xj - x_n[j]
+                elif x_n[j] > bounds[j][1]:
+                    x_n[j] = bounds[j][1]
+                    deltax[j] = xj - x_n[j]
+                f_step = fun(x_n)
+                if f_step < f0:
+                    conv_tx = True
+                    f0 = f_step
+                else:
+                    tx[j] /= 2.
+        it += 1
+        if (np.abs(deltax) - np.abs(tol) < 0).all():
+            conv = True
+        
+    return x_n, it
+
+eps_sig_guess = np.array([eps_guess,sig_guess])
+print(eps_sig_guess)
+
+#eps_opt, sig_opt = fsolve(objective_ITIC,eps_sig_guess,epsfcn=1e-4,xtol=1e-4) #This resulted in some 'nan'
+
+d_eps_sig = np.array([0.0001,0.0001])
+tol_eps_sig = np.array([0.001,0.001])
+t_eps_sig = d_eps_sig
+
+#print(eps_low)
+#print(eps_high)
+#print(sig_high)
+#print(sig_low)
+ 
+bnds = ((eps_low,eps_high),(sig_low,sig_high))                   
+                          
+#eps_sig_opt, iterations = steep_descent(objective_ITIC,eps_sig_guess,bnds,d_eps_sig,tol_eps_sig,t_eps_sig)
+
+#eps_opt = eps_sig_opt[0]
+#sig_opt = eps_sig_opt[1]
+
+#print(bnds)
+
+#sol = minimize(objective_ITIC,eps_sig_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-4,'maxiter':20,'maxfun':30}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
 #eps_opt = sol.x[0]
+#sig_opt = sol.x[1]
 
-#bnds = [eps_low,eps_high]
-#sol = minimize_scalar(objective,eps_guess,method='bounded',bounds=bnds) #This has problems because the first iteration is not actually the reference system
-#eps_opt = sol.x
+# For scanning the parameter space
 
-#bnds = ((eps_low,eps_high),)
+objective_ITIC(eps_sig_guess) #To call objective before running loop
 
-#sol = minimize(objective_ITIC,eps_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-3,'ftol':1}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
-#eps_opt = sol.x[0]
-
-eps_sig_guess = np.array([eps_guess[0],sig_guess[0]])
-
-eps_opt, sig_opt = fsolve(objective_ITIC,eps_sig_guess,epsfcn=1e-4,xtol=1e-4)
+for iEps, eps_sim in enumerate(np.linspace(eps_low,eps_high,40)):
+    for iSig, sig_sim in enumerate(np.linspace(sig_low,sig_high,40)):
+        eps_sig_sim = np.array([eps_sim,sig_sim])
+        objective_ITIC(eps_sig_sim)
 
 f = open('eps_optimal','w')
 f.write(str(eps_opt))
