@@ -153,10 +153,10 @@ def objective(eps,weighted=False):
     
     return SSE
 
-def objective_ITIC(eps): 
+def objective_ITIC(eps_sig): 
     global iRerun
     
-    USim, dUSim, PSim, dPSim, RP_U_depN, RP_P, ZSim = MBAR_estimates(eps,iRerun)
+    USim, dUSim, PSim, dPSim, RP_U_depN, RP_P, ZSim = MBAR_estimates(eps_sig,iRerun)
     # From e0s0
     #USim = np.array([-951.717582,-1772.47135,-2472.33725,-3182.829818,-3954.981049,-4348.541215,-4718.819719,-5048.007819,-5302.871063,-6305.502455,-5993.535972,-5711.665352,-5475.703544,-5160.608038,-4988.807891,-4646.560864,-4519.582458,-4174.794714,-4071.662753])
     #ZSim = np.array([0.67064977,0.479303687,0.401264805,0.476499285,1.0267111,1.603610151,2.543291165,3.870781635,5.759734141,-0.431893514,3.077724536,-0.458331725,1.893955078,-0.454276082,1.119877239,-0.384795952,0.643115142,-0.275134489,0.378439128])
@@ -408,16 +408,24 @@ def ITIC_calc(USim,ZSim):
 iEpsRef = int(np.loadtxt('../iEpsref'))
 iSigmaRef = int(np.loadtxt('../iSigref'))
 
-def MBAR_estimates(eps,iRerun):
+def MBAR_estimates(eps_sig,iRerun):
         
     #eps = eps.tolist()
 
     f = open('eps_it','w')
-    f.write(str(eps[0]))
+    f.write(str(eps_sig[0]))
     f.close()
     
     f = open('eps_all','a')
-    f.write('\n'+str(eps[0]))
+    f.write('\n'+str(eps_sig[0]))
+    f.close()
+    
+    f = open('sig_it','w')
+    f.write(str(eps_sig[1]))
+    f.close()
+    
+    f = open('sig_all','a')
+    f.write('\n'+str(eps_sig[1]))
     f.close()
     
     f = open('iRerun','w')
@@ -600,6 +608,8 @@ eps_low = np.loadtxt('eps_low')
 eps_guess = np.loadtxt('eps_guess')
 eps_high = np.loadtxt('eps_high')
 
+sig_guess = np.loadtxt('sig_guess')
+
 TOL = np.loadtxt('TOL_MBAR') 
 
 R_ratio=0.61803399
@@ -680,10 +690,16 @@ def GOLDEN(AX,BX,CX,TOL):
 #sol = minimize(objective_ITIC,eps_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-3,'ftol':1}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
 #eps_opt = sol.x[0]
 
-eps_opt = fsolve(objective_ITIC,eps_guess,epsfcn=1e-4,xtol=1e-4)
+eps_sig_guess = np.array([eps_guess[0],sig_guess[0]])
+
+eps_opt, sig_opt = fsolve(objective_ITIC,eps_sig_guess,epsfcn=1e-4,xtol=1e-4)
 
 f = open('eps_optimal','w')
 f.write(str(eps_opt))
+f.close()
+
+f = open('sig_optimal','w')
+f.write(str(sig_opt))
 f.close()
 
 conv_eps = 0
