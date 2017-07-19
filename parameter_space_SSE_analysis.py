@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np 
 import os
 from pymbar import MBAR
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from pymbar import timeseries
 import CoolProp.CoolProp as CP
 #from REFPROP_values import *
@@ -110,10 +110,7 @@ RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound
 iEpsRef = int(np.loadtxt('../iEpsref'))
 iSigmaRef = int(np.loadtxt('../iSigref'))
 
-iRerun = 0
-
-def analyze_ITIC(iEps,iSig): 
-    global iRerun
+def analyze_ITIC(iRerun): 
     
     USim, dUSim, PSim, dPSim, ZSim, Z1rhoSim = np.loadtxt('MBAR_e'+str(iEpsRef)+'s'+str(iSigmaRef)+'it'+str(iRerun),unpack=True)
     Tsat, rhoLSim, PsatSim, rhovSim = np.loadtxt('ITIC_'+str(iRerun),skiprows=1,unpack=True)
@@ -166,14 +163,100 @@ def analyze_ITIC(iEps,iSig):
     f.write('\n'+str(SSEZ))
     f.close()
     
-    iRerun += 1
+    return SSErhoL, SSEPsat, SSErhov, SSEU, SSEP, SSEZ
 
 print(os.getcwd())
 time.sleep(2)
 
+f = open('SSE_rhoL_all','w')
+f.close()
+
+f = open('SSE_Psat_all','w')
+f.close()
+
+f = open('SSE_rhov_all','w')
+f.close()
+
+f = open('SSE_U','w')
+f.close()
+
+f = open('SSE_P','w')
+f.close()
+
+f = open('SSE_Z','w')
+f.close()
+
 # For scanning the parameter space
 
-for iEps in range(40):
-    for iSig in range(40):
-        analyze_ITIC(iEps,iSig)
+nReruns = int(np.loadtxt('iRerun'))
+eps_sig_reruns = np.loadtxt('eps_Sigma_all',skiprows=1)
+eps_reruns = eps_sig_reruns[:,0]
+sig_reruns = eps_sig_reruns[:,1]
+neps = len(eps_reruns)
+nsig = len(sig_reruns)
 
+SSErhoL = np.empty([neps,nsig])
+SSEPsat = np.empty([neps,nsig])
+SSErhov = np.empty([neps,nsig])
+SSEU = np.empty([neps,nsig])
+SSEP = np.empty([neps,nsig])
+SSEZ = np.empty([neps,nsig])
+eps = np.unique(eps_reruns)
+sig = np.unique(sig_reruns)
+
+#for iRerun in range(nReruns):
+#    analyze_ITIC(iRerun)
+
+iRerun = 1
+for ieps in range(neps):
+    for isig in range(nsig):
+        SSErhoL[ieps,isig], SSEPsat[ieps,isig], SSErhov[ieps,isig], SSEU[ieps,isig], SSEP[ieps,isig], SSEZ[ieps,isig] = analyze_ITIC(iRerun)
+        iRerun += 1
+        
+f = plt.figure()
+plt.contour(eps,sig,SSErhoL)
+plt.xlabel('$\epsilon (kJ/mol)')
+plt.ylabel('$\sigma (nm)')
+plt.xlim([min(eps),max(eps)])
+plt.ylim([min(sig),max(sig)])
+f.savefig(compound+'_SSErhoL.pdf')
+
+f = plt.figure()
+plt.contour(eps,sig,SSEPsat)
+plt.xlabel('$\epsilon (kJ/mol)')
+plt.ylabel('$\sigma (nm)')
+plt.xlim([min(eps),max(eps)])
+plt.ylim([min(sig),max(sig)])
+f.savefig(compound+'_SSEPsat.pdf')
+
+f = plt.figure()
+plt.contour(eps,sig,SSErhov)
+plt.xlabel('$\epsilon (kJ/mol)')
+plt.ylabel('$\sigma (nm)')
+plt.xlim([min(eps),max(eps)])
+plt.ylim([min(sig),max(sig)])
+f.savefig(compound+'_SSErhov.pdf')
+
+f = plt.figure()
+plt.contour(eps,sig,SSEU)
+plt.xlabel('$\epsilon (kJ/mol)')
+plt.ylabel('$\sigma (nm)')
+plt.xlim([min(eps),max(eps)])
+plt.ylim([min(sig),max(sig)])
+f.savefig(compound+'_SSEU.pdf')
+
+f = plt.figure()
+plt.contour(eps,sig,SSEP)
+plt.xlabel('$\epsilon (kJ/mol)')
+plt.ylabel('$\sigma (nm)')
+plt.xlim([min(eps),max(eps)])
+plt.ylim([min(sig),max(sig)])
+f.savefig(compound+'_SSEP.pdf')
+
+f = plt.figure()
+plt.contour(eps,sig,SSEZ)
+plt.xlabel('$\epsilon (kJ/mol)')
+plt.ylabel('$\sigma (nm)')
+plt.xlim([min(eps),max(eps)])
+plt.ylim([min(sig),max(sig)])
+f.savefig(compound+'_SSEZ.pdf')
