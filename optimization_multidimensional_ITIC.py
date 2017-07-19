@@ -190,10 +190,18 @@ def objective_ITIC(eps_sig):
     devrhoL = rhoLSim[Tsat<RP_TC] - RP_rhoL #In case Tsat is greater than RP_TC
     devPsat = PsatSim[Tsat<RP_TC] - RP_Psat
     devrhov = rhovSim[Tsat<RP_TC] - RP_rhov
-    
+                     
+    devU = USim - RP_U_depN
+    devP = PSim - RP_P
+    devZ = ZSim - RP_Z
+       
     SSErhoL = np.sum(np.power(devrhoL,2))
     SSEPsat = np.sum(np.power(devPsat,2)) 
     SSErhov = np.sum(np.power(devrhov,2)) 
+    SSEU = np.sum(np.power(devU,2))
+    SSEP = np.sum(np.power(devP,2))
+    SSEZ = np.sum(np.power(devZ,2))
+    
     SSE = 0
     SSE += SSErhoL
     #SSE += SSEPsat
@@ -204,6 +212,30 @@ def objective_ITIC(eps_sig):
     
     f = open('F_ITIC_all','a')
     f.write('\n'+str(SSE))
+    f.close()
+    
+    f = open('SSE_rhoL_all','a')
+    f.write('\n'+str(SSErhoL))
+    f.close()
+    
+    f = open('SSE_Psat_all','a')
+    f.write('\n'+str(SSEPsat))
+    f.close()
+    
+    f = open('SSE_rhov_all','a')
+    f.write('\n'+str(SSErhov))
+    f.close()
+    
+    f = open('SSE_U_all','a')
+    f.write('\n'+str(SSEU))
+    f.close()
+    
+    f = open('SSE_P_all','a')
+    f.write('\n'+str(SSEP))
+    f.close()
+    
+    f = open('SSE_Z_all','a')
+    f.write('\n'+str(SSEZ))
     f.close()
     
     iRerun += 1
@@ -733,7 +765,7 @@ def steep_descent(fun,x_guess,bounds,dx,tol,tx,max_it=20,max_fun=30):
 
 def leapfrog(fun,x_guess,bounds,tol,max_it=100):
     dim = len(x_guess)
-    nplayers = 10
+    nplayers = 10*dim
     players = np.random.random([nplayers,dim])
     for idim in range(dim):
         players[:,idim] *= (bounds[idim][1]-bounds[idim][0])
@@ -763,8 +795,8 @@ def leapfrog(fun,x_guess,bounds,tol,max_it=100):
         #print(bnds_trial)
         xtrial = np.random.random(dim)
         for idim in range(dim):
-            xtrial *= (bnds_trial[idim][1]-bnds_trial[idim][0])
-            xtrial += bnds_trial[idim][0]             
+            xtrial[idim] *= (bnds_trial[idim][1]-bnds_trial[idim][0])
+            xtrial[idim] += bnds_trial[idim][0]             
         fplayers[iworst] = fun(xtrial)
         players[iworst,:] = xtrial
         it += 1
@@ -806,7 +838,11 @@ bnds = ((eps_low,eps_high),(sig_low,sig_high))
 #sig_opt = sol.x[1]
 
 # For leapfrog algorithm
-sol = leapfrog(objective_ITIC,eps_sig_guess,bnds,tol_eps_sig)
+objective_ITIC(eps_sig_guess) #To call objective before running loop
+
+eps_sig_opt = leapfrog(objective_ITIC,eps_sig_guess,bnds,tol_eps_sig)
+eps_opt = eps_sig_opt[0]
+sig_opt = eps_sig_opt[1]
 
 # For scanning the parameter space
 
