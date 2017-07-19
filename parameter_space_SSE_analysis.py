@@ -229,6 +229,7 @@ if opt_type == 'Scan':
     plt.xlabel('$\sigma$ (nm)')
     plt.ylim([min(eps),max(eps)])
     plt.xlim([min(sig),max(sig)])
+    plt.title(r'SSE $\rho_l$')
     f.savefig(compound+'_SSErhoL.pdf')
     
     f = plt.figure()
@@ -237,6 +238,7 @@ if opt_type == 'Scan':
     plt.xlabel('$\sigma$ (nm)')
     plt.ylim([min(eps),max(eps)])
     plt.xlim([min(sig),max(sig)])
+    plt.title(r'SSE $P_{sat}$')
     f.savefig(compound+'_SSEPsat.pdf')
     
     f = plt.figure()
@@ -245,6 +247,7 @@ if opt_type == 'Scan':
     plt.xlabel('$\sigma$ (nm)')
     plt.ylim([min(eps),max(eps)])
     plt.xlim([min(sig),max(sig)])
+    plt.title(r'SSE $\rho_v$')
     f.savefig(compound+'_SSErhov.pdf')
     
     f = plt.figure()
@@ -253,6 +256,7 @@ if opt_type == 'Scan':
     plt.xlabel('$\sigma$ (nm)')
     plt.ylim([min(eps),max(eps)])
     plt.xlim([min(sig),max(sig)])
+    plt.title(r'SSE U')
     f.savefig(compound+'_SSEU.pdf')
     
     f = plt.figure()
@@ -261,6 +265,7 @@ if opt_type == 'Scan':
     plt.xlabel('$\sigma$ (nm)')
     plt.ylim([min(eps),max(eps)])
     plt.xlim([min(sig),max(sig)])
+    plt.title(r'SSE P')
     f.savefig(compound+'_SSEP.pdf')
     
     f = plt.figure()
@@ -269,6 +274,7 @@ if opt_type == 'Scan':
     plt.xlabel('$\sigma$ (nm)')
     plt.ylim([min(eps),max(eps)])
     plt.xlim([min(sig),max(sig)])
+    plt.title(r'SSE Z')
     f.savefig(compound+'_SSEZ.pdf')
 
 elif opt_type == 'Iterative':
