@@ -156,7 +156,7 @@ def objective(eps,weighted=False):
 def objective_ITIC(eps_sig): 
     global iRerun
     
-    USim, dUSim, PSim, dPSim, RP_U_depN, RP_P, ZSim = MBAR_estimates(eps_sig,iRerun)
+    USim, dUSim, PSim, dPSim, ZSim = MBAR_estimates(eps_sig,iRerun)
     # From e0s0
     #USim = np.array([-951.717582,-1772.47135,-2472.33725,-3182.829818,-3954.981049,-4348.541215,-4718.819719,-5048.007819,-5302.871063,-6305.502455,-5993.535972,-5711.665352,-5475.703544,-5160.608038,-4988.807891,-4646.560864,-4519.582458,-4174.794714,-4071.662753])
     #ZSim = np.array([0.67064977,0.479303687,0.401264805,0.476499285,1.0267111,1.603610151,2.543291165,3.870781635,5.759734141,-0.431893514,3.077724536,-0.458331725,1.893955078,-0.454276082,1.119877239,-0.384795952,0.643115142,-0.275134489,0.378439128])
@@ -599,7 +599,7 @@ def MBAR_estimates(eps_sig,iRerun):
     
         f.close()
     
-    return U_rerun, dU_rerun, P_rerun, dP_rerun, RP_U_depN, RP_P, Z_rerun
+    return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
 
 print(os.getcwd())
 time.sleep(2)
@@ -731,6 +731,53 @@ def steep_descent(fun,x_guess,bounds,dx,tol,tx,max_it=20,max_fun=30):
         
     return x_n, it
 
+def leapfrog(fun,x_guess,bounds,tol,max_it=100):
+    dim = len(x_guess)
+    nplayers = 10
+    players = np.random.random([nplayers,dim])
+    for idim in range(dim):
+        players[:,idim] *= (bounds[idim][1]-bounds[idim][0])
+        players[:,idim] += bounds[idim][0]
+    fplayers = np.empty(nplayers)
+    for iplayers in range(nplayers):
+        fplayers[iplayers] = fun(players[iplayers,:])
+    #print(fplayers)
+    conv = False
+    it = 0
+    bnds_trial = np.empty([dim,2])
+    while not conv and it < max_it:
+        best = fplayers.min()
+        worst = fplayers.max()
+        ibest = fplayers.argmin()
+        iworst = fplayers.argmax()
+        dx = players[ibest,:] - players[iworst,:]
+        best_player = players[ibest,:]
+        extreme_trial = best_player + dx
+        #print(best,worst,ibest,iworst)
+        #print(dx)
+        #print(extreme_trial)
+        for idim in range(dim):
+            extreme_trial[idim] = min(np.array([max(np.array([bounds[idim][0],extreme_trial[idim]])),bounds[idim][1]]))
+            bnds_trial[idim][0] = min([extreme_trial[idim],best_player[idim]])
+            bnds_trial[idim][1] = max([extreme_trial[idim],best_player[idim]])
+        #print(bnds_trial)
+        xtrial = np.random.random(dim)
+        for idim in range(dim):
+            xtrial *= (bnds_trial[idim][1]-bnds_trial[idim][0])
+            xtrial += bnds_trial[idim][0]             
+        fplayers[iworst] = fun(xtrial)
+        players[iworst,:] = xtrial
+        it += 1
+        #plt.scatter(players[:,0],players[:,1])
+        #plt.scatter(xtrial[0],xtrial[1])
+        #plt.show()
+        if (np.abs(dx) - np.abs(tol) < 0).all():
+            conv = True
+    ibest = fplayers.argmin()
+    best_player = players[ibest,:]
+    #print(players[ibest,:])
+    return best_player
+
 eps_sig_guess = np.array([eps_guess,sig_guess])
 print(eps_sig_guess)
 
@@ -758,14 +805,17 @@ bnds = ((eps_low,eps_high),(sig_low,sig_high))
 #eps_opt = sol.x[0]
 #sig_opt = sol.x[1]
 
+# For leapfrog algorithm
+sol = leapfrog(objective_ITIC,eps_sig_guess,bnds,tol_eps_sig)
+
 # For scanning the parameter space
 
-objective_ITIC(eps_sig_guess) #To call objective before running loop
+#objective_ITIC(eps_sig_guess) #To call objective before running loop
 
-for iEps, eps_sim in enumerate(np.linspace(eps_low,eps_high,40)):
-    for iSig, sig_sim in enumerate(np.linspace(sig_low,sig_high,40)):
-        eps_sig_sim = np.array([eps_sim,sig_sim])
-        objective_ITIC(eps_sig_sim)
+#for iEps, eps_sim in enumerate(np.linspace(eps_low,eps_high,40)):
+#    for iSig, sig_sim in enumerate(np.linspace(sig_low,sig_high,40)):
+#        eps_sig_sim = np.array([eps_sim,sig_sim])
+#        objective_ITIC(eps_sig_sim)
 
 f = open('eps_optimal','w')
 f.write(str(eps_opt))
