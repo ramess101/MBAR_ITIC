@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np 
-import os
+import os, sys, argparse
 from pymbar import MBAR
 #import matplotlib.pyplot as plt
 from pymbar import timeseries
@@ -77,6 +77,19 @@ rho_mass = rho_sim * Mw / N_A * nm3_to_m3 #[kg/m3]
 nStates = len(Temp_sim)
 
 #rho_mass = rho_sim * Mw / N_A * nm3_to_ml #[gm/ml]
+
+print(os.getcwd())
+time.sleep(2)
+
+eps_low = np.loadtxt('eps_low')
+eps_guess = np.loadtxt('eps_guess')
+eps_high = np.loadtxt('eps_high')
+
+sig_low = np.loadtxt('sig_low')
+sig_guess = np.loadtxt('sig_guess')
+sig_high = np.loadtxt('sig_high')
+
+TOL = np.loadtxt('TOL_MBAR') 
 
 def U_to_u(U,T): #Converts internal energy into reduced potential energy in NVT ensemble
     beta = 1./(R_g*T)
@@ -633,23 +646,11 @@ def MBAR_estimates(eps_sig,iRerun):
     
     return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
 
-print(os.getcwd())
-time.sleep(2)
-
-eps_low = np.loadtxt('eps_low')
-eps_guess = np.loadtxt('eps_guess')
-eps_high = np.loadtxt('eps_high')
-
-sig_low = np.loadtxt('sig_low')
-sig_guess = np.loadtxt('sig_guess')
-sig_high = np.loadtxt('sig_high')
-
-TOL = np.loadtxt('TOL_MBAR') 
-
-R_ratio=0.61803399
-C_ratio=1.-R_ratio
-
 def GOLDEN(AX,BX,CX,TOL):
+
+    R_ratio=0.61803399
+    C_ratio=1.-R_ratio
+    
     X0 = AX
     X3 = CX
     #iRerun=0
@@ -810,66 +811,109 @@ def leapfrog(fun,x_guess,bounds,tol,max_it=100):
     #print(players[ibest,:])
     return best_player
 
-eps_sig_guess = np.array([eps_guess,sig_guess])
-print(eps_sig_guess)
+def call_optimizers(opt_type):
 
-#eps_opt, sig_opt = fsolve(objective_ITIC,eps_sig_guess,epsfcn=1e-4,xtol=1e-4) #This resulted in some 'nan'
+    eps_opt = 0.
+    sig_opt = 0.    
+    
+    eps_sig_guess = np.array([eps_guess,sig_guess])
+    #print(eps_sig_guess)
+    
+    d_eps_sig = np.array([0.0001,0.0001])
+    tol_eps_sig = np.array([0.001,0.001])
+    t_eps_sig = d_eps_sig
+         
+    bnds = ((eps_low,eps_high),(sig_low,sig_high)) 
+       
+    #print(bnds)
+    
+    if opt_type == 'fsolve':
+    
+        eps_opt, sig_opt = fsolve(objective_ITIC,eps_sig_guess,epsfcn=1e-4,xtol=1e-4) #This resulted in some 'nan'
+    
+    elif opt_type == 'steep':
+                                                    
+        eps_sig_opt, iterations = steep_descent(objective_ITIC,eps_sig_guess,bnds,d_eps_sig,tol_eps_sig,t_eps_sig)
+        
+        eps_opt = eps_sig_opt[0]
+        sig_opt = eps_sig_opt[1]
 
-d_eps_sig = np.array([0.0001,0.0001])
-tol_eps_sig = np.array([0.001,0.001])
-t_eps_sig = d_eps_sig
+    elif opt_type =='LBFGSB':
+         
+        sol = minimize(objective_ITIC,eps_sig_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-5,'maxiter':50,'maxfun':100}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
+        eps_opt = sol.x[0]
+        sig_opt = sol.x[1]
+    
+    elif opt_type == 'leapfrog': 
+        
+        # For leapfrog algorithm
+        objective_ITIC(eps_sig_guess) #To call objective before running loop
+        
+        eps_sig_opt = leapfrog(objective_ITIC,eps_sig_guess,bnds,tol_eps_sig)
+        eps_opt = eps_sig_opt[0]
+        sig_opt = eps_sig_opt[1]
+    
+    elif opt_type == 'scan':
+        # For scanning the parameter space
+        
+        objective_ITIC(eps_sig_guess) #To call objective before running loop
+        
+        for iEps, eps_sim in enumerate(np.linspace(eps_low,eps_high,40)):
+            for iSig, sig_sim in enumerate(np.linspace(sig_low,sig_high,40)):
+                eps_sig_sim = np.array([eps_sim,sig_sim])
+                objective_ITIC(eps_sig_sim)
+        
+    elif opt_type == 'points':
+        objective_ITIC(eps_sig_guess)
+        eps_sig_spec = np.array([0.950877,0.377134])
+        objective_ITIC(eps_sig_spec)
+    
+    return eps_opt, sig_opt        
+            
+def main():
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points'],help="choose which type of optimizer to use")
+    args = parser.parse_args()
+    if args.optimizer:
+        eps_opt, sig_opt = call_optimizers(args.optimizer)
+    else:
+        print('Please specify an optimizer type')
+        eps_opt = 0.
+        sig_opt = 0.
+    
+#    script = sys.argv[0]
+#    opt_type = sys.argv[1]
+#    
+#    eps_opt, sig_opt = call_optimizers(opt_type)
 
-#print(eps_low)
-#print(eps_high)
-#print(sig_high)
-#print(sig_low)
- 
-bnds = ((eps_low,eps_high),(sig_low,sig_high))                   
-                          
-#eps_sig_opt, iterations = steep_descent(objective_ITIC,eps_sig_guess,bnds,d_eps_sig,tol_eps_sig,t_eps_sig)
-
-#eps_opt = eps_sig_opt[0]
-#sig_opt = eps_sig_opt[1]
-
-#print(bnds)
-
-#sol = minimize(objective_ITIC,eps_sig_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-4,'maxiter':20,'maxfun':30}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
-#eps_opt = sol.x[0]
-#sig_opt = sol.x[1]
-
-# For leapfrog algorithm
-objective_ITIC(eps_sig_guess) #To call objective before running loop
-
-eps_sig_opt = leapfrog(objective_ITIC,eps_sig_guess,bnds,tol_eps_sig)
-eps_opt = eps_sig_opt[0]
-sig_opt = eps_sig_opt[1]
-
-# For scanning the parameter space
-
-#objective_ITIC(eps_sig_guess) #To call objective before running loop
-
-#for iEps, eps_sim in enumerate(np.linspace(eps_low,eps_high,40)):
-#    for iSig, sig_sim in enumerate(np.linspace(sig_low,sig_high,40)):
-#        eps_sig_sim = np.array([eps_sim,sig_sim])
-#        objective_ITIC(eps_sig_sim)
-
-f = open('eps_optimal','w')
-f.write(str(eps_opt))
-f.close()
-
-f = open('sig_optimal','w')
-f.write(str(sig_opt))
-f.close()
-
-conv_eps = 0
-
-if iEpsRef > 0:
-    eps_opt_previous = np.loadtxt('../e'+str(iEpsRef-1)+'s'+str(iSigmaRef)+'/eps_optimal')
-    eps_opt_current = eps_opt
-    TOL_eps = np.loadtxt('TOL_eps')
-    if np.abs(eps_opt_previous - eps_opt_current) < TOL_eps:
+    if eps_opt == 0. or sig_opt == 0.:
+        
         conv_eps = 1
 
-f = open('conv_eps','w')
-f.write(str(conv_eps))
-f.close()
+    else:               
+    
+        f = open('eps_optimal','w')
+        f.write(str(eps_opt))
+        f.close()
+        
+        f = open('sig_optimal','w')
+        f.write(str(sig_opt))
+        f.close()
+        
+        conv_eps = 0
+        
+        if iEpsRef > 0:
+            eps_opt_previous = np.loadtxt('../e'+str(iEpsRef-1)+'s'+str(iSigmaRef)+'/eps_optimal')
+            eps_opt_current = eps_opt
+            TOL_eps = np.loadtxt('TOL_eps')
+            if np.abs(eps_opt_previous - eps_opt_current) < TOL_eps:
+                conv_eps = 1
+        
+    f = open('conv_eps','w')
+    f.write(str(conv_eps))
+    f.close()
+
+if __name__ == '__main__':
+    
+    main()
