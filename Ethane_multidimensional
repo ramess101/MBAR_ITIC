@@ -11,22 +11,22 @@ output_path=~/"$Compound"/Gromacs/"$Model"
 
 #MolWt=30.0698
 
-eps_low=0.9
+eps_low=0.93
 eps_high=1.1
 
+sig_low=0.373
+sig_high=0.381
+
 TOL_eps=0.001
+TOL_sig=0.0001
 TOL_MBAR=0.001
 
-sigma_values=(0.377 0.375 0.376 0.378 0.38 0.381 0.382 0.385 0.379) #nm
+iEpsref=2
+iSigref=5
 
-for iSigref in $(seq 0 0)
-do
+eps_guess=0.946347455
 
-iEpsref=0
-
-eps_guess=1.0143 #122 K
-
-sigma_guess="${sigma_values[iSigref]}" 
+sig_guess=0.376754656 
 
 conv_eps=0
 
@@ -46,7 +46,7 @@ then
 
 #### Start the mdrun simulations for the initial epsilon and sigma values
 
-echo Run ITIC for Epsilon = "$eps_guess" sigma = "$sigma_guess"
+echo Run ITIC for Epsilon = "$eps_guess" sigma = "$sig_guess"
 sleep 2s
 
 ####
@@ -56,13 +56,13 @@ cd e"$iEpsref"s"$iSigref" || exit
 
 #Create files with force field parameters
 
-echo "$eps_guess" "$sigma_guess" > eps_Sigma
+echo "$eps_guess" "$sig_guess" > eps_Sigma
 echo "$eps_guess" > eps_guess
 
 cp "$input_path"/ethane_temp.top ethane.top 
 cp "$input_path"/ethane.gro ethane.gro 
 sed -i -e s/some_epsilon/"$eps_guess"/ ethane.top
-sed -i -e s/some_sigma/"$sigma_guess"/ ethane.top
+sed -i -e s/some_sigma/"$sig_guess"/ ethane.top
 
 cp "$scripts_path"/EthaneRunITIC_all EthaneRunITIC_all
 
@@ -74,7 +74,7 @@ sed -i -e s@some_scripts_path_top@"$scripts_path"@ EthaneRunITIC_all
 sed -i -e s@some_input_path_top@"$input_path"@ EthaneRunITIC_all
 sed -i -e s@some_output_path_top@"$output_path"@ EthaneRunITIC_all
 
-#./EthaneRunITIC_all
+./EthaneRunITIC_all
 
 
 fi
@@ -84,6 +84,12 @@ cd "$output_path"/e"$iEpsref"s"$iSigref" || exit # Must be in correct directory 
 echo "Eps (kJ/mol)" > eps_all
 echo "Objective" > F_all
 echo "Objective" > F_ITIC_all
+cp F_ITIC_all SSE_rhoL_all
+cp F_ITIC_all SSE_rhov_all
+cp F_ITIC_all SSE_Psat_all
+cp F_ITIC_all SSE_U_all
+cp F_ITIC_all SSE_P_all
+cp F_ITIC_all SSE_Z_all
 echo $TOL_eps > TOL_eps
 echo $TOL_MBAR > TOL_MBAR 
 
@@ -92,9 +98,12 @@ echo "$eps_high" > eps_high
 echo "$eps_guess" > eps_guess
 
 echo "Sigma (nm)" > sig_all
-echo "$sigma_guess" > sig_all
-echo "$sigma_guess" > sig_guess
-cp sig_guess sig_it
+echo "$sig_guess" > sig_guess
+echo "$sig_low" > sig_low
+echo "$sig_high" > sig_high
+
+echo "$iEpsref" > iEpsref #Testing out to see if I can copy the reference inside this directory instead
+echo "$iSigref" > iSigref 
 
 cp "$scripts_path"/EthaneRerunITIC_subprocess EthaneRerunITIC_subprocess
 
@@ -108,25 +117,25 @@ sed -i -e s@some_output_path_top@"$output_path"@ EthaneRerunITIC_subprocess
 
 cd "$output_path"/e"$iEpsref"s"$iSigref" || exit #Must cd back to original location for python script
 
-#python "$scripts_path"/optimization_subprocess.py
-#python "$scripts_path"/optimization_scipy.py
-python "$scripts_path"/optimization_scipy_ITIC.py
+python "$scripts_path"/optimization_multidimensional_ITIC.py -opt leapfrog
 
 eps_optimal=$(<eps_optimal)
+sig_optimal=$(<sig_optimal)
 iEpsref=$((iEpsref + 1))
+iSigref=$((iSigref + 1))
 conv_eps=$(<conv_eps)
-conv_eps=1 #If you just want to do a single iteration, for practice
+#conv_eps=1 #If you just want to do a single iteration, for practice
 
 eps_guess=$eps_optimal
+sig_guess=$sig_optimal
 
 echo "$eps_guess"
+echo "$sig_guess"
 echo "$conv_eps"
 
 #done #for iEpsref of direct simulations
 
 done #for while loop of direct simulations
-
-done #for loop of sigmas
 
 exit 0
 

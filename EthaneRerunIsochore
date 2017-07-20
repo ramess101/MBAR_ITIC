@@ -74,7 +74,7 @@ done #for j
 
 echo "Waiting for Isochore reruns to finish"
 
-sleep 10s
+sleep 1s
 
 exit 0
 

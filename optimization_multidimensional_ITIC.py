@@ -820,7 +820,7 @@ def call_optimizers(opt_type):
     #print(eps_sig_guess)
     
     d_eps_sig = np.array([0.0001,0.0001])
-    tol_eps_sig = np.array([0.001,0.001])
+    tol_eps_sig = np.array([0.0001,0.0001])
     t_eps_sig = d_eps_sig
          
     bnds = ((eps_low,eps_high),(sig_low,sig_high)) 
@@ -904,10 +904,13 @@ def main():
         conv_eps = 0
         
         if iEpsRef > 0:
-            eps_opt_previous = np.loadtxt('../e'+str(iEpsRef-1)+'s'+str(iSigmaRef)+'/eps_optimal')
+            eps_opt_previous = np.loadtxt('../e'+str(iEpsRef-1)+'s'+str(iSigmaRef-1)+'/eps_optimal')
             eps_opt_current = eps_opt
             TOL_eps = np.loadtxt('TOL_eps')
-            if np.abs(eps_opt_previous - eps_opt_current) < TOL_eps:
+            sig_opt_previous = np.loadtxt('../e'+str(iEpsRef-1)+'s'+str(iSigmaRef-1)+'/sig_optimal')
+            sig_opt_current = sig_opt
+            TOL_sig = np.loadtxt('TOL_sig')
+            if np.abs(eps_opt_previous - eps_opt_current) < TOL_eps and np.abs(sig_opt_previous - sig_opt_current) < TOL_sig:
                 conv_eps = 1
         
     f = open('conv_eps','w')
