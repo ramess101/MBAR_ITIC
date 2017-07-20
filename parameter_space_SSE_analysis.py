@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np 
-import os
+import os, sys, argparse
 from pymbar import MBAR
 import matplotlib
 matplotlib.use('Agg')
@@ -103,16 +103,16 @@ def REFPROP_UP(TSim,rho_mass,NmolSim,compound):
 
     return RP_U_depN, RP_P, RP_Z, RP_Z1rho
 
-#Generate REFPROP values, prints out into a file in the correct directory
-
-RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
-
-###
-
-iEpsRef = int(np.loadtxt('../iEpsref'))
-iSigmaRef = int(np.loadtxt('../iSigref'))
+iEpsRef = int(np.loadtxt('iEpsref'))
+iSigmaRef = int(np.loadtxt('iSigref'))
 
 def analyze_ITIC(iRerun): 
+
+    #Generate REFPROP values, prints out into a file in the correct directory
+
+    RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
+
+    ###
     
     USim, dUSim, PSim, dPSim, ZSim, Z1rhoSim = np.loadtxt('MBAR_e'+str(iEpsRef)+'s'+str(iSigmaRef)+'it'+str(iRerun),unpack=True)
     Tsat, rhoLSim, PsatSim, rhovSim = np.loadtxt('ITIC_'+str(iRerun),skiprows=1,unpack=True)
@@ -167,160 +167,252 @@ def analyze_ITIC(iRerun):
     
     return SSErhoL, SSEPsat, SSErhov, SSEU, SSEP, SSEZ
 
-print(os.getcwd())
-time.sleep(2)
-
-f = open('SSE_rhoL_all','w')
-f.close()
-
-f = open('SSE_Psat_all','w')
-f.close()
-
-f = open('SSE_rhov_all','w')
-f.close()
-
-f = open('SSE_U','w')
-f.close()
-
-f = open('SSE_P','w')
-f.close()
-
-f = open('SSE_Z','w')
-f.close()
-
-# For scanning the parameter space
-
-nReruns = int(np.loadtxt('iRerun'))
-eps_sig_reruns = np.loadtxt('eps_Sigma_all',skiprows=1)
-eps_reruns = eps_sig_reruns[:,0]
-sig_reruns = eps_sig_reruns[:,1]
-eps = np.unique(eps_reruns)
-sig = np.unique(sig_reruns)
-neps = len(eps)
-nsig = len(sig)    
-
-opt_type = 'Iterative'
-
-if opt_type == 'Scan':
-
-    SSErhoL = np.empty([neps,nsig])
-    SSEPsat = np.empty([neps,nsig])
-    SSErhov = np.empty([neps,nsig])
-    SSEU = np.empty([neps,nsig])
-    SSEP = np.empty([neps,nsig])
-    SSEZ = np.empty([neps,nsig])
-
-    iRerun = 1
-    for ieps in range(neps):
-        for isig in range(nsig):
-            SSErhoL[ieps,isig], SSEPsat[ieps,isig], SSErhov[ieps,isig], SSEU[ieps,isig], SSEP[ieps,isig], SSEZ[ieps,isig] = analyze_ITIC(iRerun)
-            iRerun += 1
-            
-    SSErhoL = np.log10(SSErhoL)
-    SSEPsat = np.log10(SSEPsat)
-    SSErhov = np.log10(SSErhov)
-    SSEU = np.log10(SSEU)
-    SSEP = np.log10(SSEP)
-    SSEZ = np.log10(SSEZ)
-            
-    f = plt.figure()
-    plt.contour(sig,eps,SSErhoL)
-    plt.ylabel('$\epsilon$ (kJ/mol)')
-    plt.xlabel('$\sigma$ (nm)')
-    plt.ylim([min(eps),max(eps)])
-    plt.xlim([min(sig),max(sig)])
-    plt.title(r'SSE $\rho_l$')
-    f.savefig(compound+'_SSErhoL.pdf')
+def initialize_files():
     
-    f = plt.figure()
-    plt.contour(sig,eps,SSEPsat)
-    plt.ylabel('$\epsilon$ (kJ/mol)')
-    plt.xlabel('$\sigma$ (nm)')
-    plt.ylim([min(eps),max(eps)])
-    plt.xlim([min(sig),max(sig)])
-    plt.title(r'SSE $P_{sat}$')
-    f.savefig(compound+'_SSEPsat.pdf')
+    print(os.getcwd())
+    time.sleep(2)
     
-    f = plt.figure()
-    plt.contour(sig,eps,SSErhov)
-    plt.ylabel('$\epsilon$ (kJ/mol)')
-    plt.xlabel('$\sigma$ (nm)')
-    plt.ylim([min(eps),max(eps)])
-    plt.xlim([min(sig),max(sig)])
-    plt.title(r'SSE $\rho_v$')
-    f.savefig(compound+'_SSErhov.pdf')
+    f = open('SSE_rhoL_all','w')
+    f.close()
     
-    f = plt.figure()
-    plt.contour(sig,eps,SSEU)
-    plt.ylabel('$\epsilon$ (kJ/mol)')
-    plt.xlabel('$\sigma$ (nm)')
-    plt.ylim([min(eps),max(eps)])
-    plt.xlim([min(sig),max(sig)])
-    plt.title(r'SSE U')
-    f.savefig(compound+'_SSEU.pdf')
+    f = open('SSE_Psat_all','w')
+    f.close()
     
-    f = plt.figure()
-    plt.contour(sig,eps,SSEP)
-    plt.ylabel('$\epsilon$ (kJ/mol)')
-    plt.xlabel('$\sigma$ (nm)')
-    plt.ylim([min(eps),max(eps)])
-    plt.xlim([min(sig),max(sig)])
-    plt.title(r'SSE P')
-    f.savefig(compound+'_SSEP.pdf')
+    f = open('SSE_rhov_all','w')
+    f.close()
     
-    f = plt.figure()
-    plt.contour(sig,eps,SSEZ)
-    plt.ylabel('$\epsilon$ (kJ/mol)')
-    plt.xlabel('$\sigma$ (nm)')
-    plt.ylim([min(eps),max(eps)])
-    plt.xlim([min(sig),max(sig)])
-    plt.title(r'SSE Z')
-    f.savefig(compound+'_SSEZ.pdf')
+    f = open('SSE_U','w')
+    f.close()
+    
+    f = open('SSE_P','w')
+    f.close()
+    
+    f = open('SSE_Z','w')
+    f.close()
 
-elif opt_type == 'Iterative':
+def print_figures(opt_type):
     
-    SSErhoL = np.empty(nReruns)
-    SSEPsat = np.empty(nReruns)
-    SSErhov = np.empty(nReruns)
-    SSEU = np.empty(nReruns)
-    SSEP = np.empty(nReruns)
-    SSEZ = np.empty(nReruns)
-    
-    for iRerun in range(nReruns):
-        SSErhoL[iRerun], SSEPsat[iRerun], SSErhov[iRerun], SSEU[iRerun], SSEP[iRerun], SSEZ[iRerun] = analyze_ITIC(iRerun)
+    initialize_files()  
         
-    f = plt.figure()
-    plt.plot(SSErhoL,marker='o',linestyle='none')
-    plt.xlabel('Iteration')
-    plt.ylabel('SSE')
-    f.savefig(compound+'_SSErhoL.pdf')
+    if opt_type == 'scan':
+
+        # For scanning the parameter space
+        
+        nReruns = int(np.loadtxt('iRerun'))
+        eps_sig_reruns = np.loadtxt('eps_Sigma_all',skiprows=1)
+        eps_reruns = eps_sig_reruns[:,0]
+        sig_reruns = eps_sig_reruns[:,1]
+        eps = np.unique(eps_reruns)
+        sig = np.unique(sig_reruns)
+        neps = len(eps)
+        nsig = len(sig) 
+        
+        SSErhoL = np.empty([neps,nsig])
+        SSEPsat = np.empty([neps,nsig])
+        SSErhov = np.empty([neps,nsig])
+        SSEU = np.empty([neps,nsig])
+        SSEP = np.empty([neps,nsig])
+        SSEZ = np.empty([neps,nsig])
     
-    f = plt.figure()
-    plt.plot(SSEPsat,marker='o',linestyle='none')
-    plt.xlabel('Iteration')
-    plt.ylabel('SSE')
-    f.savefig(compound+'_SSEPsat.pdf')
+        iRerun = 1
+        for ieps in range(neps):
+            for isig in range(nsig):
+                SSErhoL[ieps,isig], SSEPsat[ieps,isig], SSErhov[ieps,isig], SSEU[ieps,isig], SSEP[ieps,isig], SSEZ[ieps,isig] = analyze_ITIC(iRerun)
+                iRerun += 1
+                
+        SSErhoL = np.log10(SSErhoL)
+        SSEPsat = np.log10(SSEPsat)
+        SSErhov = np.log10(SSErhov)
+        SSEU = np.log10(SSEU)
+        SSEP = np.log10(SSEP)
+        SSEZ = np.log10(SSEZ)
+                
+        f = plt.figure()
+        plt.contour(sig,eps,SSErhoL)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE $\rho_l$')
+        f.savefig(compound+'_SSErhoL.pdf')
+        
+        f = plt.figure()
+        plt.contour(sig,eps,SSEPsat)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE $P_{sat}$')
+        f.savefig(compound+'_SSEPsat.pdf')
+        
+        f = plt.figure()
+        plt.contour(sig,eps,SSErhov)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE $\rho_v$')
+        f.savefig(compound+'_SSErhov.pdf')
+        
+        f = plt.figure()
+        plt.contour(sig,eps,SSEU)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE U')
+        f.savefig(compound+'_SSEU.pdf')
+        
+        f = plt.figure()
+        plt.contour(sig,eps,SSEP)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE P')
+        f.savefig(compound+'_SSEP.pdf')
+        
+        f = plt.figure()
+        plt.contour(sig,eps,SSEZ)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE Z')
+        f.savefig(compound+'_SSEZ.pdf')
     
-    f = plt.figure()
-    plt.plot(SSErhov,marker='o',linestyle='none')
-    plt.xlabel('Iteration')
-    plt.ylabel('SSE')
-    f.savefig(compound+'_SSErhov.pdf')
+    else:
+        
+        # For iterative
+        
+        nReruns = int(np.loadtxt('iRerun'))
+        eps_sig_reruns = np.loadtxt('eps_Sigma_all',skiprows=0)
+        eps_reruns = eps_sig_reruns[:,0]
+        sig_reruns = eps_sig_reruns[:,1]
+        eps = np.unique(eps_reruns)
+        sig = np.unique(sig_reruns)
+        
+        SSErhoL = np.empty(nReruns)
+        SSEPsat = np.empty(nReruns)
+        SSErhov = np.empty(nReruns)
+        SSEU = np.empty(nReruns)
+        SSEP = np.empty(nReruns)
+        SSEZ = np.empty(nReruns)
+        
+        for iRerun in range(nReruns):
+            SSErhoL[iRerun], SSEPsat[iRerun], SSErhov[iRerun], SSEU[iRerun], SSEP[iRerun], SSEZ[iRerun] = analyze_ITIC(iRerun)
+           
+        f = plt.figure()
+        plt.semilogy(SSErhoL,marker='o',linestyle='none')
+        plt.xlabel('Iteration')
+        plt.ylabel('SSE')
+        f.savefig(compound+'_SSErhoL.pdf')
+        
+        f = plt.figure()
+        plt.semilogy(SSEPsat,marker='o',linestyle='none')
+        plt.xlabel('Iteration')
+        plt.ylabel('SSE')
+        f.savefig(compound+'_SSEPsat.pdf')
+        
+        f = plt.figure()
+        plt.semilogy(SSErhov,marker='o',linestyle='none')
+        plt.xlabel('Iteration')
+        plt.ylabel('SSE')
+        f.savefig(compound+'_SSErhov.pdf')
+        
+        f = plt.figure()
+        plt.semilogy(SSEU,marker='o',linestyle='none')
+        plt.xlabel('Iteration')
+        plt.ylabel('SSE')
+        f.savefig(compound+'_SSEU.pdf')
+        
+        f = plt.figure()
+        plt.semilogy(SSEP,marker='o',linestyle='none')
+        plt.xlabel('Iteration')
+        plt.ylabel('SSE')
+        f.savefig(compound+'_SSEP.pdf')
+        
+        f = plt.figure()
+        plt.semilogy(SSEZ,marker='o',linestyle='none')
+        plt.xlabel('Iteration')
+        plt.ylabel('SSE')
+        f.savefig(compound+'_SSEZ.pdf')
+        
+        SSErhoL = np.log10(SSErhoL)
+        SSEPsat = np.log10(SSEPsat)
+        SSErhov = np.log10(SSErhov)
+        SSEU = np.log10(SSEU)
+        SSEP = np.log10(SSEP)
+        SSEZ = np.log10(SSEZ)
+        
+        print(eps_reruns)
+        print(sig_reruns)
+        print(SSErhoL)
+        
+        f = plt.figure()
+        plt.scatter(sig_reruns,eps_reruns,c=SSErhoL,cmap='Blues')
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE $\rho_l$')
+        f.savefig(compound+'_eps_sig_rhoL.pdf')
+        
+        f = plt.figure()
+        plt.scatter(sig_reruns,eps_reruns,c=SSEPsat)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE $P_{sat}$')
+        f.savefig(compound+'_eps_sig_SSEPsat.pdf')
+        
+        f = plt.figure()
+        plt.scatter(sig_reruns,eps_reruns,c=SSErhov)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE $\rho_v$')
+        f.savefig(compound+'_eps_sig_SSErhov.pdf')
+        
+        f = plt.figure()
+        plt.scatter(sig_reruns,eps_reruns,c=SSEU)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE U')
+        f.savefig(compound+'_eps_sig_SSEU.pdf')
+        
+        f = plt.figure()
+        plt.scatter(sig_reruns,eps_reruns,c=SSEP)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE P')
+        f.savefig(compound+'_eps_sig_SSEP.pdf')
+        
+        f = plt.figure()
+        plt.scatter(sig_reruns,eps_reruns,c=SSEZ)
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'SSE Z')
+        f.savefig(compound+'_eps_sig_SSEZ.pdf')
     
-    f = plt.figure()
-    plt.plot(SSEU,marker='o',linestyle='none')
-    plt.xlabel('Iteration')
-    plt.ylabel('SSE')
-    f.savefig(compound+'_SSEU.pdf')
+def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points'],help="choose which type of optimizer to use")
+    args = parser.parse_args()
+    if args.optimizer:
+        print_figures(args.optimizer)
+    else:
+        print('Please specify an optimizer type')
+
+if __name__ == '__main__':
     
-    f = plt.figure()
-    plt.plot(SSEP,marker='o',linestyle='none')
-    plt.xlabel('Iteration')
-    plt.ylabel('SSE')
-    f.savefig(compound+'_SSEP.pdf')
-    
-    f = plt.figure()
-    plt.plot(SSEZ,marker='o',linestyle='none')
-    plt.xlabel('Iteration')
-    plt.ylabel('SSE')
-    f.savefig(compound+'_SSEZ.pdf')
+    main()
