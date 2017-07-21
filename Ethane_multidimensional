@@ -11,22 +11,25 @@ output_path=~/"$Compound"/Gromacs/"$Model"
 
 #MolWt=30.0698
 
-eps_low=0.93
-eps_high=1.1
+opt_method='leapfrog'
+opt_prop='rhoL'
 
-sig_low=0.373
-sig_high=0.381
+eps_low=0.85
+eps_high=1.
+
+sig_low=0.371
+sig_high=0.379
 
 TOL_eps=0.001
 TOL_sig=0.0001
 TOL_MBAR=0.001
 
-iEpsref=2
-iSigref=5
+iEpsref=3
+iSigref=6
 
-eps_guess=0.946347455
+eps_guess=0.929298966921
 
-sig_guess=0.376754656 
+sig_guess=0.375554136073 
 
 conv_eps=0
 
@@ -41,7 +44,7 @@ cd "$output_path" || exit
 echo "$iEpsref" > iEpsref
 echo "$iSigref" > iSigref
 
-if [ $iEpsref -ge 1 ] #If you have already run (i.e. just rerunning the optimization)
+if [ $iEpsref -ge 4 ] #If you have already run (i.e. just rerunning the optimization)
 then
 
 #### Start the mdrun simulations for the initial epsilon and sigma values
@@ -91,6 +94,7 @@ cp F_ITIC_all SSE_U_all
 cp F_ITIC_all SSE_P_all
 cp F_ITIC_all SSE_Z_all
 echo $TOL_eps > TOL_eps
+echo $TOL_sig > TOL_sig
 echo $TOL_MBAR > TOL_MBAR 
 
 echo "$eps_low" > eps_low
@@ -117,7 +121,13 @@ sed -i -e s@some_output_path_top@"$output_path"@ EthaneRerunITIC_subprocess
 
 cd "$output_path"/e"$iEpsref"s"$iSigref" || exit #Must cd back to original location for python script
 
-python "$scripts_path"/optimization_multidimensional_ITIC.py -opt leapfrog
+python "$scripts_path"/optimization_multidimensional_ITIC.py -opt "$opt_method" -prop "$opt_prop"
+python "$scripts_path"/parameter_space_SSE_analysis.py -opt "$opt_method"
+
+cd "$output_path"/e"$iEpsref"s"$iSigref" || exit #Should still be in the same directory, but just to be safe
+
+rm Isochore/rho?/T?/NVT_eq/NVT_prod/energy_press_e*s*it*.xvg Isochore/rho?/T?/NVT_eq/nvt_eq.trr Isochore/rho?/T?/NVT_eq/NVT_prod/nvt_prod.log
+rm Isotherm/rho_?/NVT_eq/NVT_prod/energy_press_e*s*it*.xvg Isotherm/rho_?/NVT_eq/nvt_eq.trr Isotherm/rho_?/NVT_eq/NVT_prod/nvt_prod.log #Do not delete the production trajectory files since they will be used in subsequent iterations
 
 eps_optimal=$(<eps_optimal)
 sig_optimal=$(<sig_optimal)
