@@ -353,8 +353,9 @@ def print_figures(opt_type):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.legend()
+        plt.title(r'$\rho_l$')
         ax = plt.colorbar()
-        ax.set_label(r'SSE $\rho_l$')
+        ax.set_label('log(SSE)')
         f.savefig(compound+'_eps_sig_rhoL.pdf')
         
         f = plt.figure()

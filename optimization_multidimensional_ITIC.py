@@ -125,48 +125,9 @@ RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound
 
 ###
 
-def objective_old(RP_U_depN, RP_P, USim,PSim,dUSim=1.,dPSim=1.): 
-    devU = (USim - RP_U_depN)/dUSim
-    devP = (PSim - RP_P)/dPSim
-    SSEU = np.sum(np.power(devU,2))
-    SSEP = np.sum(np.power(devP,2)) 
-    SSE = 0
-    SSE += SSEU
-    #SSE += SSEP
-    #print(devU)
-    #print(devP)
-    return SSE
-
 iRerun = 0
 
-def objective(eps,weighted=False): 
-    global iRerun
-    
-    USim, dUSim, PSim, dPSim, RP_U_depN, RP_P = MBAR_estimates(eps,iRerun)
-
-    if weighted:
-        devU = (USim - RP_U_depN)/dUSim
-        devP = (PSim - RP_P)/dPSim
-    else:
-        devU = USim - RP_U_depN
-        devP = PSim - RP_P
-    SSEU = np.sum(np.power(devU,2))
-    SSEP = np.sum(np.power(devP,2)) 
-    SSE = 0
-    SSE += SSEU
-    #SSE += SSEP
-    #print(devU)
-    #print(devP)
-    
-    f = open('F_all','a')
-    f.write('\n'+str(SSE))
-    f.close()
-    
-    iRerun += 1
-    
-    return SSE
-
-def objective_ITIC(eps_sig): 
+def objective_ITIC(eps_sig,prop_type): 
     global iRerun
     
     USim, dUSim, PSim, dPSim, ZSim = MBAR_estimates(eps_sig,iRerun)
@@ -216,12 +177,20 @@ def objective_ITIC(eps_sig):
     SSEZ = np.sum(np.power(devZ,2))
     
     SSE = 0
-    SSE += SSErhoL
-    #SSE += SSEPsat
-    #SSE += SSErhov
-    #print(devrhoL)
-    #print(devPsat)
-    #print(devrhov)
+    
+    for prop in prop_type:
+        if prop == 'rhoL':
+            SSE += SSErhoL
+        elif prop == 'Psat':
+            SSE += SSEPsat
+        elif prop == 'rhov':
+            SSE += SSErhov
+        elif prop == 'U':
+            SSE += SSEU
+        elif prop == 'P':
+            SSE += SSEP
+        elif prop == 'Z':
+            SSE += SSEZ
     
     f = open('F_ITIC_all','a')
     f.write('\n'+str(SSE))
@@ -454,7 +423,7 @@ iEpsRef = int(np.loadtxt('../iEpsref'))
 iSigmaRef = int(np.loadtxt('../iSigref'))
 
 def MBAR_estimates(eps_sig,iRerun):
-        
+    
     #eps = eps.tolist()
 
     f = open('eps_it','w')
@@ -811,7 +780,9 @@ def leapfrog(fun,x_guess,bounds,tol,max_it=100):
     #print(players[ibest,:])
     return best_player
 
-def call_optimizers(opt_type):
+def call_optimizers(opt_type,prop_type):
+    
+    objective = lambda eps_sig: objective_ITIC(eps_sig,prop_type)
 
     eps_opt = 0.
     sig_opt = 0.    
@@ -829,42 +800,42 @@ def call_optimizers(opt_type):
     
     if opt_type == 'fsolve':
     
-        eps_opt, sig_opt = fsolve(objective_ITIC,eps_sig_guess,epsfcn=1e-4,xtol=1e-4) #This resulted in some 'nan'
+        eps_opt, sig_opt = fsolve(objective,eps_sig_guess,epsfcn=1e-4,xtol=1e-4) #This resulted in some 'nan'
     
     elif opt_type == 'steep':
                                                     
-        eps_sig_opt, iterations = steep_descent(objective_ITIC,eps_sig_guess,bnds,d_eps_sig,tol_eps_sig,t_eps_sig)
+        eps_sig_opt, iterations = steep_descent(objective,eps_sig_guess,bnds,d_eps_sig,tol_eps_sig,t_eps_sig)
         
         eps_opt = eps_sig_opt[0]
         sig_opt = eps_sig_opt[1]
 
     elif opt_type =='LBFGSB':
          
-        sol = minimize(objective_ITIC,eps_sig_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-5,'maxiter':50,'maxfun':100}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
+        sol = minimize(objective,eps_sig_guess,method='L-BFGS-B',bounds=bnds,options={'eps':1e-5,'maxiter':50,'maxfun':100}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
         eps_opt = sol.x[0]
         sig_opt = sol.x[1]
     
     elif opt_type == 'leapfrog': 
         
         # For leapfrog algorithm
-        objective_ITIC(eps_sig_guess) #To call objective before running loop
+        objective(eps_sig_guess) #To call objective before running loop
         
-        eps_sig_opt = leapfrog(objective_ITIC,eps_sig_guess,bnds,tol_eps_sig)
+        eps_sig_opt = leapfrog(objective,eps_sig_guess,bnds,tol_eps_sig)
         eps_opt = eps_sig_opt[0]
         sig_opt = eps_sig_opt[1]
     
     elif opt_type == 'scan':
         # For scanning the parameter space
         
-        objective_ITIC(eps_sig_guess) #To call objective before running loop
+        objective(eps_sig_guess) #To call objective before running loop
         
         for iEps, eps_sim in enumerate(np.linspace(eps_low,eps_high,40)):
             for iSig, sig_sim in enumerate(np.linspace(sig_low,sig_high,40)):
                 eps_sig_sim = np.array([eps_sim,sig_sim])
-                objective_ITIC(eps_sig_sim)
+                objective(eps_sig_sim)
         
     elif opt_type == 'points':
-        objective_ITIC(eps_sig_guess)
+        objective(eps_sig_guess)
         eps_sig_spec = np.array([0.950877,0.377134])
         objective_ITIC(eps_sig_spec)
     
@@ -874,9 +845,10 @@ def main():
     
     parser = argparse.ArgumentParser()
     parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points'],help="choose which type of optimizer to use")
+    parser.add_argument("-prop","--properties",type=str,nargs='+',choices=['rhoL','Psat','rhov','P','U','Z'],help="choose one or more properties to use in optimization" )
     args = parser.parse_args()
     if args.optimizer:
-        eps_opt, sig_opt = call_optimizers(args.optimizer)
+        eps_opt, sig_opt = call_optimizers(args.optimizer,args.properties)
     else:
         print('Please specify an optimizer type')
         eps_opt = 0.
