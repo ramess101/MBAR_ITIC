@@ -285,7 +285,7 @@ def print_figures(opt_type):
         
         # For iterative
         
-        nReruns = int(np.loadtxt('iRerun'))
+        nReruns = int(np.loadtxt('iRerun'))+1
         eps_sig_reruns = np.loadtxt('eps_Sigma_all',skiprows=0)
         eps_reruns = eps_sig_reruns[:,0]
         sig_reruns = eps_sig_reruns[:,1]
@@ -345,17 +345,16 @@ def print_figures(opt_type):
         SSEP = np.log10(SSEP)
         SSEZ = np.log10(SSEZ)
         
-        print(eps_reruns)
-        print(sig_reruns)
-        print(SSErhoL)
-        
         f = plt.figure()
-        plt.scatter(sig_reruns,eps_reruns,c=SSErhoL,cmap='Blues')
+        plt.scatter(sig_reruns[1:],eps_reruns[1:],c=SSErhoL[1:],cmap='Blues',label='Iterations')
+        plt.scatter(sig_reruns[0],eps_reruns[0],marker='x',c=SSErhoL[0],cmap='Blues',label='Reference')
         plt.ylabel('$\epsilon$ (kJ/mol)')
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE $\rho_l$')
+        plt.legend()
+        ax = plt.colorbar()
+        ax.set_label(r'SSE $\rho_l$')
         f.savefig(compound+'_eps_sig_rhoL.pdf')
         
         f = plt.figure()
