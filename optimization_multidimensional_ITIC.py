@@ -81,13 +81,17 @@ nStates = len(Temp_sim)
 print(os.getcwd())
 time.sleep(2)
 
-eps_low = np.loadtxt('eps_low')
+#eps_low = np.loadtxt('eps_low')
 eps_guess = np.loadtxt('eps_guess')
-eps_high = np.loadtxt('eps_high')
+#eps_high = np.loadtxt('eps_high')
+eps_low = 0.9*eps_guess
+eps_high = 1.1*eps_guess
 
-sig_low = np.loadtxt('sig_low')
+#sig_low = np.loadtxt('sig_low')
 sig_guess = np.loadtxt('sig_guess')
-sig_high = np.loadtxt('sig_high')
+#sig_high = np.loadtxt('sig_high')
+sig_low=0.98*sig_guess
+sig_high=1.02*sig_guess
 
 TOL = np.loadtxt('TOL_MBAR') 
 
@@ -419,8 +423,8 @@ def ITIC_calc(USim,ZSim):
 
 #print(objective_ITIC(1.))
           
-iEpsRef = int(np.loadtxt('../iEpsref'))
-iSigmaRef = int(np.loadtxt('../iSigref'))
+iEpsRef = int(np.loadtxt('iEpsref'))
+iSigmaRef = int(np.loadtxt('iSigref'))
 
 def MBAR_estimates(eps_sig,iRerun):
     
@@ -871,6 +875,10 @@ def main():
         
         f = open('sig_optimal','w')
         f.write(str(sig_opt))
+        f.close()
+        
+        f = open('eps_sig_optimal','w')
+        f.write(str(eps_opt)+'\t'+str(sig_opt))
         f.close()
         
         conv_eps = 0

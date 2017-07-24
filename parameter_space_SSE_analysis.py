@@ -133,37 +133,103 @@ def analyze_ITIC(iRerun):
     devU = USim - RP_U_depN
     devP = PSim - RP_P
     devZ = ZSim - RP_Z
-       
+    
+    AAD = np.zeros(6)
+    AAD[0] = np.sum(np.abs(devrhoL/RP_rhoL))*100./len(devrhoL)
+    AAD[1] = np.sum(np.abs(devPsat/RP_Psat))*100./len(devPsat)
+    AAD[2] = np.sum(np.abs(devrhov/RP_rhov))*100./len(devrhov)
+    AAD[3] = np.sum(np.abs(devU/RP_U_depN))*100./len(devU)
+    AAD[4] = np.sum(np.abs(devP/RP_P))*100./len(devP)
+    AAD[5] = np.sum(np.abs(devZ/RP_Z))*100./len(devZ)
+    
+    bias = np.zeros(6)
+    bias[0] = np.sum(devrhoL/RP_rhoL)*100./len(devrhoL)
+    bias[1] = np.sum(devPsat/RP_Psat)*100./len(devPsat)
+    bias[2] = np.sum(devrhov/RP_rhov)*100./len(devrhov)
+    bias[3] = np.sum(devU/RP_U_depN)*100./len(devU)
+    bias[4] = np.sum(devP/RP_P)*100./len(devP)
+    bias[5] = np.sum(devZ/RP_Z)*100./len(devZ) 
+              
     SSErhoL = np.sum(np.power(devrhoL,2))
     SSEPsat = np.sum(np.power(devPsat,2))
     SSErhov = np.sum(np.power(devrhov,2)) 
     SSEU = np.sum(np.power(devU,2))
     SSEP = np.sum(np.power(devP,2))
     SSEZ = np.sum(np.power(devZ,2))
+    
+    SSE = np.zeros(6)
+    SSE[0] = SSErhoL
+    SSE[1] = SSEPsat
+    SSE[2] = SSErhov
+    SSE[3] = SSEU
+    SSE[4] = SSEP
+    SSE[5] = SSEZ
        
-    f = open('SSE_rhoL_all','a')
-    f.write('\n'+str(SSErhoL))
+    RMS = np.zeros(6)
+    RMS[0] = np.sqrt(SSErhoL/len(devrhoL))
+    RMS[1] = np.sqrt(SSEPsat/len(devPsat))
+    RMS[2] = np.sqrt(SSErhov/len(devrhov))
+    RMS[3] = np.sqrt(SSEU/len(devU))
+    RMS[4] = np.sqrt(SSEP/len(devP))
+    RMS[5] = np.sqrt(SSEZ/len(devZ)) 
+
+    for iAAD,ibias,iSSE,iRMS in zip(AAD,bias,SSE,RMS):
+           
+        f = open('AAD_all','a')
+        f.write(str(iAAD)+'\t')
+        f.close()
+        
+        f = open('bias_all','a')
+        f.write(str(ibias)+'\t')
+        f.close()
+        
+        f = open('SSE_all','a')
+        f.write(str(iSSE)+'\t')
+        f.close()
+
+        f = open('RMS_all','a')
+        f.write(str(iRMS)+'\t')
+        f.close()
+        
+    f = open('AAD_all','a')
+    f.write('\n')
     f.close()
     
-    f = open('SSE_Psat_all','a')
-    f.write('\n'+str(SSEPsat))
+    f = open('bias_all','a')
+    f.write('\n')
     f.close()
     
-    f = open('SSE_rhov_all','a')
-    f.write('\n'+str(SSErhov))
+    f = open('SSE_all','a')
+    f.write('\n')
     f.close()
-    
-    f = open('SSE_U','a')
-    f.write('\n'+str(SSEU))
-    f.close()
-    
-    f = open('SSE_P','a')
-    f.write('\n'+str(SSEP))
-    f.close()
-    
-    f = open('SSE_Z','a')
-    f.write('\n'+str(SSEZ))
-    f.close()
+
+    f = open('RMS_all','a')
+    f.write('\n')
+    f.close()    
+           
+#    f = open('SSE_rhoL_all','a')
+#    f.write('\n'+str(SSErhoL))
+#    f.close()
+#    
+#    f = open('SSE_Psat_all','a')
+#    f.write('\n'+str(SSEPsat))
+#    f.close()
+#    
+#    f = open('SSE_rhov_all','a')
+#    f.write('\n'+str(SSErhov))
+#    f.close()
+#    
+#    f = open('SSE_U','a')
+#    f.write('\n'+str(SSEU))
+#    f.close()
+#    
+#    f = open('SSE_P','a')
+#    f.write('\n'+str(SSEP))
+#    f.close()
+#    
+#    f = open('SSE_Z','a')
+#    f.write('\n'+str(SSEZ))
+#    f.close()
     
     return SSErhoL, SSEPsat, SSErhov, SSEU, SSEP, SSEZ
 
@@ -172,23 +238,39 @@ def initialize_files():
     print(os.getcwd())
     time.sleep(2)
     
-    f = open('SSE_rhoL_all','w')
+    f = open('AAD_all','w')
+    f.write('rhoL \t Psat \t rhov \t Udep \t P \t Z \n')
     f.close()
     
-    f = open('SSE_Psat_all','w')
+    f = open('bias_all','w')
+    f.write('rhoL \t Psat \t rhov \t Udep \t P \t Z \n')
     f.close()
     
-    f = open('SSE_rhov_all','w')
+    f = open('SSE_all','w')
+    f.write('rhoL \t Psat \t rhov \t Udep \t P \t Z \n')
     f.close()
     
-    f = open('SSE_U','w')
+    f = open('RMS_all','w')
+    f.write('rhoL \t Psat \t rhov \t Udep \t P \t Z \n')
     f.close()
     
-    f = open('SSE_P','w')
-    f.close()
-    
-    f = open('SSE_Z','w')
-    f.close()
+#    f = open('SSE_rhoL_all','w')
+#    f.close()
+#    
+#    f = open('SSE_Psat_all','w')
+#    f.close()
+#    
+#    f = open('SSE_rhov_all','w')
+#    f.close()
+#    
+#    f = open('SSE_U','w')
+#    f.close()
+#    
+#    f = open('SSE_P','w')
+#    f.close()
+#    
+#    f = open('SSE_Z','w')
+#    f.close()
 
 def print_figures(opt_type):
     
@@ -301,6 +383,7 @@ def print_figures(opt_type):
         
         for iRerun in range(nReruns):
             SSErhoL[iRerun], SSEPsat[iRerun], SSErhov[iRerun], SSEU[iRerun], SSEP[iRerun], SSEZ[iRerun] = analyze_ITIC(iRerun)
+                
            
         f = plt.figure()
         plt.semilogy(SSErhoL,marker='o',linestyle='none')
