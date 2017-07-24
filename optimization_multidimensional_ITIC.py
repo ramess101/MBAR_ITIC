@@ -423,8 +423,7 @@ def ITIC_calc(USim,ZSim):
 
 #print(objective_ITIC(1.))
           
-iEpsRef = int(np.loadtxt('iEpsref'))
-iSigmaRef = int(np.loadtxt('iSigref'))
+iRef = int(np.loadtxt('iRef'))
 
 def MBAR_estimates(eps_sig,iRerun):
     
@@ -495,7 +494,7 @@ def MBAR_estimates(eps_sig,iRerun):
         
                     #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
         
-                    en_p = open(fpath+'energy_press_e%ss%sit%s.xvg' %(iEpsRef,iSigmaRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+                    en_p = open(fpath+'energy_press_ref%srr%s.xvg' %(iRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
     
                     nSnaps = len(en_p) #Number of snapshots
         
@@ -596,7 +595,7 @@ def MBAR_estimates(eps_sig,iRerun):
     
     for iSet, iter in enumerate(iSets):
     
-        f = open('MBAR_e'+str(iEpsRef)+'s'+str(iSigmaRef)+'it'+str(iter),'w')
+        f = open('MBAR_ref'+str(iRef)+'rr'+str(iter),'w')
     
         iState = 0
     
@@ -883,11 +882,11 @@ def main():
         
         conv_eps = 0
         
-        if iEpsRef > 0:
-            eps_opt_previous = np.loadtxt('../e'+str(iEpsRef-1)+'s'+str(iSigmaRef-1)+'/eps_optimal')
+        if iRef > 0:
+            eps_opt_previous = np.loadtxt('../ref'+str(iRef-1)+'/eps_optimal')
             eps_opt_current = eps_opt
             TOL_eps = np.loadtxt('TOL_eps')
-            sig_opt_previous = np.loadtxt('../e'+str(iEpsRef-1)+'s'+str(iSigmaRef-1)+'/sig_optimal')
+            sig_opt_previous = np.loadtxt('../ref'+str(iRef-1)+'/sig_optimal')
             sig_opt_current = sig_opt
             TOL_sig = np.loadtxt('TOL_sig')
             if np.abs(eps_opt_previous - eps_opt_current) < TOL_eps and np.abs(sig_opt_previous - sig_opt_current) < TOL_sig:

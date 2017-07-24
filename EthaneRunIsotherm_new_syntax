@@ -1,0 +1,145 @@
+#!/bin/bash
+
+Compound=some_compound
+
+Model=some_model
+
+iRef=some_iRef
+
+input_path=some_input_path
+output_path=some_output_path
+
+N=400
+
+supercritical_box=(6.1536 4.8841 4.2666 3.8765 3.5986 3.4861 3.3864 3.2973 3.2168) #boxLens(nm)
+
+nCores=(1 1 1 2 2 2 2 2 2)
+
+Temp=(360 360 360 360 360 360 360 360 360)
+
+j_start=0
+j_end=8
+
+####
+
+# Initialize the folders
+
+cd "$output_path"/ref"$iRef"  || exit
+
+echo "NMol" "Length (nm)" "Temp (K)" > IsothermSettings.txt
+
+mkdir Isotherm
+cd Isotherm || exit
+
+for j in $(seq $j_start $j_end)
+
+do
+
+cd "$output_path"/ref"$iRef"/Isotherm/ || exit
+
+echo "$N" "${supercritical_box[j]}" "${Temp[j]}" >> ../IsothermSettings.txt
+
+mkdir rho_"$j"
+
+cd rho_"$j" || exit
+
+gmx insert-molecules -ci ../../ethane.gro -nmol $N -box "${supercritical_box[j]}" "${supercritical_box[j]}" "${supercritical_box[j]}" -o ethane_box.gro
+
+#Copy the minimization files
+
+cp "$input_path"/em_steep.mdp em_steep.mdp
+cp "$input_path"/em_l-bfgs.mdp em_l-bfgs.mdp
+
+mkdir NVT_eq
+cd NVT_eq || exit
+
+# Copy the equilibration files and edit the temperature
+
+cp "$input_path"/nvt_eq_force_switch.mdp nvt_eq.mdp
+sed -i -e s/some_temperature/"${Temp[j]}"/ nvt_eq.mdp
+
+mkdir NVT_prod
+cd NVT_prod || exit
+
+# Copy the production files and edit the temperature
+
+cp "$input_path"/nvt_prod_force_switch.mdp nvt_prod.mdp
+sed -i -e s/some_temperature/"${Temp[j]}"/ nvt_prod.mdp
+
+done
+
+#######
+
+# Energy minimization
+
+# First run the em_steep
+
+for j in $(seq $j_start $j_end)
+
+do
+
+cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j" || exit
+
+gmx grompp -f em_steep.mdp -c ethane_box.gro -p ../../ethane.top -o em_steep.tpr
+gmx mdrun -nt 1 -deffnm em_steep &
+
+done
+
+# Wait a while to make sure em_steep are done (with more temperatures in the first loop this is not necessary)
+
+echo "Waiting for em_steep.tpr: Energy Minimization Part1"
+
+sleep 10s
+
+# Second run the em_l-bfgs
+
+for j in $(seq $j_start $j_end)
+
+do
+
+cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j" || exit
+
+gmx grompp -f em_l-bfgs.mdp -c em_steep.gro -p ../../ethane.top -o em_l_bfgs.tpr -maxwarn 1
+gmx mdrun -nt 1 -deffnm em_l_bfgs &
+
+done
+
+#####
+
+echo "Waiting for em_l_bfgs.tpr: Energy Minimization Part2"
+
+sleep 10s
+
+# Equilibration period
+
+for j in $(seq $j_start $j_end)
+
+do
+
+cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j"/NVT_eq || exit
+
+gmx grompp -f nvt_eq.mdp -c ../em_l_bfgs.gro -p ../../../ethane.top -o nvt_eq.tpr
+gmx mdrun -nt "${nCores[j]}" -deffnm nvt_eq &
+
+done
+
+sleep 2m # At 360 K and isochore_0 it takes about 2 m with a single thread
+echo "Waiting for NVT_eq: Energy equilibration"
+
+
+# Production period for liquid phase
+
+for j in $(seq $j_start $j_end)
+
+do
+
+cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
+
+# Could give more resources to denser phase
+
+gmx grompp -f nvt_prod.mdp -c ../nvt_eq.gro -p ../../../../ethane.top -o nvt_prod.tpr
+gmx mdrun -nt "${nCores[j]}" -deffnm nvt_prod & #Can use more cores in liquid phase since vapor phase will have already finished
+
+done
+
+exit 0

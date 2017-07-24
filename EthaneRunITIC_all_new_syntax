@@ -1,0 +1,62 @@
+#!/bin/bash
+
+Compound=some_compound_top
+
+#MolWt=30.0698
+
+Model=some_model_top
+iRef=some_iRef_top
+scripts_path=some_scripts_path_top
+input_path=some_input_path_top
+output_path=some_output_path_top
+
+
+
+
+cp "$scripts_path"/EthaneRunIsochore_new_syntax EthaneRunIsochore
+cp "$scripts_path"/EthaneRunIsotherm_new_syntax EthaneRunIsotherm
+cp "$scripts_path"/EthaneRunVirial_new_syntax EthaneRunVirial
+
+sed -i -e s/some_compound/"${Compound}"/ EthaneRunIsochore
+sed -i -e s/some_model/"${Model}"/ EthaneRunIsochore
+sed -i -e s/some_iRef/"${iRef}"/ EthaneRunIsochore
+sed -i -e s@some_input_path@"$input_path"@ EthaneRunIsochore
+sed -i -e s@some_output_path@"$output_path"@ EthaneRunIsochore
+
+sed -i -e s/some_compound/"${Compound}"/ EthaneRunIsotherm
+sed -i -e s/some_model/"${Model}"/ EthaneRunIsotherm
+sed -i -e s/some_iRef/"${iRef}"/ EthaneRunIsotherm
+sed -i -e s@some_input_path@"$input_path"@ EthaneRunIsotherm
+sed -i -e s@some_output_path@"$output_path"@ EthaneRunIsotherm
+
+sed -i -e s/some_compound/"${Compound}"/ EthaneRunVirial
+sed -i -e s/some_model/"${Model}"/ EthaneRunVirial
+sed -i -e s/some_iRef/"${iRef}"/ EthaneRunVirial
+sed -i -e s@some_input_path@"$input_path"@ EthaneRunVirial
+sed -i -e s@some_output_path@"$output_path"@ EthaneRunVirial
+
+#jretemp 
+./EthaneRunIsochore
+echo "Waiting for isochore productions"
+#jretemp
+#sleep 5s
+sleep 7m #sleep
+
+#jretemp 
+./EthaneRunIsotherm
+#jretemp echo "Waiting for next epsilon."
+#jretemp 
+#sleep 5s
+sleep 7m #If multiple epsilons, uncomment sleep
+
+#jretemp 
+#./EthaneRunVirial
+#jretemp 
+#echo "Virial: Waiting for next epsilon."
+#jretemp 
+#sleep 2m #If multiple epsilons, uncomment sleep
+
+exit 0
+
+#######
+

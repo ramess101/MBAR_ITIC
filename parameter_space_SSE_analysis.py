@@ -103,8 +103,7 @@ def REFPROP_UP(TSim,rho_mass,NmolSim,compound):
 
     return RP_U_depN, RP_P, RP_Z, RP_Z1rho
 
-iEpsRef = int(np.loadtxt('iEpsref'))
-iSigmaRef = int(np.loadtxt('iSigref'))
+iRef = int(np.loadtxt('iRef'))
 
 def analyze_ITIC(iRerun): 
 
@@ -114,7 +113,7 @@ def analyze_ITIC(iRerun):
 
     ###
     
-    USim, dUSim, PSim, dPSim, ZSim, Z1rhoSim = np.loadtxt('MBAR_e'+str(iEpsRef)+'s'+str(iSigmaRef)+'it'+str(iRerun),unpack=True)
+    USim, dUSim, PSim, dPSim, ZSim, Z1rhoSim = np.loadtxt('MBAR_ref'+str(iRef)+'rr'+str(iRerun),unpack=True)
     Tsat, rhoLSim, PsatSim, rhovSim = np.loadtxt('ITIC_'+str(iRerun),skiprows=1,unpack=True)
     
     #print(Tsat)

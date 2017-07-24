@@ -25,11 +25,9 @@ TOL_eps=0.001
 TOL_sig=0.0001
 TOL_MBAR=0.001
 
-iEpsref=0
-iSigref=0
+iRef=0
 
 eps_guess=1.12 #[kJ/mol]
-
 sig_guess=0.352 #[nm]
 
 bond_length=0.230 #[nm]
@@ -41,10 +39,7 @@ do
 
 cd "$output_path" || exit
 
-echo "$iEpsref" > iEpsref
-echo "$iSigref" > iSigref
-
-if [ $iEpsref -ge 1 ] #If you have already run (i.e. just rerunning the optimization)
+if [ $iRef -ge 0 ] #If you have already run (i.e. just rerunning the optimization)
 then
 
 #### Start the mdrun simulations for the initial epsilon and sigma values
@@ -54,8 +49,8 @@ sleep 2s
 
 ####
 
-mkdir e"$iEpsref"s"$iSigref"
-cd e"$iEpsref"s"$iSigref" || exit
+mkdir ref"$iRef"
+cd ref"$iRef" || exit
 
 #Create files with force field parameters
 
@@ -69,22 +64,21 @@ sed -i -e s/some_epsilon/"$eps_guess"/ ethane.top
 sed -i -e s/some_sigma/"$sig_guess"/ ethane.top
 sed -i -e s/some_bond/"$bond_length"/ ethane.top
 
-cp "$scripts_path"/EthaneRunITIC_all EthaneRunITIC_all
+cp "$scripts_path"/EthaneRunITIC_all_new_syntax EthaneRunITIC_all
 
 sed -i -e s/some_compound_top/"${Compound}"/ EthaneRunITIC_all
 sed -i -e s/some_model_top/"${Model}"/ EthaneRunITIC_all
-sed -i -e s/some_iSigma_top/"${iSigref}"/ EthaneRunITIC_all
-sed -i -e s/some_iEps_top/"${iEpsref}"/ EthaneRunITIC_all
+sed -i -e s/some_iRef_top/"${iRef}"/ EthaneRunITIC_all
 sed -i -e s@some_scripts_path_top@"$scripts_path"@ EthaneRunITIC_all
 sed -i -e s@some_input_path_top@"$input_path"@ EthaneRunITIC_all
 sed -i -e s@some_output_path_top@"$output_path"@ EthaneRunITIC_all
 
-./EthaneRunITIC_all
+#./EthaneRunITIC_all
 
 
 fi
 
-cd "$output_path"/e"$iEpsref"s"$iSigref" || exit # Must be in correct directory for python script and file generation
+cd "$output_path"/ref"$iRef" || exit # Must be in correct directory for python script and file generation
 
 echo "Eps (kJ/mol)" > eps_all
 echo "Objective" > F_all
@@ -108,33 +102,30 @@ echo "$sig_guess" > sig_guess
 #echo "$sig_low" > sig_low
 #echo "$sig_high" > sig_high
 
-echo "$iEpsref" > iEpsref #Testing out to see if I can copy the reference inside this directory instead
-echo "$iSigref" > iSigref 
+echo "$iRef" > iRef #Testing out to see if I can copy the reference inside this directory instead
 
-cp "$scripts_path"/EthaneRerunITIC_subprocess EthaneRerunITIC_subprocess
+cp "$scripts_path"/EthaneRerunITIC_subprocess_new_syntax EthaneRerunITIC_subprocess
 
 sed -i -e s/some_compound_top/"${Compound}"/ EthaneRerunITIC_subprocess
 sed -i -e s/some_model_top/"${Model}"/ EthaneRerunITIC_subprocess
-sed -i -e s/some_iRefSig_top/"${iSigref}"/ EthaneRerunITIC_subprocess
-sed -i -e s/some_iRefEps_top/"${iEpsref}"/ EthaneRerunITIC_subprocess
+sed -i -e s/some_iRef_top/"${iRef}"/ EthaneRerunITIC_subprocess
 sed -i -e s@some_scripts_path_top@"$scripts_path"@ EthaneRerunITIC_subprocess
 sed -i -e s@some_input_path_top@"$input_path"@ EthaneRerunITIC_subprocess
 sed -i -e s@some_output_path_top@"$output_path"@ EthaneRerunITIC_subprocess
 
-cd "$output_path"/e"$iEpsref"s"$iSigref" || exit #Must cd back to original location for python script
+cd "$output_path"/ref"$iRef" || exit #Must cd back to original location for python script
 
 python "$scripts_path"/optimization_multidimensional_ITIC.py -opt "$opt_method" -prop "$opt_prop1" "$opt_prop2"
-python "$scripts_path"/parameter_space_SSE_analysis.py -opt "$opt_method"
+#python "$scripts_path"/parameter_space_SSE_analysis.py -opt "$opt_method"
 
-cd "$output_path"/e"$iEpsref"s"$iSigref" || exit #Should still be in the same directory, but just to be safe
+cd "$output_path"/ref"$iRef" || exit #Should still be in the same directory, but just to be safe
 
-rm Isochore/rho?/T?/NVT_eq/NVT_prod/energy_press_e*s*it*.xvg Isochore/rho?/T?/NVT_eq/nvt_eq.trr Isochore/rho?/T?/NVT_eq/NVT_prod/nvt_prod.log
-rm Isotherm/rho_?/NVT_eq/NVT_prod/energy_press_e*s*it*.xvg Isotherm/rho_?/NVT_eq/nvt_eq.trr Isotherm/rho_?/NVT_eq/NVT_prod/nvt_prod.log #Do not delete the production trajectory files since they will be used in subsequent iterations
+rm Isochore/rho?/T?/NVT_eq/NVT_prod/energy_press_ref*rr*.xvg Isochore/rho?/T?/NVT_eq/nvt_eq.trr Isochore/rho?/T?/NVT_eq/NVT_prod/nvt_prod.log
+rm Isotherm/rho_?/NVT_eq/NVT_prod/energy_press_ref*rr*.xvg Isotherm/rho_?/NVT_eq/nvt_eq.trr Isotherm/rho_?/NVT_eq/NVT_prod/nvt_prod.log #Do not delete the production trajectory files since they will be used in subsequent iterations
 
 eps_optimal=$(<eps_optimal)
 sig_optimal=$(<sig_optimal)
-iEpsref=$((iEpsref + 1))
-iSigref=$((iSigref + 1))
+iRef=$((iRef + 1))
 conv_eps=$(<conv_eps)
 #conv_eps=1 #If you just want to do a single iteration, for practice
 
