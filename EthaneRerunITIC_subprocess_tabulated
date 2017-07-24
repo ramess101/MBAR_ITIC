@@ -12,8 +12,8 @@ output_path=some_output_path_top
 
 cd "$output_path"/ref"$iRef" || exit #Must cd back 
 
-cp "$scripts_path"/EthaneRerunIsochore EthaneRerunIsochore
-cp "$scripts_path"/EthaneRerunIsotherm EthaneRerunIsotherm
+cp "$scripts_path"/EthaneRerunIsochore_tabulated EthaneRerunIsochore
+cp "$scripts_path"/EthaneRerunIsotherm_tabulated EthaneRerunIsotherm
 
 iRerun=$(<iRerun)
 
@@ -37,9 +37,17 @@ eps_it=$(<eps_it)
 eps_guess=$(<eps_guess)
 #echo "$eps_it" >> eps_all
 
-sig_it=$(<sig_it) #Sigma is held constant
+sig_it=$(<sig_it)
 sig_guess=$(<sig_guess)
 #echo "$sig_it" >> sig_all
+
+lam_it=$(<lam_guess) #Currently not changing lambda (so just LJ)
+lam_guess=$(<lam_guess)
+
+python "$scripts_path"/create_tab.py --lam "$lam_it" --epsilon "$eps_it" --sigma "$sig_it"
+
+C6_it=$(<C6_it)
+Clam_it=$(<Clam_it)
 
 bond_length=$(<bond_length)
 
@@ -60,8 +68,8 @@ echo "$eps_it" "$sig_it" >> eps_Sigma_all
 # I can move this inside the EthaneRerunITIC_all
 
 cp "$input_path"/ethane_temp.top ethane_ref"$iRef"rr"$iRerun".top
-sed -i -e s/some_epsilon/"$eps_it"/ ethane_ref"$iRef"rr"$iRerun".top 
-sed -i -e s/some_sigma/"$sig_it"/ ethane_ref"$iRef"rr"$iRerun".top
+sed -i -e s/some_C6/"$C6_it"/ ethane_ref"$iRef"rr"$iRerun".top 
+sed -i -e s/some_Clam/"$Clam_it"/ ethane_ref"$iRef"rr"$iRerun".top
 sed -i -e s/some_bond/"$bond_length"/g ethane_ref"$iRef"rr"$iRerun".top
 
 

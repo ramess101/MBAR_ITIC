@@ -32,7 +32,7 @@ sed -i -e s/some_temperature/"${Temp[j]}"/ md_nocord.mdp #Temperature might not 
 
 gmx grompp -f md_nocord.mdp -p ../../../../ethane_ref"$iRef"rr"$iRerun".top -c nvt_prod.gro -o prod_ref"$iRef"rr"$iRerun" -maxwarn 1
 
-gmx mdrun -nt 1 -rerun nvt_prod.trr -deffnm prod_ref"$iRef"rr"$iRerun"
+gmx mdrun -table ../../../../../tab_it.xvg -nt 1 -rerun nvt_prod.trr -deffnm prod_ref"$iRef"rr"$iRerun"
 
 echo "1
 3

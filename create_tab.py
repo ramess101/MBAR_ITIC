@@ -5,9 +5,12 @@ from __future__ import division
 import numpy as np 
 import argparse
 
+kb = 1.38064852e-26 #[kJ/K]
+NA = 6.02214e23 #[1/mol]
+
 def create_tab(nrep,natt=6.,ncoul=1.):
     r = np.arange(0,2.401,0.0005)
-    f = open('it_tab.xvg','w')
+    f = open('tab_it.xvg','w')
     rcutin = 0.05
 
     for ri in r:
@@ -28,14 +31,32 @@ def create_tab(nrep,natt=6.,ncoul=1.):
             
         f.write(str(ri)+'\t'+str(U1)+'\t'+str(F1)+'\t'+str(U2)+'\t'+str(F2)+'\t'+str(U3)+'\t'+str(F3)+'\n')
     f.close()
+    
+def convert_eps_sig_C6_Clam(eps,sig,lam,n=6.):
+    Ncoef = lam/(lam-n)*(lam/n)**(n/(lam-n))
+    eps *= kb * NA
+    C6 = Ncoef * eps * sig ** n
+    Clam = Ncoef * eps * sig ** lam
+    
+    f = open('C6_it','w')
+    f.write(str(C6))
+    f.close()
+    
+    f = open('Clam_it','w')
+    f.write(str(Clam))
+    f.close()
 
 def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-l","--lam",type=float,help="Set the value for lambda")
+    parser.add_argument("-e","--epsilon",type=float,help="Set the value for epsilon (K)")
+    parser.add_argument("-s","--sigma",type=float,help="Set the value for sigma (nm)")
     args = parser.parse_args()
     if args.lam:
         create_tab(args.lam)
+        if args.epsilon and args.sigma:
+            convert_eps_sig_C6_Clam(args.epsilon,args.sigma,args.lam)
     else:
         print('Please specify a value for lambda')
 
