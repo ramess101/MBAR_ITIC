@@ -77,7 +77,7 @@ sed -i -e s@some_scripts_path_top@"$scripts_path"@ EthaneRunITIC_all
 sed -i -e s@some_input_path_top@"$input_path"@ EthaneRunITIC_all
 sed -i -e s@some_output_path_top@"$output_path"@ EthaneRunITIC_all
 
-./EthaneRunITIC_all
+#./EthaneRunITIC_all
 
 
 fi

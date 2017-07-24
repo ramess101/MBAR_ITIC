@@ -30,7 +30,7 @@ sed -i -e s/some_model/"${Model}"/ EthaneRerunIsotherm
 sed -i -e s/some_iRerun/"${iRerun}"/ EthaneRerunIsotherm
 sed -i -e s/some_iRef/"${iRef}"/ EthaneRerunIsotherm
 sed -i -e s@some_scripts_path@"$scripts_path"@ EthaneRerunIsotherm
-sed -i -e s@some_input_path@"$input_path"@ EthaneRerunIsochore
+sed -i -e s@some_input_path@"$input_path"@ EthaneRerunIsotherm
 sed -i -e s@some_output_path@"$output_path"@ EthaneRerunIsotherm
 
 eps_it=$(<eps_it)

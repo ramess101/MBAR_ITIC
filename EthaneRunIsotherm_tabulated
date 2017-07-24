@@ -81,7 +81,7 @@ do
 cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j" || exit
 
 gmx grompp -f em_steep.mdp -c ethane_box.gro -p ../../ethane.top -o em_steep.tpr
-gmx mdrun -table ../tab_it.xvg -nt 1 -deffnm em_steep &
+gmx mdrun -table ../../tab_it.xvg -nt 1 -deffnm em_steep &
 
 done
 

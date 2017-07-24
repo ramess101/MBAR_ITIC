@@ -47,7 +47,7 @@ sleep 15m #Tabulated takes more than twice as long
 #jretemp echo "Waiting for next epsilon."
 #jretemp 
 #sleep 5s
-sleep 15m #Tabulated takes more than twice as long
+sleep 20m #Tabulated takes more than twice as long
 
 #jretemp 
 #./EthaneRunVirial
