@@ -121,13 +121,13 @@ def analyze_ITIC(iRerun):
     #print(PsatSim)
     #print(rhovSim)
 
-    RP_rhoL = CP.PropsSI('D','T',Tsat[Tsat<RP_TC],'Q',0,'REFPROP::'+compound) #[kg/m3]   
-    RP_rhov = CP.PropsSI('D','T',Tsat[Tsat<RP_TC],'Q',1,'REFPROP::'+compound) #[kg/m3]
-    RP_Psat = CP.PropsSI('P','T',Tsat[Tsat<RP_TC],'Q',1,'REFPROP::'+compound)/100000. #[bar]
+    RP_rhoL = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',0,'REFPROP::'+compound) #[kg/m3]   
+    RP_rhov = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound) #[kg/m3]
+    RP_Psat = CP.PropsSI('P','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound)/100000. #[bar]
 
-    devrhoL = rhoLSim[Tsat<RP_TC] - RP_rhoL #In case Tsat is greater than RP_TC
-    devPsat = PsatSim[Tsat<RP_TC] - RP_Psat
-    devrhov = rhovSim[Tsat<RP_TC] - RP_rhov
+    devrhoL = rhoLSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhoL #In case Tsat is greater than RP_TC
+    devPsat = PsatSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_Psat
+    devrhov = rhovSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhov
                      
     devU = USim - RP_U_depN
     devP = PSim - RP_P
@@ -315,7 +315,7 @@ def print_figures(opt_type):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE $\rho_l$')
-        f.savefig(compound+'_SSErhoL.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSErhoL.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,SSEPsat)
@@ -324,7 +324,7 @@ def print_figures(opt_type):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE $P_{sat}$')
-        f.savefig(compound+'_SSEPsat.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSEPsat.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,SSErhov)
@@ -333,7 +333,7 @@ def print_figures(opt_type):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE $\rho_v$')
-        f.savefig(compound+'_SSErhov.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSErhov.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,SSEU)
@@ -342,7 +342,7 @@ def print_figures(opt_type):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE U')
-        f.savefig(compound+'_SSEU.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSEU.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,SSEP)
@@ -351,7 +351,7 @@ def print_figures(opt_type):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE P')
-        f.savefig(compound+'_SSEP.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSEP.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,SSEZ)
@@ -360,7 +360,7 @@ def print_figures(opt_type):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE Z')
-        f.savefig(compound+'_SSEZ.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSEZ.pdf')
     
     else:
         
@@ -388,37 +388,37 @@ def print_figures(opt_type):
         plt.semilogy(SSErhoL,marker='o',linestyle='none')
         plt.xlabel('Iteration')
         plt.ylabel('SSE')
-        f.savefig(compound+'_SSErhoL.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSErhoL.pdf')
         
         f = plt.figure()
         plt.semilogy(SSEPsat,marker='o',linestyle='none')
         plt.xlabel('Iteration')
         plt.ylabel('SSE')
-        f.savefig(compound+'_SSEPsat.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSEPsat.pdf')
         
         f = plt.figure()
         plt.semilogy(SSErhov,marker='o',linestyle='none')
         plt.xlabel('Iteration')
         plt.ylabel('SSE')
-        f.savefig(compound+'_SSErhov.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSErhov.pdf')
         
         f = plt.figure()
         plt.semilogy(SSEU,marker='o',linestyle='none')
         plt.xlabel('Iteration')
         plt.ylabel('SSE')
-        f.savefig(compound+'_SSEU.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSEU.pdf')
         
         f = plt.figure()
         plt.semilogy(SSEP,marker='o',linestyle='none')
         plt.xlabel('Iteration')
         plt.ylabel('SSE')
-        f.savefig(compound+'_SSEP.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSEP.pdf')
         
         f = plt.figure()
         plt.semilogy(SSEZ,marker='o',linestyle='none')
         plt.xlabel('Iteration')
         plt.ylabel('SSE')
-        f.savefig(compound+'_SSEZ.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_SSEZ.pdf')
         
         SSErhoL = np.log10(SSErhoL)
         SSEPsat = np.log10(SSEPsat)
@@ -438,52 +438,72 @@ def print_figures(opt_type):
         plt.title(r'$\rho_l$')
         ax = plt.colorbar()
         ax.set_label('log(SSE)')
-        f.savefig(compound+'_eps_sig_rhoL.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_rhoL.pdf')
         
         f = plt.figure()
-        plt.scatter(sig_reruns,eps_reruns,c=SSEPsat)
+        plt.scatter(sig_reruns[1:],eps_reruns[1:],c=SSEPsat[1:],cmap='Blues',label='Iterations')
+        plt.scatter(sig_reruns[0],eps_reruns[0],marker='x',c=SSEPsat[0],cmap='Blues',label='Reference')
         plt.ylabel('$\epsilon$ (kJ/mol)')
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE $P_{sat}$')
-        f.savefig(compound+'_eps_sig_SSEPsat.pdf')
+        plt.legend()
+        plt.title(r'$P_{sat}$')
+        ax = plt.colorbar()
+        ax.set_label('log(SSE)')
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_SSEPsat.pdf')
         
         f = plt.figure()
-        plt.scatter(sig_reruns,eps_reruns,c=SSErhov)
+        plt.scatter(sig_reruns[1:],eps_reruns[1:],c=SSErhov[1:],cmap='Blues',label='Iterations')
+        plt.scatter(sig_reruns[0],eps_reruns[0],marker='x',c=SSErhov[0],cmap='Blues',label='Reference')
         plt.ylabel('$\epsilon$ (kJ/mol)')
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE $\rho_v$')
-        f.savefig(compound+'_eps_sig_SSErhov.pdf')
+        plt.legend()
+        plt.title(r'$\rho_v$')
+        ax = plt.colorbar()
+        ax.set_label('log(SSE)')
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_SSErhov.pdf')
         
         f = plt.figure()
-        plt.scatter(sig_reruns,eps_reruns,c=SSEU)
+        plt.scatter(sig_reruns[1:],eps_reruns[1:],c=SSEU[1:],cmap='Blues',label='Iterations')
+        plt.scatter(sig_reruns[0],eps_reruns[0],marker='x',c=SSEU[0],cmap='Blues',label='Reference')
         plt.ylabel('$\epsilon$ (kJ/mol)')
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE U')
-        f.savefig(compound+'_eps_sig_SSEU.pdf')
+        plt.legend()
+        plt.title(r'U')
+        ax = plt.colorbar()
+        ax.set_label('log(SSE)')
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_SSEU.pdf')
         
         f = plt.figure()
-        plt.scatter(sig_reruns,eps_reruns,c=SSEP)
+        plt.scatter(sig_reruns[1:],eps_reruns[1:],c=SSEP[1:],cmap='Blues',label='Iterations')
+        plt.scatter(sig_reruns[0],eps_reruns[0],marker='x',c=SSEP[0],cmap='Blues',label='Reference')
         plt.ylabel('$\epsilon$ (kJ/mol)')
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE P')
-        f.savefig(compound+'_eps_sig_SSEP.pdf')
+        plt.legend()
+        plt.title(r'P')
+        ax = plt.colorbar()
+        ax.set_label('log(SSE)')
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_SSEP.pdf')
         
         f = plt.figure()
-        plt.scatter(sig_reruns,eps_reruns,c=SSEZ)
+        plt.scatter(sig_reruns[1:],eps_reruns[1:],c=SSEZ[1:],cmap='Blues',label='Iterations')
+        plt.scatter(sig_reruns[0],eps_reruns[0],marker='x',c=SSEZ[0],cmap='Blues',label='Reference')
         plt.ylabel('$\epsilon$ (kJ/mol)')
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE Z')
-        f.savefig(compound+'_eps_sig_SSEZ.pdf')
+        plt.legend()
+        plt.title(r'Z')
+        ax = plt.colorbar()
+        ax.set_label('log(SSE)')
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_SSEZ.pdf')
     
 def main():
 

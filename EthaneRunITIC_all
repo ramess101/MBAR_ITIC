@@ -5,8 +5,7 @@ Compound=some_compound_top
 #MolWt=30.0698
 
 Model=some_model_top
-iSigma=some_iSigma_top
-iEps=some_iEps_top
+iRef=some_iRef_top
 scripts_path=some_scripts_path_top
 input_path=some_input_path_top
 output_path=some_output_path_top
@@ -20,22 +19,19 @@ cp "$scripts_path"/EthaneRunVirial EthaneRunVirial
 
 sed -i -e s/some_compound/"${Compound}"/ EthaneRunIsochore
 sed -i -e s/some_model/"${Model}"/ EthaneRunIsochore
-sed -i -e s/some_iSigma/"${iSigma}"/ EthaneRunIsochore
-sed -i -e s/some_iEps/"${iEps}"/ EthaneRunIsochore
+sed -i -e s/some_iRef/"${iRef}"/ EthaneRunIsochore
 sed -i -e s@some_input_path@"$input_path"@ EthaneRunIsochore
 sed -i -e s@some_output_path@"$output_path"@ EthaneRunIsochore
 
 sed -i -e s/some_compound/"${Compound}"/ EthaneRunIsotherm
 sed -i -e s/some_model/"${Model}"/ EthaneRunIsotherm
-sed -i -e s/some_iSigma/"${iSigma}"/ EthaneRunIsotherm
-sed -i -e s/some_iEps/"${iEps}"/ EthaneRunIsotherm
+sed -i -e s/some_iRef/"${iRef}"/ EthaneRunIsotherm
 sed -i -e s@some_input_path@"$input_path"@ EthaneRunIsotherm
 sed -i -e s@some_output_path@"$output_path"@ EthaneRunIsotherm
 
 sed -i -e s/some_compound/"${Compound}"/ EthaneRunVirial
 sed -i -e s/some_model/"${Model}"/ EthaneRunVirial
-sed -i -e s/some_iSigma/"${iSigma}"/ EthaneRunVirial
-sed -i -e s/some_iEps/"${iEps}"/ EthaneRunVirial
+sed -i -e s/some_iRef/"${iRef}"/ EthaneRunVirial
 sed -i -e s@some_input_path@"$input_path"@ EthaneRunVirial
 sed -i -e s@some_output_path@"$output_path"@ EthaneRunVirial
 

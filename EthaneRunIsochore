@@ -5,8 +5,7 @@ Compound=some_compound
 #MolWt=30.0698
 
 Model=some_model
-iSigma=some_iSigma
-iEps=some_iEps
+iRef=some_iRef
 input_path=some_input_path
 output_path=some_output_path
 
@@ -43,7 +42,7 @@ j_end=4
 
 ####
 
-echo "NMol" "Length (nm)" "Temp (K)" > "$output_path"/e"$iEps"s"$iSigma"/IsochoreSettings.txt
+echo "NMol" "Length (nm)" "Temp (K)" > "$output_path"/ref"$iRef"/IsochoreSettings.txt
 
 # Initialize the folders
 
@@ -51,7 +50,7 @@ for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma" || exit #presumes this dir was made during Isotherm simulation
+cd "$output_path"/ref"$iRef" || exit #presumes this dir was made during Isotherm simulation
 
 #jretemp 
 mkdir Isochore  
@@ -71,16 +70,16 @@ for Temp in ${Tic}
 do
 t=$((t+1))
 
-echo "$N" "${liquid_box[j]}" "$Temp" >> "$output_path"/e"$iEps"s"$iSigma"/IsochoreSettings.txt
+echo "$N" "${liquid_box[j]}" "$Temp" >> "$output_path"/ref"$iRef"/IsochoreSettings.txt
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isochore/rho"$j" || exit  #start fresh for do cycle instead of multiple "cd .."'s
+cd "$output_path"/ref"$iRef"/Isochore/rho"$j" || exit  #start fresh for do cycle instead of multiple "cd .."'s
 
 #jretemp 
 mkdir T"$t"  #JRE: using generic "T1" and "T2" for folder names to facilitate later reading/post-processing.
 cd    T"$t" || exit
 
 #JRE: cd to here because later cycles may be way deep.
-#cd "$output_path"/e"$iEps"s"$iSigma"/Isochore/rho"$j"/T"$t" || exit
+#cd "$output_path"/ref"$iRef"/Isochore/rho"$j"/T"$t" || exit
 gmx insert-molecules -ci ../../../ethane.gro -nmol $N -box "${liquid_box[j]}" "${liquid_box[j]}" "${liquid_box[j]}" -o ethane_box.gro
 
 #Copy the minimization files

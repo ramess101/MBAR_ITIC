@@ -4,8 +4,7 @@ Compound=some_compound
 
 Model=some_model
 
-iSigma=some_iSigma
-iEps=some_iEps
+iRef=some_iRef
 
 input_path=some_input_path
 output_path=some_output_path
@@ -25,7 +24,7 @@ j_end=8
 
 # Initialize the folders
 
-cd "$output_path"/e"$iEps"s"$iSigma"  || exit
+cd "$output_path"/ref"$iRef"  || exit
 
 echo "NMol" "Length (nm)" "Temp (K)" > IsothermSettings.txt
 
@@ -36,7 +35,7 @@ for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isotherm/ || exit
+cd "$output_path"/ref"$iRef"/Isotherm/ || exit
 
 echo "$N" "${supercritical_box[j]}" "${Temp[j]}" >> ../IsothermSettings.txt
 
@@ -79,7 +78,7 @@ for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isotherm/rho_"$j" || exit
+cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j" || exit
 
 gmx grompp -f em_steep.mdp -c ethane_box.gro -p ../../ethane.top -o em_steep.tpr
 gmx mdrun -nt 1 -deffnm em_steep &
@@ -98,7 +97,7 @@ for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isotherm/rho_"$j" || exit
+cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j" || exit
 
 gmx grompp -f em_l-bfgs.mdp -c em_steep.gro -p ../../ethane.top -o em_l_bfgs.tpr -maxwarn 1
 gmx mdrun -nt 1 -deffnm em_l_bfgs &
@@ -117,7 +116,7 @@ for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isotherm/rho_"$j"/NVT_eq || exit
+cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j"/NVT_eq || exit
 
 gmx grompp -f nvt_eq.mdp -c ../em_l_bfgs.gro -p ../../../ethane.top -o nvt_eq.tpr
 gmx mdrun -nt "${nCores[j]}" -deffnm nvt_eq &
@@ -134,7 +133,7 @@ for j in $(seq $j_start $j_end)
 
 do
 
-cd "$output_path"/e"$iEps"s"$iSigma"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
+cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
 
 # Could give more resources to denser phase
 
