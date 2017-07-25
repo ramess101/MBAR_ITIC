@@ -57,10 +57,10 @@ gmx grompp -f md_nocord.mdp -p ../../../../../ethane_ref"$iRef"rr"$iRerun".top -
 gmx mdrun -table ../../../../../tab_it.xvg -nt 1 -rerun nvt_prod.trr -deffnm prod_ref"$iRef"rr"$iRerun"
 
 echo "1
-3
-5
-7
+4
+6
 8
+10
 0" | gmx energy -dp -f prod_ref"$iRef"rr"$iRerun".edr -o energy_press_ref"$iRef"rr"$iRerun".xvg
 
 rm -f \#*

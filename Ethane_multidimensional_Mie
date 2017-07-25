@@ -1,12 +1,12 @@
 #!/bin/bash
 
 Compound=Ethane
-Model=TraPPEAUAfs
+Model=Mie
 
 #Specify the path location, note do not include a space at the end of the line
 
 scripts_path=~/Elliott
-input_path=~/"$Compound"/Gromacs/Force_switch
+input_path=~/"$Compound"/Gromacs/Tabulated
 output_path=~/"$Compound"/Gromacs/"$Model"
 
 #MolWt=30.0698
@@ -15,34 +15,31 @@ opt_method='leapfrog'
 opt_prop1='rhoL'
 opt_prop2='Psat'
 
-#eps_low=0.85 #Rely on optimization algorithm to determine feasible bounds
-#eps_high=1.
-
-#sig_low=0.371
-#sig_high=0.379
+eps_range=(0.2 0.1 0.05 0.01 0.005 0.001)
+sig_range=(0.02 0.01 0.005 0.001 0.0005 0.0001)
 
 TOL_eps=0.001
 TOL_sig=0.0001
 TOL_MBAR=0.001
 
-iRef=3
+iRef=1
 
-eps_guess=1.12 #[kJ/mol]
-sig_guess=0.352 #[nm]
+eps_guess=121.25 # (K)
+sig_guess=0.3783 # (nm)
+lam_guess=16.
 
-eps_guess=1.23605404528
-sig_guess=0.351713031761
+bond_length=0.154 #[nm]
 
-bond_length=0.230 #[nm]
+conv_overall=0
 
-conv_eps=0
+max_iterations=5
 
-while [ "$conv_eps" -lt 1 ] #Checks to see if the loop has converged for epsilon
+while [ "$conv_overall" -lt 1 ] && [ "$iRef" -lt "$max_iterations" ] #Checks to see if the loop has converged for epsilon
 do
 
 cd "$output_path" || exit
 
-if [ $iRef -ge 0 ] #If you have already run (i.e. just rerunning the optimization)
+if [ $iRef -ge 2 ] #If you have already run (i.e. just rerunning the optimization)
 then
 
 #### Start the mdrun simulations for the initial epsilon and sigma values
@@ -57,18 +54,22 @@ cd ref"$iRef" || exit
 
 #Create files with force field parameters
 
+python "$scripts_path"/create_tab.py --lam "$lam_guess" --epsilon "$eps_guess" --sigma "$sig_guess"
+
+C6_guess=$(<C6_it)
+Clam_guess=$(<Clam_it)
+
 echo "$eps_guess" "$sig_guess" > eps_Sigma_guess
-echo "$eps_guess" "$sig_guess" > eps_Sigma_all
 echo "$eps_guess" > eps_guess
 echo "$bond_length" > bond_length
 
 cp "$input_path"/ethane_temp.top ethane.top 
 cp "$input_path"/ethane.gro ethane.gro 
-sed -i -e s/some_epsilon/"$eps_guess"/ ethane.top
-sed -i -e s/some_sigma/"$sig_guess"/ ethane.top
+sed -i -e s/some_C6/"$C6_guess"/ ethane.top
+sed -i -e s/some_Clam/"$Clam_guess"/ ethane.top
 sed -i -e s/some_bond/"$bond_length"/g ethane.top
 
-cp "$scripts_path"/EthaneRunITIC_all EthaneRunITIC_all
+cp "$scripts_path"/EthaneRunITIC_all_tabulated EthaneRunITIC_all
 
 sed -i -e s/some_compound_top/"${Compound}"/ EthaneRunITIC_all
 sed -i -e s/some_model_top/"${Model}"/ EthaneRunITIC_all
@@ -85,6 +86,7 @@ fi
 cd "$output_path"/ref"$iRef" || exit # Must be in correct directory for python script and file generation
 
 echo "Eps (kJ/mol)" > eps_all
+echo "Eps (kJ/mol)" "Sigma (nm)" "Lambda" > eps_sig_lam_all
 echo "Objective" > F_all
 echo "Objective" > F_ITIC_all
 cp F_ITIC_all SSE_rhoL_all
@@ -97,18 +99,16 @@ echo $TOL_eps > TOL_eps
 echo $TOL_sig > TOL_sig
 echo $TOL_MBAR > TOL_MBAR 
 
-#echo "$eps_low" > eps_low
-#echo "$eps_high" > eps_high
+echo "${eps_range[iRef]}" > eps_range
 echo "$eps_guess" > eps_guess
 
 echo "Sigma (nm)" > sig_all
 echo "$sig_guess" > sig_guess
-#echo "$sig_low" > sig_low
-#echo "$sig_high" > sig_high
+echo "${sig_range[iRef]}" > sig_range
 
 echo "$iRef" > iRef #Testing out to see if I can copy the reference inside this directory instead
 
-cp "$scripts_path"/EthaneRerunITIC_subprocess EthaneRerunITIC_subprocess
+cp "$scripts_path"/EthaneRerunITIC_subprocess_tabulated EthaneRerunITIC_subprocess
 
 sed -i -e s/some_compound_top/"${Compound}"/ EthaneRerunITIC_subprocess
 sed -i -e s/some_model_top/"${Model}"/ EthaneRerunITIC_subprocess
@@ -119,8 +119,8 @@ sed -i -e s@some_output_path_top@"$output_path"@ EthaneRerunITIC_subprocess
 
 cd "$output_path"/ref"$iRef" || exit #Must cd back to original location for python script
 
-python "$scripts_path"/optimization_multidimensional_ITIC.py -opt "$opt_method" -prop "$opt_prop1" "$opt_prop2"
-python "$scripts_path"/parameter_space_SSE_analysis.py -opt "$opt_method"
+python "$scripts_path"/optimization_Mie_ITIC.py -opt "$opt_method" -prop "$opt_prop1" "$opt_prop2"
+python "$scripts_path"/parameter_space_SSE_analysis_Mie.py -opt "$opt_method"
 
 cd "$output_path"/ref"$iRef" || exit #Should still be in the same directory, but just to be safe
 
@@ -129,16 +129,18 @@ rm Isotherm/rho_?/NVT_eq/NVT_prod/energy_press_ref*rr*.xvg Isotherm/rho_?/NVT_eq
 
 eps_optimal=$(<eps_optimal)
 sig_optimal=$(<sig_optimal)
+lam_optimal=$(<lam_optimal)
 iRef=$((iRef + 1))
-conv_eps=$(<conv_eps)
-#conv_eps=1 #If you just want to do a single iteration, for practice
+conv_overall=$(<conv_overall)
 
 eps_guess=$eps_optimal
 sig_guess=$sig_optimal
+lam_guess=$lam_optimal
 
 echo "$eps_guess"
 echo "$sig_guess"
-echo "$conv_eps"
+echo "$lam_guess"
+echo "$conv_overall"
 
 done #for while loop of direct simulations
 

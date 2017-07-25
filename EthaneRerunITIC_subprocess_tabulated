@@ -35,13 +35,11 @@ sed -i -e s@some_output_path@"$output_path"@ EthaneRerunIsotherm
 
 eps_it=$(<eps_it)
 eps_guess=$(<eps_guess)
-#echo "$eps_it" >> eps_all
 
 sig_it=$(<sig_it)
 sig_guess=$(<sig_guess)
-#echo "$sig_it" >> sig_all
 
-lam_it=$(<lam_guess) #Currently not changing lambda (so just LJ)
+lam_it=$(<lam_it) 
 lam_guess=$(<lam_guess)
 
 python "$scripts_path"/create_tab.py --lam "$lam_it" --epsilon "$eps_it" --sigma "$sig_it"
@@ -53,8 +51,8 @@ bond_length=$(<bond_length)
 
 # Perform the rerun simulations 
 
-echo Reference Epsilon = "$eps_guess" sigma = "$sig_guess"
-echo MBAR rerun Epsilon = "$eps_it" sigma = "$sig_it"
+echo Reference Epsilon = "$eps_guess" sigma = "$sig_guess" lambda = "$lam_guess"
+echo MBAR rerun Epsilon = "$eps_it" sigma = "$sig_it" lambda = "$lam_it"
 sleep 2s
 
 ####
@@ -63,7 +61,7 @@ sleep 2s
 
 cd "$output_path"/ref"$iRef" || exit #Must cd back 
 
-echo "$eps_it" "$sig_it" >> eps_Sigma_all
+echo "$eps_it" "$sig_it" "$lam_it" >> eps_sig_lam_all
 
 # I can move this inside the EthaneRerunITIC_all
 
