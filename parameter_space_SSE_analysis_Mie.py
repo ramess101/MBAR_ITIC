@@ -534,7 +534,7 @@ def print_figures(opt_type):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points'],help="choose which type of optimizer to use")
+    parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points','SLSQP'],help="choose which type of optimizer to use")
     args = parser.parse_args()
     if args.optimizer:
         print_figures(args.optimizer)

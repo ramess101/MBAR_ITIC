@@ -84,9 +84,10 @@ time.sleep(2)
 #eps_low = np.loadtxt('eps_low')
 eps_guess = np.loadtxt('eps_guess')
 #eps_high = np.loadtxt('eps_high')
-eps_range = np.loadtxt('eps_range')
-eps_low = eps_guess*(1.-eps_range)
-eps_high = eps_guess*(1.+eps_range)
+eps_range_low = np.loadtxt('eps_range_low')
+eps_range_high = np.loadtxt('eps_range_high')
+eps_low = eps_guess*(1.-eps_range_low)
+eps_high = eps_guess*(1.+eps_range_high)
 
 #sig_low = np.loadtxt('sig_low')
 sig_guess = np.loadtxt('sig_guess')
@@ -96,8 +97,8 @@ sig_low= sig_guess * (1.-sig_range)
 sig_high=sig_guess * (1.+sig_range)
 
 lam_guess = np.loadtxt('lam_guess')
-lam_low = 14.
-lam_high = 18.
+lam_low = np.loadtxt('lam_low')
+lam_high = np.loadtxt('lam_high')
 
 TOL = np.loadtxt('TOL_MBAR') 
 
@@ -105,6 +106,10 @@ def U_to_u(U,T): #Converts internal energy into reduced potential energy in NVT 
     beta = 1./(R_g*T)
     u = beta*(U)
     return u
+
+def r_min_calc(sig, n=12., m=6.):
+    r_min = (n/m*sig**(n-m))**(1./(n-m))
+    return r_min
 
 def REFPROP_UP(TSim,rho_mass,NmolSim,compound):
     RP_U = CP.PropsSI('UMOLAR','T',TSim,'D',rho_mass,'REFPROP::'+compound) / 1e3 #[kJ/mol]
@@ -694,7 +699,7 @@ def steep_descent(fun,x_guess,bounds,dx,tol,tx,max_it=20,max_fun=30):
         
     return x_n, it
 
-def leapfrog(fun,x_guess,bounds,tol,max_it=100):
+def leapfrog(fun,x_guess,bounds,tol,max_it=500):
     dim = len(x_guess)
     nplayers = 10*dim
     players = np.random.random([nplayers,dim])
@@ -752,8 +757,12 @@ def call_optimizers(opt_type,prop_type):
     eps_sig_lam_guess = np.array([eps_guess,sig_guess,lam_guess])
     #print(eps_sig_lam_guess)
     
+    tol_eps = np.loadtxt('TOL_eps')
+    tol_sig = np.loadtxt('TOL_sig')
+    tol_lam = np.loadtxt('TOL_lam')
+    
     d_eps_sig_lam = np.array([0.0001,0.0001,0.0001])
-    tol_eps_sig_lam = np.array([0.0001,0.0001,0.01])
+    tol_eps_sig_lam = np.array([tol_eps,tol_sig,tol_lam])
     t_eps_sig_lam = d_eps_sig_lam
          
     bnds = ((eps_low,eps_high),(sig_low,sig_high),(lam_low,lam_high)) 
@@ -804,13 +813,22 @@ def call_optimizers(opt_type,prop_type):
         objective(eps_sig_lam_guess)
         eps_sig_lam_spec = np.array([121.25,0.3783,16.])
         objective_ITIC(eps_sig_lam_spec)
+        
+    elif opt_type == 'SLSQP':
+        eps_sig_lam_guess_scaled = eps_sig_lam_guess/eps_sig_lam_guess
+        objective_scaled = lambda eps_sig_lam_scaled: objective(eps_sig_lam_scaled*eps_sig_lam_guess)
+        bnds = ((eps_low/eps_guess,eps_high/eps_guess),(sig_low/sig_guess,sig_high/sig_guess),(lam_low/lam_guess,lam_high/lam_guess)) 
+        sol = minimize(objective_scaled,eps_sig_lam_guess_scaled,method='SLSQP',bounds=bnds,options={'eps':1e-5,'maxiter':50}) #'eps' accounts for the algorithm wanting to take too small of a step change for the Jacobian that Gromacs does not distinguish between the different force fields
+        eps_opt = sol.x[0]*eps_guess
+        sig_opt = sol.x[1]*sig_guess
+        lam_opt = sol.x[2]*lam_guess
     
     return eps_opt, sig_opt, lam_opt        
             
 def main():
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points'],help="choose which type of optimizer to use")
+    parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points','SLSQP'],help="choose which type of optimizer to use")
     parser.add_argument("-prop","--properties",type=str,nargs='+',choices=['rhoL','Psat','rhov','P','U','Z'],help="choose one or more properties to use in optimization" )
     args = parser.parse_args()
     if args.optimizer:
