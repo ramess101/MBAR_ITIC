@@ -376,6 +376,8 @@ def print_figures(opt_type):
         sig = np.unique(sig_reruns)
         lam = np.unique(lam_reruns)
         
+        F_ITIC = np.loadtxt('F_ITIC_all',skiprows=1)
+        
         #print(len(eps_reruns))
         #print(len(sig_reruns))
         #prin(len(lam_reruns))
@@ -530,6 +532,22 @@ def print_figures(opt_type):
         ax = plt.colorbar(p)
         ax.set_label('log(SSE)')
         f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_SSEZ.pdf')
+        
+        f = plt.figure()
+        ax = f.add_subplot(111,projection='3d')
+        p = ax.scatter(sig_reruns[1:],eps_reruns[1:],lam_reruns[1:],c=np.log10(F_ITIC[1:]),cmap='Blues',label='Iterations')
+        ax.scatter(sig_reruns[0],eps_reruns[0],lam_reruns[0],marker='x',c=np.log10(F_ITIC[0]),cmap='Blues',label='Reference')
+        ax.set_ylabel('$\epsilon$ (kJ/mol)')
+        ax.set_xlabel('$\sigma$ (nm)')
+        ax.set_zlabel(r'$\lambda$')
+        ax.set_zlim([min(lam),max(lam)])
+        ax.set_ylim([min(eps),max(eps)])
+        ax.set_xlim([min(sig),max(sig)])
+        ax.legend()
+        plt.title('Objective Function')
+        ax = plt.colorbar(p)
+        ax.set_label('log(SSE)')
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_F.pdf')
     
 def main():
 
