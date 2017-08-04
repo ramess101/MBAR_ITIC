@@ -383,6 +383,8 @@ def print_figures(opt_type):
         #prin(len(lam_reruns))
         #print(nReruns)
         
+        assert len(eps_reruns) == nReruns, 'Number of reruns does not match. Check if eps_sig_lam_all had repeated initial parameters.'
+        
         SSErhoL = np.empty(nReruns)
         SSEPsat = np.empty(nReruns)
         SSErhov = np.empty(nReruns)

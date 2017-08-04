@@ -732,9 +732,6 @@ def leapfrog(fun,x_guess,bounds,tol,max_it=500):
                     #print('Not valid')
         fplayers[iworst] = fun(xtrial)
         it += 1
-        plt.scatter(players[:,0],players[:,1])
-        plt.scatter(xtrial[0],xtrial[1])
-        plt.show()
         if (np.abs(dx) - np.abs(tol) < 0).all():
             conv = True
     ibest = fplayers.argmin()

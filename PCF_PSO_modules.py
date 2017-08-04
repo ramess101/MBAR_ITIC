@@ -4,149 +4,20 @@ import matplotlib.pyplot as plt
 import math
 import CoolProp
 from scipy.optimize import minimize
-
-CP = CoolProp.CoolProp
-
-"""
-    This code performs a post-simulation optimization using the pair correlation function
-"""
      
-compound='Ethane'
-
-Temp = np.array([178, 197, 217, 236, 256, 275, 110, 135, 160, 290]) #[K]
-rho_v = np.array([0.02915, 0.07315, 0.16168, 0.30783, 0.56606, 0.98726, 4.89203E-05, 0.001216635, 0.0097938, 1.54641093]) #[1/nm**3]
-rho_L = np.array([11.06996, 10.57738, 10.01629, 9.42727, 8.71778, 7.89483, 12.61697633, 12.06116887, 11.48692334, 7.036023817]) #[1/nm**3]
-
-V_v = 1./rho_v #[nm**3]
-V_L = 1./rho_L #[nm**3]
-
-T_c_RP = CP.PropsSI('TCRIT','REFPROP::'+compound)
-rho_c_RP = CP.PropsSI('RHOCRIT','REFPROP::'+compound)
-M_w = CP.PropsSI('M','REFPROP::'+compound) #[kg/mol]
-T_low = CP.PropsSI('TMIN','REFPROP::'+compound)
-RP_rho_L = CP.PropsSI('D','T',Temp,'Q',0,'REFPROP::'+compound) #[kg/m3]
-RP_rho_v = CP.PropsSI('D','T',Temp,'Q',1,'REFPROP::'+compound) #[kg/m3]
-RP_P_v = CP.PropsSI('P','T',Temp,'Q',1,'REFPROP::'+compound)/1000 #[kPa]
-RP_H_L = CP.PropsSI('HMOLAR','T',Temp,'Q',0,'REFPROP::'+compound) / 1000 #[kJ/mol]
-RP_H_v = CP.PropsSI('HMOLAR','T',Temp,'Q',1,'REFPROP::'+compound) / 1000 #[kJ/mol]
-RP_HVP = RP_H_v - RP_H_L #[kJ/mol]
-RP_V_L = M_w/RP_rho_L #[m3/mol]
-RP_V_v = M_w/RP_rho_v #[m3/mol]
-RP_deltaV = RP_V_v - RP_V_L #[m3/mol]
-RP_deltaU = RP_HVP - RP_P_v*RP_deltaV #[kJ/mol]
-RP_U_L = CP.PropsSI('UMOLAR','T',Temp,'Q',0,'REFPROP::'+compound) / 1000 #[kJ/mol]
-RP_U_v = CP.PropsSI('UMOLAR','T',Temp,'Q',1,'REFPROP::'+compound) / 1000 #[kJ/mol] 
-RP_deltaU_alt = RP_U_v - RP_U_L
-RP_U_ig = CP.PropsSI('UMOLAR','T',Temp,'D',0,'REFPROP::'+compound) / 1000 #[kJ/mol]
-RP_U_L_res = RP_U_L - RP_U_ig
-RP_U_v_res = RP_U_v - RP_U_ig
-
-T_YE_tab = np.array([170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280])
-YE_U_L_tab = np.array([-9.305, -8.587, -7.86, -7.121, -6.367, -5.596, -4.805, -3.988, -3.14, -2.254, -1.316, -0.3061]) #Alternative source
-YE_U_v_tab = np.array([4.554, 4.839, 5.117 ,5.388 ,5.647 ,5.893 ,6.12 ,6.324 ,6.498 ,6.632, 6.709,6.7])
-
-Temp_sorted = np.sort(Temp)
-
-YE_U_L_fit = np.polyval(np.polyfit(T_YE_tab,YE_U_L_tab,2),Temp_sorted)
-YE_U_v_fit = np.polyval(np.polyfit(T_YE_tab,YE_U_v_tab,2),Temp_sorted)
-YE_deltaU_fit = YE_U_v_fit - YE_U_L_fit
-
-#RP_U_L = YE_U_L_fit
-#RP_U_v = YE_U_v_fit
-
-#RP_deltaU = YE_deltaU_fit
-
-U_intra = np.array([5.506943842, 5.878684617, 6.289459224, 6.693660331, 7.130462861, 7.553929439, 4.467419639, 4.772479078, 5.177295002, 7.893015148])
-
-R_g = 8.314472e-3 # [kJ/mol/K]
-
-N = 400 # Number of molecules
-N_sites = 2
-N_pair = N_sites**2
-
-reference='TraPPE'
-
-if reference == 'TraPPE':
-
-    # TraPPE
-    eps_ref = 98. #[K]
-    sig_ref = 0.375 #[nm]
-    lam_ref = 12;
-    
-    fname = 'H:/PCF-PSO/RDF_TraPPE_all_temps.txt'
-    RDFs_ref = np.loadtxt(fname,delimiter='\t')
-    
-    deltaU_ens = np.array([12.26633, 11.50548, 10.63125, 9.6665, 8.465, 6.98475, 14.68024786, 13.79634868, 12.91341433, 5.421409895]) # [kJ/mol] Ensemble averages for TraPPE
-    U_L_ens = np.array([-12.3225, -11.6325, -10.89, -10.13, -9.2675, -8.3125, -14.68044749, -13.79952918, -12.93440837, -7.39177347]) # [kJ/mol] Ensemble averages for TraPPE
-    U_v_ens = np.array([-0.056175, -0.127025,-0.25875,-0.4635,-0.8025,-1.32775, -0.000199626, -0.003180493, -0.020994042,-1.970363575]) # [kJ/mol] Ensemble averages for TraPPE
-
-elif reference == 'Potoff':
-                    
-    # Potoff
-    eps_ref = 121.25 #[K]
-    sig_ref = 0.3783 #[nm]
-    lam_ref = 16
-    
-    fname = 'H:/PCF-PSO/RDF_Potoff.txt'
-    RDFs_ref = np.loadtxt(fname,delimiter='\t')   
-    
-    deltaU_ens = np.array([13.47817937, 12.60056654, 11.58723646, 10.49408513, 9.136582368, 7.504864688]) # [kJ/mol] Ensemble averages for Potoff
-
-elif reference == 'Iteration_3':                     
-                     
-    # Iteration_3
-    eps_ref = 117.426 #[K]
-    sig_ref = 0.377629 #[nm]
-    lam_ref = 15.0561
-    
-    fname = 'H:/PCF-PSO/RDF_PCF_PSO_Iteration_3_all_Temps.txt'
-    RDFs_ref = np.loadtxt(fname,delimiter='\t')   
-    
-    # Wrong tail corrections
-    #deltaU_ens = np.array([13.30261018, 12.44742398, 11.45416561, 10.37973227, 9.04093736, 7.430165499, 16.04817995, 15.04421521, 14.03175751, 5.703436554]) # [kJ/mol] Ensemble averages for Iteration 3
-    # Correct tail corrections
-    deltaU_ens = np.array([13.565469, 12.69750703, 11.68878262, 10.59684646, 9.235012225, 7.594619838, 16.34856183, 15.3313366, 14.30500321, 5.834132324]) # [kJ/mol] Ensemble averages for Iteration 3
-    U_L_ens = np.array([-13.63266466, -12.84714095, -11.98980705, -11.12923475, -10.14797751 ,-9.09372066 ,-16.34856315 ,-15.33136885 ,-14.33118704 ,-8.071015752]) # [kJ/mol] Ensemble averages for TraPPE
-    U_v_ens = np.array([-0.067195657, -0.149633913, -0.301024437, -0.532388298, -0.91296529, -1.499100823,-0.000252822,-0.004209754,-0.026183824,-2.236883428]) # [kJ/mol] Ensemble averages for TraPPE
-
-elif reference == 'Iteration_4':                                          
-                     
-    # Iteration_4
-    eps_ref = 119.6115 #[K]
-    sig_ref = 0.377761 #[nm]
-    lam_ref = 15.091
-        
-    fname = 'H:/PCF-PSO/RDF_PCF_PSO_Iteration_4.txt'
-    RDFs_ref = np.loadtxt(fname,delimiter='\t')   
-    
-    deltaU_ens = np.array([13.58024314, 12.70553103, 11.6871413, 10.58667247, 9.225330852, 7.573248935]) # [kJ/mol] Ensemble averages for Iteration 4                  
-
-elif reference == 'Iteration_5_Int':                                          
-                     
-    # Iteration_5_Int
-    eps_ref = 118.935 #[K]
-    sig_ref = 0.377525 #[nm]
-    lam_ref = 15.
-        
-    fname = 'H:/PCF-PSO/RDF_Iteration_5_Int_all_Temps.txt'
-    RDFs_ref = np.loadtxt(fname,delimiter='\t')   
-    
-    deltaU_ens = np.array([13.58024314, 12.70553103, 11.6871413, 10.58667247, 9.225330852, 7.573248935, 16.27853971, 15.27048735, 14.24386152, 5.806201543]) # [kJ/mol] Ensemble averages for Iteration 4                  
-
-      
-def r_min_calc(sig, n=12., m=6.):
-    r_min = (n/m*sig**(n-m))**(1./(n-m))
-    return r_min
-                      
-r_min_ref = r_min_calc(sig_ref,lam_ref)
-r_avg_ref = (sig_ref + r_min_ref)/2
-                      
-bond_length = 0.154 #[nm]
-
 # Simulation constants
+
+# Gromacs uses a different format
+    
+N_sites = 1
+N_pair = N_sites**2
+N_columns = N_pair * 2
+
+# RDF bins
+
 r_c = 1.4 #[nm]
 
-r = np.linspace(0.014,1.386,num=50) #[nm]
+r = np.linspace(0.002,1.4,num=700) #[nm]
 
 dr = r[1] - r[0]
 
@@ -401,3 +272,21 @@ plt.xlabel('T (K)')
 plt.ylabel(r'$U_v \left(\frac{kJ}{mol}\right)$')
 plt.legend()
 plt.show()
+
+def main():
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points','SLSQP'],help="choose which type of optimizer to use")
+    parser.add_argument("-prop","--properties",type=str,nargs='+',choices=['rhoL','Psat','rhov','P','U','Z'],help="choose one or more properties to use in optimization" )
+    args = parser.parse_args()
+    if args.optimizer:
+        eps_opt, sig_opt, lam_opt = call_optimizers(args.optimizer,args.properties)
+    else:
+        print('Please specify an optimizer type')
+        eps_opt = 0.
+        sig_opt = 0.
+        lam_opt = 0.
+
+if __name__ == '__main__':
+    
+    main()
