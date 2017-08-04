@@ -12,8 +12,8 @@ output_path=some_output_path_top
 
 cd "$output_path"/ref"$iRef" || exit #Must cd back 
 
-cp "$scripts_path"/EthaneRerunIsochore_tabulated EthaneRerunIsochore
-cp "$scripts_path"/EthaneRerunIsotherm_tabulated EthaneRerunIsotherm
+cp "$scripts_path"/EthaneRerunIsochore_tabulated_parallel EthaneRerunIsochore
+cp "$scripts_path"/EthaneRerunIsotherm_tabulated_parallel EthaneRerunIsotherm
 
 iRerun=$(<iRerun)
 
