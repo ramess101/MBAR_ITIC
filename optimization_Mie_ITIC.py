@@ -712,33 +712,29 @@ def leapfrog(fun,x_guess,bounds,tol,max_it=500):
     #print(fplayers)
     conv = False
     it = 0
-    bnds_trial = np.empty([dim,2])
     while not conv and it < max_it:
         best = fplayers.min()
         worst = fplayers.max()
         ibest = fplayers.argmin()
         iworst = fplayers.argmax()
-        dx = players[ibest,:] - players[iworst,:]
         best_player = players[ibest,:]
-        extreme_trial = best_player + dx
-        #print(best,worst,ibest,iworst)
-        #print(dx)
-        #print(extreme_trial)
-        for idim in range(dim):
-            extreme_trial[idim] = min(np.array([max(np.array([bounds[idim][0],extreme_trial[idim]])),bounds[idim][1]]))
-            bnds_trial[idim][0] = min([extreme_trial[idim],best_player[idim]])
-            bnds_trial[idim][1] = max([extreme_trial[idim],best_player[idim]])
-        #print(bnds_trial)
-        xtrial = np.random.random(dim)
-        for idim in range(dim):
-            xtrial[idim] *= (bnds_trial[idim][1]-bnds_trial[idim][0])
-            xtrial[idim] += bnds_trial[idim][0]             
+        valid = False
+        while not valid:
+            dx = players[ibest,:] - players[iworst,:]
+            xtrial = np.random.random(dim)
+            xtrial *= dx
+            xtrial += best_player
+            players[iworst,:] = xtrial
+            valid = True
+            for idim in range(dim):
+                if xtrial[idim] < bounds[idim][0] or xtrial[idim] > bounds[idim][1]:
+                    valid = False
+                    #print('Not valid')
         fplayers[iworst] = fun(xtrial)
-        players[iworst,:] = xtrial
         it += 1
-        #plt.scatter(players[:,0],players[:,1])
-        #plt.scatter(xtrial[0],xtrial[1])
-        #plt.show()
+        plt.scatter(players[:,0],players[:,1])
+        plt.scatter(xtrial[0],xtrial[1])
+        plt.show()
         if (np.abs(dx) - np.abs(tol) < 0).all():
             conv = True
     ibest = fplayers.argmin()
