@@ -111,6 +111,26 @@ def r_min_calc(sig, n=12., m=6.):
     r_min = (n/m*sig**(n-m))**(1./(n-m))
     return r_min
 
+sig_TraPPE = 0.375 #[nm]
+lam_TraPPE = 12
+r_min_TraPPE = r_min_calc(sig_TraPPE,lam_TraPPE)
+
+def constraint_sig(params): #If lambda is greater than 12 sigma must be greater than sigma TraPPE
+    sig = params[1]
+    lam = params[2]
+    if lam < lam_TraPPE:
+        return sig_TraPPE - sig
+    elif lam >= lam_TraPPE:
+        return sig - sig_TraPPE
+    
+def constraint_rmin(params): #If lambda is greater than 12 rmin must be less than rmin TraPPE
+    sig = params[1]
+    lam = params[2]
+    if lam < lam_TraPPE:
+        return r_min_calc(sig,lam) - r_min_TraPPE
+    elif lam >= lam_TraPPE:
+        return r_min_TraPPE - r_min_calc(sig,lam)
+
 def REFPROP_UP(TSim,rho_mass,NmolSim,compound):
     RP_U = CP.PropsSI('UMOLAR','T',TSim,'D',rho_mass,'REFPROP::'+compound) / 1e3 #[kJ/mol]
     RP_U_ig = CP.PropsSI('UMOLAR','T',TSim,'D',0,'REFPROP::'+compound) / 1e3 #[kJ/mol]
@@ -699,13 +719,30 @@ def steep_descent(fun,x_guess,bounds,dx,tol,tx,max_it=20,max_fun=30):
         
     return x_n, it
 
-def leapfrog(fun,x_guess,bounds,tol,max_it=500):
+def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=False,int_cons=False):
     dim = len(x_guess)
     nplayers = 10*dim
     players = np.random.random([nplayers,dim])
     for idim in range(dim):
         players[:,idim] *= (bounds[idim][1]-bounds[idim][0])
         players[:,idim] += bounds[idim][0]
+    if int_lam == True:
+        for iplayer in range(nplayers):
+            players[iplayer,2] = int(round(players[iplayer,2]))
+    if int_cons == True:
+        players[:,2] = x_guess[2]
+    if constrained == True:
+        for iplayer, xplayer in enumerate(players):
+            valid = False
+            while not valid:
+                if constraint_sig(xplayer) > 0 and constraint_rmin(xplayer) > 0:
+                    valid = True
+                else:
+                    sig_trial = np.random.random()
+                    sig_trial *= (bounds[1][1]-bounds[1][0])
+                    sig_trial += bounds[1][0]
+                    xplayer[1] = sig_trial
+                    players[iplayer,1] = sig_trial
     fplayers = np.empty(nplayers)
     for iplayers in range(nplayers):
         fplayers[iplayers] = fun(players[iplayers,:])
@@ -724,11 +761,19 @@ def leapfrog(fun,x_guess,bounds,tol,max_it=500):
             xtrial = np.random.random(dim)
             xtrial *= dx
             xtrial += best_player
+            if int_lam == True:
+                xtrial[2] = int(round(xtrial[2]))
+            if int_cons == True:
+                xtrial[2] = x_guess[2]
             players[iworst,:] = xtrial
             valid = True
             for idim in range(dim):
                 if xtrial[idim] < bounds[idim][0] or xtrial[idim] > bounds[idim][1]:
                     valid = False
+            if constrained == True:
+                if constraint_sig(xtrial) < 0 or constraint_rmin(xtrial) < 0:
+                    valid = False
+                    
                     #print('Not valid')
         fplayers[iworst] = fun(xtrial)
         it += 1
@@ -737,6 +782,7 @@ def leapfrog(fun,x_guess,bounds,tol,max_it=500):
     ibest = fplayers.argmin()
     best_player = players[ibest,:]
     #print(players[ibest,:])
+    print('This has changed')
     return best_player
 
 def call_optimizers(opt_type,prop_type):
@@ -759,6 +805,11 @@ def call_optimizers(opt_type,prop_type):
     t_eps_sig_lam = d_eps_sig_lam
          
     bnds = ((eps_low,eps_high),(sig_low,sig_high),(lam_low,lam_high)) 
+    
+    constrained = False # Default is to not use constraint
+    if len(prop_type) == 1:
+        if prop_type == 'U':
+            constrained = True       
        
     #print(bnds)
     
@@ -786,7 +837,7 @@ def call_optimizers(opt_type,prop_type):
         # For leapfrog algorithm
         objective(eps_sig_lam_guess) #To call objective before running loop
         
-        eps_sig_lam_opt = leapfrog(objective,eps_sig_lam_guess,bnds,tol_eps_sig_lam)
+        eps_sig_lam_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,tol_eps_sig_lam)
         eps_opt = eps_sig_lam_opt[0]
         sig_opt = eps_sig_lam_opt[1]
         lam_opt = eps_sig_lam_opt[2]
