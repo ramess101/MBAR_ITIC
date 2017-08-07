@@ -43,7 +43,7 @@ mkdir rho_"$j"
 
 cd rho_"$j" || exit
 
-gmx insert-molecules -ci ../../ethane.gro -nmol $N -box "${supercritical_box[j]}" "${supercritical_box[j]}" "${supercritical_box[j]}" -o ethane_box.gro
+gmx insert-molecules -ci ../../ethane.gro -nmol $N -box "${supercritical_box[j]}" "${supercritical_box[j]}" "${supercritical_box[j]}" -o ethane_box.gro > insertout 2>> insertout
 
 #Copy the minimization files
 
@@ -80,8 +80,8 @@ do
 
 cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j" || exit
 
-gmx grompp -f em_steep.mdp -c ethane_box.gro -p ../../ethane.top -o em_steep.tpr
-gmx mdrun -table ../../tab_it.xvg -nt 1 -deffnm em_steep &
+gmx grompp -f em_steep.mdp -c ethane_box.gro -p ../../ethane.top -o em_steep.tpr > gromppout 2>> gromppout
+gmx mdrun -table ../../tab_it.xvg -nt 1 -deffnm em_steep > runout 2>> runout &
 
 done
 
@@ -99,8 +99,8 @@ do
 
 cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j" || exit
 
-gmx grompp -f em_l-bfgs.mdp -c em_steep.gro -p ../../ethane.top -o em_l_bfgs.tpr -maxwarn 1
-gmx mdrun -table ../../tab_it.xvg -nt 1 -deffnm em_l_bfgs &
+gmx grompp -f em_l-bfgs.mdp -c em_steep.gro -p ../../ethane.top -o em_l_bfgs.tpr -maxwarn 1 >> gromppout 2>> gromppout
+gmx mdrun -table ../../tab_it.xvg -nt 1 -deffnm em_l_bfgs >> runout 2>> runout &
 
 done
 
@@ -118,8 +118,8 @@ do
 
 cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j"/NVT_eq || exit
 
-gmx grompp -f nvt_eq.mdp -c ../em_l_bfgs.gro -p ../../../ethane.top -o nvt_eq.tpr
-gmx mdrun -table ../../../tab_it.xvg -nt "${nCores[j]}" -deffnm nvt_eq &
+gmx grompp -f nvt_eq.mdp -c ../em_l_bfgs.gro -p ../../../ethane.top -o nvt_eq.tpr > gromppout 2>> gromppout
+gmx mdrun -table ../../../tab_it.xvg -nt "${nCores[j]}" -deffnm nvt_eq > runout 2>> runout &
 
 done
 
@@ -137,8 +137,8 @@ cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
 
 # Could give more resources to denser phase
 
-gmx grompp -f nvt_prod.mdp -c ../nvt_eq.gro -p ../../../../ethane.top -o nvt_prod.tpr
-gmx mdrun -table ../../../../tab_it.xvg -nt "${nCores[j]}" -deffnm nvt_prod & #Can use more cores in liquid phase since vapor phase will have already finished
+gmx grompp -f nvt_prod.mdp -c ../nvt_eq.gro -p ../../../../ethane.top -o nvt_prod.tpr > gromppout 2>> gromppout
+gmx mdrun -table ../../../../tab_it.xvg -nt "${nCores[j]}" -deffnm nvt_prod > runout 2>> runout & #Can use more cores in liquid phase since vapor phase will have already finished
 
 done
 
