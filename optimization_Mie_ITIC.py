@@ -719,30 +719,35 @@ def steep_descent(fun,x_guess,bounds,dx,tol,tx,max_it=20,max_fun=30):
         
     return x_n, it
 
-def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=False,int_cons=False):
-    dim = len(x_guess)
-    nplayers = 10*dim
+def initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons):
     players = np.random.random([nplayers,dim])
     for idim in range(dim):
         players[:,idim] *= (bounds[idim][1]-bounds[idim][0])
         players[:,idim] += bounds[idim][0]
-    if int_lam == True:
+    if int_lam:
         for iplayer in range(nplayers):
             players[iplayer,2] = int(round(players[iplayer,2]))
-    if int_cons == True:
+    if int_cons:
         players[:,2] = x_guess[2]
-    if constrained == True:
+    if constrained:
         for iplayer, xplayer in enumerate(players):
             valid = False
             while not valid:
                 if constraint_sig(xplayer) > 0 and constraint_rmin(xplayer) > 0:
                     valid = True
-                else:
+                else: 
+                    # Only change sigma so that there is no bias towards higher lambda's that have more feasible sigma values
                     sig_trial = np.random.random()
                     sig_trial *= (bounds[1][1]-bounds[1][0])
                     sig_trial += bounds[1][0]
                     xplayer[1] = sig_trial
                     players[iplayer,1] = sig_trial
+    return players
+
+def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=False,int_cons=False):
+    dim = len(x_guess)
+    nplayers = 10*dim
+    players = initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons)
     fplayers = np.empty(nplayers)
     for iplayers in range(nplayers):
         fplayers[iplayers] = fun(players[iplayers,:])
@@ -756,23 +761,38 @@ def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=False,int_con
         iworst = fplayers.argmax()
         best_player = players[ibest,:]
         valid = False
+        prev_lam = False
         while not valid:
             dx = players[ibest,:] - players[iworst,:]
             xtrial = np.random.random(dim)
             xtrial *= dx
             xtrial += best_player
-            if int_lam == True:
+#            if constrained and prev_lam: #Only change sigma when accounting for constrained optimization
+#                xtrial[2] = players[iworst,2] #Restore lambda to previous value
+            if int_lam:
                 xtrial[2] = int(round(xtrial[2]))
-            if int_cons == True:
+            if int_cons:
                 xtrial[2] = x_guess[2]
             players[iworst,:] = xtrial
-            valid = True
+            if constrained: #This approach makes more sense, just change sigma until the constraint is satisfied without leaping back over
+                while not valid:
+                    if constraint_sig(xtrial) > 0 and constraint_rmin(xtrial) > 0:
+                        valid = True
+                    else:
+                        # Only change sigma so that there is no bias towards higher lambda's that have more feasible sigma values
+                        sig_trial = np.random.random()
+                        sig_trial *= dx[1]
+                        sig_trial += best_player[1]
+                        xtrial[1] = sig_trial
+                        valid = False
+            valid = True #This is still necessary in case constrained is false
             for idim in range(dim):
                 if xtrial[idim] < bounds[idim][0] or xtrial[idim] > bounds[idim][1]:
                     valid = False
-            if constrained == True:
-                if constraint_sig(xtrial) < 0 or constraint_rmin(xtrial) < 0:
-                    valid = False
+#            if constrained:
+#                if constraint_sig(xtrial) < 0 or constraint_rmin(xtrial) < 0:
+#                    valid = False
+#                    prev_lam = True
                     
                     #print('Not valid')
         fplayers[iworst] = fun(xtrial)
@@ -807,7 +827,7 @@ def call_optimizers(opt_type,prop_type):
     bnds = ((eps_low,eps_high),(sig_low,sig_high),(lam_low,lam_high)) 
     
     constrained = False # Default is to not use constraint
-    if len(prop_type) == 1:
+    if len(prop_type) == 1: #If only optimizing to U it is best to constrain sigma and rmin
         if prop_type == 'U':
             constrained = True       
        
