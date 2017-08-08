@@ -744,10 +744,10 @@ def initialize_players(nplayers,dim,bounds,constrained,int_lam,int_cons,lam_cons
                     players[iplayer,1] = sig_trial
     return players
 
-def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,max_trials=50,int_lam=True,int_cons=False,restart=False,lam_cons=x_guess[2]):
+def leapfrog(fun,x_guess,bounds,constrained,lam_cons,tol,max_it=500,max_trials=50,int_lam=True,int_cons=False,restart=False):
     dim = len(x_guess)
     nplayers = 10*dim
-
+    
     if restart:
         global iRerun
         players = np.loadtxt('eps_sig_lam_all_failed',skiprows=2) #Recall that initial objective call is the reference system
@@ -817,7 +817,7 @@ def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,max_trials=50,int_lam
     #print(players[ibest,:])
     return best_player, best
 
-def call_optimizers(opt_type,prop_type,lam_cons):
+def call_optimizers(opt_type,prop_type,lam_cons=lam_guess):
     
     objective = lambda eps_sig_lam: objective_ITIC(eps_sig_lam,prop_type)
 
@@ -871,7 +871,7 @@ def call_optimizers(opt_type,prop_type,lam_cons):
         # For leapfrog algorithm
         objective(eps_sig_lam_guess) #To call objective before running loop
         
-        eps_sig_lam_opt, f_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,tol_eps_sig_lam,lam_cons=lam_cons)
+        eps_sig_lam_opt, f_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,lam_cons,tol_eps_sig_lam)
         eps_opt = eps_sig_lam_opt[0]
         sig_opt = eps_sig_lam_opt[1]
         lam_opt = eps_sig_lam_opt[2]
@@ -902,7 +902,7 @@ def call_optimizers(opt_type,prop_type,lam_cons):
         lam_opt = sol.x[2]*lam_guess
 
     if 'f_opt' not in locals():
-        f_opt = objective(np.array([eps_opt,sig_opt,lam_opt])
+        f_opt = objective(np.array([eps_opt,sig_opt,lam_opt]))
     
     return eps_opt, sig_opt, lam_opt, f_opt        
             
@@ -911,11 +911,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points','SLSQP'],help="choose which type of optimizer to use")
     parser.add_argument("-prop","--properties",type=str,nargs='+',choices=['rhoL','Psat','rhov','P','U','Z'],help="choose one or more properties to use in optimization" )
-    parser.add_argument("-lam","--lambda",type=int,nargs='+',help="choose one or more integer values of lambda" )
+    parser.add_argument("-lam","--lam",type=int,nargs='+',help="choose one or more integer values of lambda" )
     args = parser.parse_args()
     if args.optimizer:
-        if args.lambda:
-            lam_range = args.lambda
+        if args.lam:
+            lam_range = args.lam
             eps_opt_range = np.zeros(len(lam_range))
             sig_opt_range = np.zeros(len(lam_range))
             lam_opt_range = np.zeros(len(lam_range))
