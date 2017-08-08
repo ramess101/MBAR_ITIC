@@ -719,7 +719,7 @@ def steep_descent(fun,x_guess,bounds,dx,tol,tx,max_it=20,max_fun=30):
         
     return x_n, it
 
-def initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons):
+def initialize_players(nplayers,dim,bounds,constrained,int_lam,int_cons,lam_cons):
     players = np.random.random([nplayers,dim])
     for idim in range(dim):
         players[:,idim] *= (bounds[idim][1]-bounds[idim][0])
@@ -728,7 +728,7 @@ def initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons)
         for iplayer in range(nplayers):
             players[iplayer,2] = int(round(players[iplayer,2]))
     if int_cons:
-        players[:,2] = x_guess[2]
+        players[:,2] = lam_cons
     if constrained:
         for iplayer, xplayer in enumerate(players):
             valid = False
@@ -744,9 +744,10 @@ def initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons)
                     players[iplayer,1] = sig_trial
     return players
 
-def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,max_trials=50,int_lam=True,int_cons=False,restart=False):
+def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,max_trials=50,int_lam=True,int_cons=False,restart=False,lam_cons=x_guess[2]):
     dim = len(x_guess)
     nplayers = 10*dim
+
     if restart:
         global iRerun
         players = np.loadtxt('eps_sig_lam_all_failed',skiprows=2) #Recall that initial objective call is the reference system
@@ -755,7 +756,7 @@ def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,max_trials=50,int_lam
         shutil.copy('F_ITIC_all_failed','F_ITIC_all')
         iRerun = len(players) + 1
     else:
-        players = initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons)
+        players = initialize_players(nplayers,dim,bounds,constrained,int_lam,int_cons,lam_cons)
         fplayers = np.empty(nplayers)
         for iplayers in range(nplayers):
             fplayers[iplayers] = fun(players[iplayers,:])
@@ -772,7 +773,6 @@ def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,max_trials=50,int_lam
         best_player = players[ibest,:]
         print('Current best player = '+str(best_player))
         valid = False
-        prev_lam = False
         while not valid:
             dx = players[ibest,:] - players[iworst,:]
             xtrial = np.random.random(dim)
@@ -781,7 +781,7 @@ def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,max_trials=50,int_lam
             if int_lam:
                 xtrial[2] = int(round(xtrial[2]))
             if int_cons:
-                xtrial[2] = x_guess[2]
+                xtrial[2] = lam_cons
             if constrained: #This approach makes more sense, just change sigma until the constraint is satisfied without leaping back over
                 valid = False
                 trials = 0
@@ -813,10 +813,11 @@ def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,max_trials=50,int_lam
             conv = True
     ibest = fplayers.argmin()
     best_player = players[ibest,:]
+    best = fplayers.min()
     #print(players[ibest,:])
-    return best_player
+    return best_player, best
 
-def call_optimizers(opt_type,prop_type):
+def call_optimizers(opt_type,prop_type,lam_cons):
     
     objective = lambda eps_sig_lam: objective_ITIC(eps_sig_lam,prop_type)
 
@@ -870,7 +871,7 @@ def call_optimizers(opt_type,prop_type):
         # For leapfrog algorithm
         objective(eps_sig_lam_guess) #To call objective before running loop
         
-        eps_sig_lam_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,tol_eps_sig_lam)
+        eps_sig_lam_opt, f_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,tol_eps_sig_lam,lam_cons=lam_cons)
         eps_opt = eps_sig_lam_opt[0]
         sig_opt = eps_sig_lam_opt[1]
         lam_opt = eps_sig_lam_opt[2]
@@ -899,17 +900,33 @@ def call_optimizers(opt_type,prop_type):
         eps_opt = sol.x[0]*eps_guess
         sig_opt = sol.x[1]*sig_guess
         lam_opt = sol.x[2]*lam_guess
+
+    if 'f_opt' not in locals():
+        f_opt = objective(np.array([eps_opt,sig_opt,lam_opt])
     
-    return eps_opt, sig_opt, lam_opt        
+    return eps_opt, sig_opt, lam_opt, f_opt        
             
 def main():
     
     parser = argparse.ArgumentParser()
     parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points','SLSQP'],help="choose which type of optimizer to use")
     parser.add_argument("-prop","--properties",type=str,nargs='+',choices=['rhoL','Psat','rhov','P','U','Z'],help="choose one or more properties to use in optimization" )
+    parser.add_argument("-lam","--lambda",type=int,nargs='+',help="choose one or more integer values of lambda" )
     args = parser.parse_args()
     if args.optimizer:
-        eps_opt, sig_opt, lam_opt = call_optimizers(args.optimizer,args.properties)
+        if args.lambda:
+            lam_range = args.lambda
+            eps_opt_range = np.zeros(len(lam_range))
+            sig_opt_range = np.zeros(len(lam_range))
+            lam_opt_range = np.zeros(len(lam_range))
+            f_opt_range = np.zeros(len(lam_range))
+            for ilam, lam_cons in enumerate(lam_range):
+                eps_opt_range[ilam], sig_opt_range[ilam], lam_opt_range[ilam], f_opt_range[ilam] = call_optimizers(args.optimizer,args.properties,lam_cons)
+                assert lam_opt_range[ilam] == lam_cons, 'Optimal lambda is different than the constrained lambda value'
+            iopt = f_opt_range.argmin()
+            eps_opt, sig_opt, lam_opt, f_opt = eps_opt_range[iopt], sig_opt_range[iopt], lam_opt_range[iopt], f_opt_range[iopt]           
+        else:
+            eps_opt, sig_opt, lam_opt = call_optimizers(args.optimizer,args.properties)
     else:
         print('Please specify an optimizer type')
         eps_opt = 0.
