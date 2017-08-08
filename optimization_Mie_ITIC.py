@@ -719,7 +719,7 @@ def steep_descent(fun,x_guess,bounds,dx,tol,tx,max_it=20,max_fun=30):
         
     return x_n, it
 
-def initialize_players(nplayers,dim,bounds,constrained,int_lam,int_cons,lam_cons):
+def initialize_players(nplayers,dim,bounds,constrained,int_lam,cons_lam,lam_cons):
     players = np.random.random([nplayers,dim])
     for idim in range(dim):
         players[:,idim] *= (bounds[idim][1]-bounds[idim][0])
@@ -727,7 +727,7 @@ def initialize_players(nplayers,dim,bounds,constrained,int_lam,int_cons,lam_cons
     if int_lam:
         for iplayer in range(nplayers):
             players[iplayer,2] = int(round(players[iplayer,2]))
-    if int_cons:
+    if cons_lam:
         players[:,2] = lam_cons
     if constrained:
         for iplayer, xplayer in enumerate(players):
@@ -744,9 +744,12 @@ def initialize_players(nplayers,dim,bounds,constrained,int_lam,int_cons,lam_cons
                     players[iplayer,1] = sig_trial
     return players
 
-def leapfrog(fun,x_guess,bounds,constrained,lam_cons,tol,max_it=500,max_trials=50,int_lam=True,int_cons=False,restart=False):
+def leapfrog(fun,x_guess,bounds,constrained,lam_cons,tol,max_it=500,max_trials=100,int_lam=True,cons_lam=True,restart=False):
     dim = len(x_guess)
-    nplayers = 10*dim
+    if cons_lam:
+        nplayers = 10*(dim-1)
+    else:
+        nplayers = 10*dim
     
     if restart:
         global iRerun
@@ -756,7 +759,7 @@ def leapfrog(fun,x_guess,bounds,constrained,lam_cons,tol,max_it=500,max_trials=5
         shutil.copy('F_ITIC_all_failed','F_ITIC_all')
         iRerun = len(players) + 1
     else:
-        players = initialize_players(nplayers,dim,bounds,constrained,int_lam,int_cons,lam_cons)
+        players = initialize_players(nplayers,dim,bounds,constrained,int_lam,cons_lam,lam_cons)
         fplayers = np.empty(nplayers)
         for iplayers in range(nplayers):
             fplayers[iplayers] = fun(players[iplayers,:])
@@ -780,7 +783,7 @@ def leapfrog(fun,x_guess,bounds,constrained,lam_cons,tol,max_it=500,max_trials=5
             xtrial += best_player
             if int_lam:
                 xtrial[2] = int(round(xtrial[2]))
-            if int_cons:
+            if cons_lam:
                 xtrial[2] = lam_cons
             if constrained: #This approach makes more sense, just change sigma until the constraint is satisfied without leaping back over
                 valid = False
@@ -797,14 +800,15 @@ def leapfrog(fun,x_guess,bounds,constrained,lam_cons,tol,max_it=500,max_trials=5
                         #print('Trial failed constraints')
                         valid = False
                         trials += 1
-                if trials >= max_trials:
-                    print('Trial region could not meet constraints')
             players[iworst,:] = xtrial
             valid = True #This is still necessary in case constrained is false
             for idim in range(dim):
                 if xtrial[idim] < bounds[idim][0] or xtrial[idim] > bounds[idim][1]:
                     valid = False
                     print('Trial outside of bounds')
+            if trials >= max_trials:
+                print('Trial region could not meet constraints')
+                valid = False
         if trials >= max_trials:
             print('Not valid parameter set, fails constraints')
         fplayers[iworst] = fun(xtrial)
