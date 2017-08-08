@@ -744,7 +744,7 @@ def initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons)
                     players[iplayer,1] = sig_trial
     return players
 
-def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=False,int_cons=False):
+def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=True,int_cons=False):
     dim = len(x_guess)
     nplayers = 10*dim
     players = initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons)
@@ -802,7 +802,6 @@ def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=False,int_con
     ibest = fplayers.argmin()
     best_player = players[ibest,:]
     #print(players[ibest,:])
-    print('This has changed')
     return best_player
 
 def call_optimizers(opt_type,prop_type):
@@ -828,8 +827,10 @@ def call_optimizers(opt_type,prop_type):
     
     constrained = False # Default is to not use constraint
     if len(prop_type) == 1: #If only optimizing to U it is best to constrain sigma and rmin
-        if prop_type == 'U':
-            constrained = True       
+        if prop_type[0] == 'U':
+            constrained = True
+            print('This is a constrained optimization')
+     
        
     #print(bnds)
     
