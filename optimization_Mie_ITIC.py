@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np 
-import os, sys, argparse
+import os, sys, argparse, shutil
 from pymbar import MBAR
 #import matplotlib.pyplot as plt
 from pymbar import timeseries
@@ -744,14 +744,24 @@ def initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons)
                     players[iplayer,1] = sig_trial
     return players
 
-def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=True,int_cons=False):
+def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,max_trials=50,int_lam=True,int_cons=False,restart=False):
     dim = len(x_guess)
     nplayers = 10*dim
-    players = initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons)
-    fplayers = np.empty(nplayers)
-    for iplayers in range(nplayers):
-        fplayers[iplayers] = fun(players[iplayers,:])
+    if restart:
+        global iRerun
+        players = np.loadtxt('eps_sig_lam_all_failed',skiprows=2) #Recall that initial objective call is the reference system
+        fplayers = np.loadtxt('F_ITIC_all_failed',skiprows=3)
+        shutil.copy('eps_sig_lam_all_failed','eps_sig_lam_all')
+        shutil.copy('F_ITIC_all_failed','F_ITIC_all')
+        iRerun = len(players) + 1
+    else:
+        players = initialize_players(x_guess,nplayers,dim,bounds,constrained,int_lam,int_cons)
+        fplayers = np.empty(nplayers)
+        for iplayers in range(nplayers):
+            fplayers[iplayers] = fun(players[iplayers,:])
     #print(fplayers)
+    print('Initial players = '+str(players))
+    assert len(players) == nplayers, 'Initialization had error'
     conv = False
     it = 0
     while not conv and it < max_it:
@@ -760,6 +770,7 @@ def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=True,int_cons
         ibest = fplayers.argmin()
         iworst = fplayers.argmax()
         best_player = players[ibest,:]
+        print('Current best player = '+str(best_player))
         valid = False
         prev_lam = False
         while not valid:
@@ -767,15 +778,14 @@ def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=True,int_cons
             xtrial = np.random.random(dim)
             xtrial *= dx
             xtrial += best_player
-#            if constrained and prev_lam: #Only change sigma when accounting for constrained optimization
-#                xtrial[2] = players[iworst,2] #Restore lambda to previous value
             if int_lam:
                 xtrial[2] = int(round(xtrial[2]))
             if int_cons:
                 xtrial[2] = x_guess[2]
-            players[iworst,:] = xtrial
             if constrained: #This approach makes more sense, just change sigma until the constraint is satisfied without leaping back over
-                while not valid:
+                valid = False
+                trials = 0
+                while not valid and trials < max_trials:
                     if constraint_sig(xtrial) > 0 and constraint_rmin(xtrial) > 0:
                         valid = True
                     else:
@@ -784,17 +794,19 @@ def leapfrog(fun,x_guess,bounds,constrained,tol,max_it=500,int_lam=True,int_cons
                         sig_trial *= dx[1]
                         sig_trial += best_player[1]
                         xtrial[1] = sig_trial
+                        #print('Trial failed constraints')
                         valid = False
+                        trials += 1
+                if trials >= max_trials:
+                    print('Trial region could not meet constraints')
+            players[iworst,:] = xtrial
             valid = True #This is still necessary in case constrained is false
             for idim in range(dim):
                 if xtrial[idim] < bounds[idim][0] or xtrial[idim] > bounds[idim][1]:
                     valid = False
-#            if constrained:
-#                if constraint_sig(xtrial) < 0 or constraint_rmin(xtrial) < 0:
-#                    valid = False
-#                    prev_lam = True
-                    
-                    #print('Not valid')
+                    print('Trial outside of bounds')
+        if trials >= max_trials:
+            print('Not valid parameter set, fails constraints')
         fplayers[iworst] = fun(xtrial)
         it += 1
         if (np.abs(dx) - np.abs(tol) < 0).all():
