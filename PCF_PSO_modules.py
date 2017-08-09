@@ -4,6 +4,24 @@ import matplotlib.pyplot as plt
 import math
 import CoolProp
 from scipy.optimize import minimize
+
+# The general concept for this code is:
+# 1) Input:
+#    a) Reference system
+#        i) PCF
+#        ii) Force field parameters
+#    b) Target system
+#        i) Force field parameters
+#    c) State points
+#        i) Temperature
+#        ii) Density
+#    d) Compound details
+#        i) Molecular weight
+#       ii) Number/type of interaction sites
+#    e) Specific type of PCFR
+# 2) Output:
+#    a) U
+#    b) P
      
 # Simulation constants
 

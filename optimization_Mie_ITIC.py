@@ -444,7 +444,7 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     
     nSets = len(iSets)
     
-    N_k = [0]*nSets #This makes a list of nSets elements, need to be 0 not 0. for MBAR to work
+    N_k = [0]*nSets #This makes a list of nSets elements, need to be 0 for MBAR to work
         
     # Analyze snapshots
     
