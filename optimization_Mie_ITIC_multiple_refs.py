@@ -100,6 +100,24 @@ lam_guess = np.loadtxt('lam_guess')
 lam_low = np.loadtxt('lam_low')
 lam_high = np.loadtxt('lam_high')
 
+###
+
+iRef = int(np.loadtxt('iRef'))
+nRefs = iRef + 1 #Plus 1 because we need one more for the zeroth state
+iRefs = range(nRefs)  
+
+iRerun = 0
+
+eps_sig_lam_refs = np.empty([iRef+1,3])
+    
+for iiRef in range(iRef + 1): #We want to perform a rerun with each reference
+
+    fpathRef = "../ref"+str(iiRef)+"/"
+    eps_sig_lam_ref = np.loadtxt(fpathRef+'eps_sig_lam_ref')
+    eps_sig_lam_refs[iiRef,:] = eps_sig_lam_ref
+
+#print(eps_sig_lam_refs)
+
 TOL = np.loadtxt('TOL_MBAR') 
 
 def U_to_u(U,T): #Converts internal energy into reduced potential energy in NVT ensemble
@@ -157,10 +175,6 @@ def REFPROP_UP(TSim,rho_mass,NmolSim,compound):
 #Generate REFPROP values, prints out into a file in the correct directory
 
 RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
-
-###
-
-iRerun = 0
 
 def objective_ITIC(eps_sig_lam,prop_type): 
     global iRerun
@@ -396,9 +410,34 @@ def ITIC_calc(USim,ZSim):
     
     return Tsat, rhoL, Psat, rhov
 
+def rerun_refs():
+    
+    for iiRef, eps_sig_lam in enumerate(eps_sig_lam_refs): #We want to perform a rerun with each reference
+
+        fpathRef = "../ref"+str(iiRef)+"/"
+        print(fpathRef)
+    
+        for iiiRef, eps_sig_lam in enumerate(eps_sig_lam_refs):
+    
+            f = open(fpathRef+'eps_it','w')
+            f.write(str(eps_sig_lam[0]))
+            f.close()
+        
+            f = open(fpathRef+'sig_it','w')
+            f.write(str(eps_sig_lam[1]))
+            f.close()
+        
+            f = open(fpathRef+'lam_it','w')
+            f.write(str(eps_sig_lam[2]))
+            f.close()
+            
+            f = open(fpathRef+'iRerun','w')
+            f.write(str(iiiRef))
+            f.close()
+        
+            subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
+
 #print(objective_ITIC(1.))
-          
-iRef = int(np.loadtxt('iRef'))
 
 def MBAR_estimates(eps_sig_lam,iRerun):
     
@@ -416,31 +455,34 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     f.write('\n'+str(eps_sig_lam[2]))
     f.close()
     
-    f = open('iRerun','w')
-    f.write(str(iRerun))
-    f.close()
-    
-    nRefs = iRef + 1 #Plus 1 because we need one more for the zeroth state
     iSets = [int(iRerun)]*(nRefs + 1) #Plus 1 because we need one more for the rerun  
-    iRefs = range(nRefs)  
     
     for iiRef in iRefs: #We want to perform a rerun with each reference
-
-        f = open('eps_it','w')
+    
+        fpathRef = "../ref"+str(iiRef)+"/"
+        print(fpathRef)
+    
+        f = open(fpathRef+'eps_it','w')
         f.write(str(eps_sig_lam[0]))
         f.close()
     
-        f = open('sig_it','w')
+        f = open(fpathRef+'sig_it','w')
         f.write(str(eps_sig_lam[1]))
         f.close()
     
-        f = open('lam_it','w')
+        f = open(fpathRef+'lam_it','w')
         f.write(str(eps_sig_lam[2]))
         f.close()
-    
-        subprocess.call("../ref"+str(iiRef)+"/EthaneRerunITIC_subprocess")
+        
+        f = open(fpathRef+'iRerun','w')
+        f.write(str(iRerun))
+        f.close()
         
         iSets[iiRef] = iiRef
+        
+        if iRerun > iRef: #We only need to perform the reruns if not one of the references
+    
+            subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
 
     g_start = 28 #Row where data starts in g_energy output
     g_t = 0 #Column for the snapshot time
@@ -486,10 +528,13 @@ def MBAR_estimates(eps_sig_lam,iRerun):
                     en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
         
                     nSnapsRef = len(en_p) #Number of snapshots
+                    #print(nSnapsRef)
                     
                     N_k[iiRef] = nSnapsRef # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
-
+                    
                 nSnaps = np.sum(N_k)
+                #print(N_k)
+                #print(nSnaps)
                 
                 t = np.zeros([nSets,nSnaps])
                 LJsr = np.zeros([nSets,nSnaps])
@@ -511,7 +556,7 @@ def MBAR_estimates(eps_sig_lam,iRerun):
                         #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
                         
                         nSnapsRef = N_k[iiRef]
-                        
+                        #print(nSnapsRef)
                         assert nSnapsRef == len(en_p), 'The value of N_k does not match the length of the energy file.'
                                    
                         for frame in xrange(nSnapsRef):
@@ -524,6 +569,8 @@ def MBAR_estimates(eps_sig_lam,iRerun):
                             #f.write(str(p[iSet][frame])+'\n')
                             
                         frame_shift += nSnapsRef
+                        #print(frame_shift)
+                        #print(t[iSet])
     
                     U_total[iSet] = en[iSet] # For TraPPEfs we just used potential because dispersion was erroneous. I believe we still want potential even if there are intramolecular contributions. 
                     LJ_total[iSet] = LJsr[iSet] + LJdc[iSet] #In case we want just the LJ total (since that would be U_res as long as no LJ intra). We would still use U_total for MBAR reweighting but LJ_total would be the observable
@@ -902,7 +949,10 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess):
     elif opt_type == 'leapfrog': 
         
         # For leapfrog algorithm
-        objective(eps_sig_lam_guess) #To call objective before running loop
+        #objective(eps_sig_lam_guess) #To call objective before running loop
+        rerun_refs() #Perform the reruns for the references prior to anything
+        for eps_sig_lam in eps_sig_lam_refs:
+            objective(eps_sig_lam) #Call objective for each of the references
         
         eps_sig_lam_opt, f_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,lam_cons,tol_eps_sig_lam)
         eps_opt = eps_sig_lam_opt[0]

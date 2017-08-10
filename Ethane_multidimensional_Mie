@@ -65,7 +65,7 @@ python "$scripts_path"/create_tab.py --lam "$lam_guess" --epsilon "$eps_guess" -
 C6_guess=$(<C6_it)
 Clam_guess=$(<Clam_it)
 
-echo "$eps_guess" "$sig_guess" > eps_Sigma_guess
+echo "$eps_guess" "$sig_guess" "$lam_guess" > eps_sig_lam_ref
 echo "$eps_guess" > eps_guess
 echo "$bond_length" > bond_length
 
@@ -131,7 +131,7 @@ sed -i -e s@some_output_path_top@"$output_path"@ EthaneRerunITIC_subprocess
 
 cd "$output_path"/ref"$iRef" || exit #Must cd back to original location for python script
 
-python "$scripts_path"/optimization_Mie_ITIC.py -opt "$opt_method" -prop "$opt_prop1" -lam 16
+python "$scripts_path"/optimization_Mie_ITIC_multiple_refs.py -opt "$opt_method" -prop "$opt_prop1" -lam 16
 #python "$scripts_path"/optimization_Mie_ITIC.py -opt "$opt_method" -prop "$opt_prop1" "$opt_prop2"
 python "$scripts_path"/parameter_space_SSE_analysis_Mie.py -opt "$opt_method"
 
