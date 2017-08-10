@@ -420,9 +420,11 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     f.write(str(iRerun))
     f.close()
     
-    iSets = [int(iRerun)]*(iRef+2) #Plus 2 because we need one more for the zeroth state and one more for the rerun
+    nRefs = iRef + 1 #Plus 1 because we need one more for the zeroth state
+    iSets = [int(iRerun)]*(nRefs + 1) #Plus 1 because we need one more for the rerun  
+    iRefs = range(nRefs)  
     
-    for iiRef in range(iRef+1):
+    for iiRef in iRefs: #We want to perform a rerun with each reference
 
         f = open('eps_it','w')
         f.write(str(eps_sig_lam[0]))
@@ -438,11 +440,13 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     
         subprocess.call("../"+str(iiRef)+"EthaneRerunITIC_subprocess")
         
-        iSets[iiRef] = 'Ref'
+        iSets[iiRef] = iiRef
 
     g_start = 28 #Row where data starts in g_energy output
     g_t = 0 #Column for the snapshot time
+    g_LJsr = 1 #Column where the 'Lennard-Jones' short-range interactions are located
     g_en = 2 #Column where the potential energy is located
+    g_LJdc = 3 #Column where the 'Lennard-Jones' dispersion corrections are located
     g_T = 4 #Column where T is located
     g_p = 5 #Column where p is located
     
@@ -475,35 +479,54 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     
                 else:
     
-                    fpath = run_type+'/rho_'+str(irho)+'/NVT_eq/NVT_prod/'    
+                    fpath = run_type+'/rho_'+str(irho)+'/NVT_eq/NVT_prod/'
+                                
+                for iiRef in iRefs: # To initialize arrays we must know how many snapshots come from each reference
+                    
+                    en_p = open('../ref'+str(iiRef)+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+        
+                    nSnapsRef = len(en_p) #Number of snapshots
+                    
+                    N_k[iiRef] = nSnapsRef # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
+
+                nSnaps = np.sum(N_k)
+                
+                t = np.zeros([nSets,nSnaps])
+                LJsr = np.zeros([nSets,nSnaps])
+                LJdc = np.zeros([nSets,nSnaps])
+                en = np.zeros([nSets,nSnaps])
+                p = np.zeros([nSets,nSnaps])
+                U_total = np.zeros([nSets,nSnaps])
+                LJ_total = np.zeros([nSets,nSnaps])
+                T = np.zeros([nSets,nSnaps])
     
                 for iSet, iter in enumerate(iSets):
-        
-                    #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
-        
-                    en_p = open(fpath+'energy_press_ref%srr%s.xvg' %(iRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
-    
-                    nSnaps = len(en_p) #Number of snapshots
-        
-                    if iSet == 0: #For the first loop we initialize these arrays
-    
-                        t = np.zeros([nSets,nSnaps])
-                        en = np.zeros([nSets,nSnaps])
-                        p = np.zeros([nSets,nSnaps])
-                        U_total = np.zeros([nSets,nSnaps])
-                        T = np.zeros([nSets,nSnaps])
+                    
+                    frame_shift = 0
+                    
+                    for iiRef in iRefs:
                         
-                    if iter == 'Ref':
-                        N_k[iSet] = nSnaps # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
-         
-                    for frame in xrange(nSnaps):
-                        t[iSet][frame] = float(en_p[frame].split()[g_t])
-                        en[iSet][frame] = float(en_p[frame].split()[g_en])
-                        p[iSet][frame]     = float(en_p[frame].split()[g_p])
-                        T[iSet][frame] = float(en_p[frame].split()[g_T])
-                        #f.write(str(p[iSet][frame])+'\n')
+                        en_p = open('../ref'+str(iiRef)+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+        
+                        #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
+                        
+                        nSnapsRef = N_k[iiRef]
+                        
+                        assert nSnapsRef == len(en_p), 'The value of N_k does not match the length of the energy file.'
+                                   
+                        for frame in xrange(nSnapsRef):
+                            t[iSet][frame+frame_shift] = float(en_p[frame].split()[g_t])
+                            LJsr[iSet][frame+frame_shift] = float(en_p[frame].split()[g_LJsr])
+                            LJdc[iSet][frame+frame_shift] = float(en_p[frame].split()[g_LJdc])
+                            en[iSet][frame+frame_shift] = float(en_p[frame].split()[g_en])
+                            p[iSet][frame+frame_shift] = float(en_p[frame].split()[g_p])
+                            T[iSet][frame+frame_shift] = float(en_p[frame].split()[g_T])
+                            #f.write(str(p[iSet][frame])+'\n')
+                            
+                        frame_shift += nSnapsRef
     
-                    U_total[iSet] = en[iSet] # If dispersion corrections include ' + en_dc[k]' after en[k]
+                    U_total[iSet] = en[iSet] # For TraPPEfs we just used potential because dispersion was erroneous. I believe we still want potential even if there are intramolecular contributions. 
+                    LJ_total[iSet] = LJsr[iSet] + LJdc[iSet] #In case we want just the LJ total (since that would be U_res as long as no LJ intra). We would still use U_total for MBAR reweighting but LJ_total would be the observable
     
                     #f.close()
                 
