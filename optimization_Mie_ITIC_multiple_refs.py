@@ -641,11 +641,11 @@ def MBAR_estimates(eps_sig_lam,iRerun):
                 #print 'MBAR estimates of uncertainty in pressure in bar:'
                 #print(dP_MBAR)
     
-    U_rerun = U_MBAR[:,1]
-    dU_rerun = dU_MBAR[:,1]
-    P_rerun = P_MBAR[:,1]
-    dP_rerun = dP_MBAR[:,1]
-    Z_rerun = Z_MBAR[:,1]
+    U_rerun = U_MBAR[:,-1]
+    dU_rerun = dU_MBAR[:,-1]
+    P_rerun = P_MBAR[:,-1]
+    dP_rerun = dP_MBAR[:,-1]
+    Z_rerun = Z_MBAR[:,-1]
     
     #print(U_rerun)
     #print(dU_rerun)
