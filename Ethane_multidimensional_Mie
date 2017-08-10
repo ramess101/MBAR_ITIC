@@ -1,7 +1,7 @@
 #!/bin/bash
 
 Compound=Ethane
-Model=Mie
+Model=TraPPE_Potoff
 
 #Specify the path location, note do not include a space at the end of the line
 
@@ -12,21 +12,27 @@ output_path=~/"$Compound"/Gromacs/"$Model"
 #MolWt=30.0698
 
 opt_method='leapfrog'
-opt_prop1='rhoL'
-opt_prop2='Psat'
+opt_prop1='U'
+#opt_prop2='Psat'
 
-eps_range=(0.2 0.1 0.05 0.01 0.005 0.001)
-sig_range=(0.02 0.01 0.005 0.001 0.0005 0.0001)
+#eps_range_low=(0. 0.1 0.1 0.1 0.1 0.1)
+#eps_range_high=(0.25 0.2 0.2 0.2 0.2 0.2)
+eps_range_low=(0.1 0.1 0.1 0.1 0.1 0.1)
+eps_range_high=(0.1 0.1 0.1 0.1 0.1 0.1)
+sig_range=(0.02 0.02 0.02 0.02 0.02 0.02)
+lam_low=13
+lam_high=18
 
-TOL_eps=0.001
-TOL_sig=0.0001
+TOL_eps=0.1
+TOL_sig=0.0003
+TOL_lam=0.1
 TOL_MBAR=0.001
 
 iRef=1
 
 eps_guess=121.25 # (K)
 sig_guess=0.3783 # (nm)
-lam_guess=16.
+lam_guess=16.  
 
 bond_length=0.154 #[nm]
 
@@ -44,7 +50,7 @@ then
 
 #### Start the mdrun simulations for the initial epsilon and sigma values
 
-echo Run ITIC for Epsilon = "$eps_guess" sigma = "$sig_guess"
+echo Run ITIC for Epsilon = "$eps_guess" sigma = "$sig_guess" lambda = "$lam_guess"
 sleep 2s
 
 ####
@@ -97,14 +103,20 @@ cp F_ITIC_all SSE_P_all
 cp F_ITIC_all SSE_Z_all
 echo $TOL_eps > TOL_eps
 echo $TOL_sig > TOL_sig
+echo $TOL_lam > TOL_lam
 echo $TOL_MBAR > TOL_MBAR 
 
-echo "${eps_range[iRef]}" > eps_range
+echo "${eps_range_low[iRef]}" > eps_range_low
+echo "${eps_range_high[iRef]}" > eps_range_high
 echo "$eps_guess" > eps_guess
 
 echo "Sigma (nm)" > sig_all
 echo "$sig_guess" > sig_guess
 echo "${sig_range[iRef]}" > sig_range
+
+echo "$lam_low" > lam_low
+echo "$lam_high" > lam_high
+echo "$lam_guess" > lam_guess
 
 echo "$iRef" > iRef #Testing out to see if I can copy the reference inside this directory instead
 
@@ -119,7 +131,8 @@ sed -i -e s@some_output_path_top@"$output_path"@ EthaneRerunITIC_subprocess
 
 cd "$output_path"/ref"$iRef" || exit #Must cd back to original location for python script
 
-python "$scripts_path"/optimization_Mie_ITIC.py -opt "$opt_method" -prop "$opt_prop1" "$opt_prop2"
+python "$scripts_path"/optimization_Mie_ITIC.py -opt "$opt_method" -prop "$opt_prop1" -lam 16
+#python "$scripts_path"/optimization_Mie_ITIC.py -opt "$opt_method" -prop "$opt_prop1" "$opt_prop2"
 python "$scripts_path"/parameter_space_SSE_analysis_Mie.py -opt "$opt_method"
 
 cd "$output_path"/ref"$iRef" || exit #Should still be in the same directory, but just to be safe

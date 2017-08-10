@@ -403,25 +403,13 @@ iRef = int(np.loadtxt('iRef'))
 def MBAR_estimates(eps_sig_lam,iRerun):
     
     #eps = eps.tolist()
-
-    f = open('eps_it','w')
-    f.write(str(eps_sig_lam[0]))
-    f.close()
     
     f = open('eps_all','a')
     f.write('\n'+str(eps_sig_lam[0]))
     f.close()
     
-    f = open('sig_it','w')
-    f.write(str(eps_sig_lam[1]))
-    f.close()
-    
     f = open('sig_all','a')
     f.write('\n'+str(eps_sig_lam[1]))
-    f.close()
-    
-    f = open('lam_it','w')
-    f.write(str(eps_sig_lam[2]))
     f.close()
     
     f = open('lam_all','a')
@@ -432,17 +420,31 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     f.write(str(iRerun))
     f.close()
     
-    subprocess.call("./EthaneRerunITIC_subprocess")
+    iSets = [int(iRerun)]*(iRef+2) #Plus 2 because we need one more for the zeroth state and one more for the rerun
+    
+    for iiRef in range(iRef+1):
+
+        f = open('eps_it','w')
+        f.write(str(eps_sig_lam[0]))
+        f.close()
+    
+        f = open('sig_it','w')
+        f.write(str(eps_sig_lam[1]))
+        f.close()
+    
+        f = open('lam_it','w')
+        f.write(str(eps_sig_lam[2]))
+        f.close()
+    
+        subprocess.call("../"+str(iiRef)+"EthaneRerunITIC_subprocess")
+        
+        iSets[iiRef] = 'Ref'
 
     g_start = 28 #Row where data starts in g_energy output
     g_t = 0 #Column for the snapshot time
-    g_LJsr = 1 #Column where the 'Lennard-Jones' short-range interactions are located
     g_en = 2 #Column where the potential energy is located
-    g_LJdc = 3 #Column where the 'Lennard-Jones' dispersion corrections are located
     g_T = 4 #Column where T is located
     g_p = 5 #Column where p is located
-
-    iSets = [0, int(iRerun)]
     
     nSets = len(iSets)
     
@@ -457,7 +459,7 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     Z_MBAR = np.empty([nStates,nSets])
     Z1rho_MBAR = np.empty([nStates,nSets])
     
-    print(nTemps['Isochore'])
+    #print(nTemps['Isochore'])
     
     iState = 0
     
@@ -486,26 +488,22 @@ def MBAR_estimates(eps_sig_lam,iRerun):
                     if iSet == 0: #For the first loop we initialize these arrays
     
                         t = np.zeros([nSets,nSnaps])
-                        LJsr = np.zeros([nSets,nSnaps])
-                        LJdc = np.zeros([nSets,nSnaps])
                         en = np.zeros([nSets,nSnaps])
                         p = np.zeros([nSets,nSnaps])
                         U_total = np.zeros([nSets,nSnaps])
-                        LJ_total = np.zeros([nSets,nSnaps])
                         T = np.zeros([nSets,nSnaps])
-                        N_k[iter] = nSnaps
+                        
+                    if iter == 'Ref':
+                        N_k[iSet] = nSnaps # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
          
                     for frame in xrange(nSnaps):
                         t[iSet][frame] = float(en_p[frame].split()[g_t])
-                        LJsr[iSet][frame] = float(en_p[frame].split()[g_LJsr])
-                        LJdc[iSet][frame] = float(en_p[frame].split()[g_LJdc])
                         en[iSet][frame] = float(en_p[frame].split()[g_en])
                         p[iSet][frame]     = float(en_p[frame].split()[g_p])
                         T[iSet][frame] = float(en_p[frame].split()[g_T])
                         #f.write(str(p[iSet][frame])+'\n')
     
-                    U_total[iSet] = en[iSet] # For TraPPEfs we just used potential because dispersion was erroneous. I believe we still want potential even if there are intramolecular contributions. 
-                    LJ_total[iSet] = LJsr[iSet] + LJdc[iSet] #In case we want just the LJ total (since that would be U_res as long as no LJ intra). We would still use U_total for MBAR reweighting but LJ_total would be the observable
+                    U_total[iSet] = en[iSet] # If dispersion corrections include ' + en_dc[k]' after en[k]
     
                     #f.close()
                 

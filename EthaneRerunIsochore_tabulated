@@ -52,16 +52,16 @@ cp "$input_path"/md_nocord.mdp md_nocord.mdp
 
 sed -i -e s/some_temperature/"$Temp"/ md_nocord.mdp #Temperature might not matter in rerun
 
-gmx grompp -f md_nocord.mdp -p ../../../../../ethane_ref"$iRef"rr"$iRerun".top -c nvt_prod.gro -o prod_ref"$iRef"rr"$iRerun" -maxwarn 1
+gmx grompp -f md_nocord.mdp -p ../../../../../ethane_ref"$iRef"rr"$iRerun".top -c nvt_prod.gro -o prod_ref"$iRef"rr"$iRerun" -maxwarn 1 > gromppout 2>> gromppout
 
-gmx mdrun -table ../../../../../tab_it.xvg -nt 1 -rerun nvt_prod.trr -deffnm prod_ref"$iRef"rr"$iRerun"
+gmx mdrun -table ../../../../../tab_it.xvg -nt 1 -rerun nvt_prod.trr -deffnm prod_ref"$iRef"rr"$iRerun" > rerunout 2>> rerunout
 
 echo "1
 4
-6
+2
 8
 10
-0" | gmx energy -dp -f prod_ref"$iRef"rr"$iRerun".edr -o energy_press_ref"$iRef"rr"$iRerun".xvg
+0" | gmx energy -dp -f prod_ref"$iRef"rr"$iRerun".edr -o energy_press_ref"$iRef"rr"$iRerun".xvg > energyout 2>> energyout
 
 rm -f \#*
 rm -f prod_ref*rr*.log
