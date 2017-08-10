@@ -923,11 +923,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points','SLSQP'],help="choose which type of optimizer to use")
     parser.add_argument("-prop","--properties",type=str,nargs='+',choices=['rhoL','Psat','rhov','P','U','Z'],help="choose one or more properties to use in optimization" )
-    parser.add_argument("-lam","--lam",type=int,nargs='+',help="choose one or more integer values of lambda" )
+    parser.add_argument("-lam","--lam",help="Scan the lambda space incrementally",action="store_true")
     args = parser.parse_args()
     if args.optimizer:
         if args.lam:
-            lam_range = args.lam
+            lam_range = range(int(lam_low),int(lam_high)+1)
             eps_opt_range = np.zeros(len(lam_range))
             sig_opt_range = np.zeros(len(lam_range))
             lam_opt_range = np.zeros(len(lam_range))
