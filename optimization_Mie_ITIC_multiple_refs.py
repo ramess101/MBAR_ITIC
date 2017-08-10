@@ -438,7 +438,7 @@ def MBAR_estimates(eps_sig_lam,iRerun):
         f.write(str(eps_sig_lam[2]))
         f.close()
     
-        subprocess.call("../"+str(iiRef)+"EthaneRerunITIC_subprocess")
+        subprocess.call("../ref"+str(iiRef)+"/EthaneRerunITIC_subprocess")
         
         iSets[iiRef] = iiRef
 
@@ -483,7 +483,7 @@ def MBAR_estimates(eps_sig_lam,iRerun):
                                 
                 for iiRef in iRefs: # To initialize arrays we must know how many snapshots come from each reference
                     
-                    en_p = open('../ref'+str(iiRef)+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+                    en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
         
                     nSnapsRef = len(en_p) #Number of snapshots
                     
@@ -506,7 +506,7 @@ def MBAR_estimates(eps_sig_lam,iRerun):
                     
                     for iiRef in iRefs:
                         
-                        en_p = open('../ref'+str(iiRef)+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+                        en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
         
                         #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
                         
