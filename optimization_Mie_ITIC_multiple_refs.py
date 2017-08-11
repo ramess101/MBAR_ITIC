@@ -125,7 +125,7 @@ for iiRef in iRefs: #We want to perform a rerun with each reference
     fpathRef = "../ref"+str(iiRef)+"/"
     eps_sig_lam_ref = np.loadtxt(fpathRef+'eps_sig_lam_ref')
     eps_sig_lam_refs[iiRef,:] = eps_sig_lam_ref
-
+                    
 #print(eps_sig_lam_refs)
 
 def U_to_u(U,T): #Converts internal energy into reduced potential energy in NVT ensemble
@@ -958,9 +958,7 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess):
         
         # For leapfrog algorithm
         #objective(eps_sig_lam_guess) #To call objective before running loop
-        rerun_refs() #Perform the reruns for the references prior to anything
-        for eps_sig_lam in eps_sig_lam_refs:
-            objective(eps_sig_lam) #Call objective for each of the references
+        # Moved this outside of loop
         
         eps_sig_lam_opt, f_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,lam_cons,tol_eps_sig_lam)
         eps_opt = eps_sig_lam_opt[0]
@@ -1005,6 +1003,9 @@ def main():
     parser.add_argument("-lam","--lam",help="Scan the lambda space incrementally",action="store_true")
     args = parser.parse_args()
     if args.optimizer:
+        rerun_refs() #Perform the reruns for the references prior to anything
+        for eps_sig_lam in eps_sig_lam_refs:
+            objective_ITIC(eps_sig_lam,args.properties) #Call objective for each of the references
         if args.lam:
             lam_range = range(int(lam_low),int(lam_high)+1)
             eps_opt_range = np.zeros(len(lam_range))
