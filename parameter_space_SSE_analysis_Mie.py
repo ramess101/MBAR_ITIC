@@ -104,6 +104,24 @@ def REFPROP_UP(TSim,rho_mass,NmolSim,compound):
 
     return RP_U_depN, RP_P, RP_Z, RP_Z1rho
 
+eps_guess = np.loadtxt('eps_guess')
+#eps_high = np.loadtxt('eps_high')
+eps_range_low = np.loadtxt('eps_range_low')
+eps_range_high = np.loadtxt('eps_range_high')
+eps_low = eps_guess*(1.-eps_range_low)
+eps_high = eps_guess*(1.+eps_range_high)
+
+#sig_low = np.loadtxt('sig_low')
+sig_guess = np.loadtxt('sig_guess')
+#sig_high = np.loadtxt('sig_high')
+sig_range = np.loadtxt('sig_range')
+sig_low= sig_guess * (1.-sig_range)
+sig_high=sig_guess * (1.+sig_range)
+
+lam_guess = np.loadtxt('lam_guess')
+lam_low = np.loadtxt('lam_low')
+lam_high = np.loadtxt('lam_high')
+
 iRef = int(np.loadtxt('iRef'))
 
 def analyze_ITIC(iRerun): 
@@ -438,6 +456,7 @@ def print_figures(opt_type):
         SSEU = np.log10(SSEU)
         SSEP = np.log10(SSEP)
         SSEZ = np.log10(SSEZ)
+        F_ITIC = np.log10(F_ITIC)
         
         f = plt.figure()
         ax = f.add_subplot(111,projection='3d')
@@ -537,8 +556,8 @@ def print_figures(opt_type):
         
         f = plt.figure()
         ax = f.add_subplot(111,projection='3d')
-        p = ax.scatter(sig_reruns[1:],eps_reruns[1:],lam_reruns[1:],c=np.log10(F_ITIC[1:]),cmap='Blues',label='Iterations')
-        ax.scatter(sig_reruns[0],eps_reruns[0],lam_reruns[0],marker='x',c=np.log10(F_ITIC[0]),cmap='Blues',label='Reference')
+        p = ax.scatter(sig_reruns[1:],eps_reruns[1:],lam_reruns[1:],c=F_ITIC[1:],cmap='Blues',label='Iterations')
+        ax.scatter(sig_reruns[0],eps_reruns[0],lam_reruns[0],marker='x',c=F_ITIC[0],cmap='Blues',label='Reference')
         ax.set_ylabel('$\epsilon$ (kJ/mol)')
         ax.set_xlabel('$\sigma$ (nm)')
         ax.set_zlabel(r'$\lambda$')
@@ -549,7 +568,65 @@ def print_figures(opt_type):
         plt.title('Objective Function')
         ax = plt.colorbar(p)
         ax.set_label('log(SSE)')
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_lam_F.pdf')
+        
+        f = plt.figure()
+        cmaps = ['Greys','Purples','Blues','Greens','Oranges','Reds','YlOrBr','BuPu']
+        
+        for ilam, lam_scan in enumerate(lam):
+            
+            sig_lam = sig_reruns[lam_reruns==lam_scan]
+            eps_lam = eps_reruns[lam_reruns==lam_scan]
+            F_lam = F_ITIC[lam_reruns==lam_scan]
+            
+            assert len(sig_lam) == len(eps_lam), 'Length of epsilon and sigma arrays do not match'
+            assert (sig_lam >= min(sig)).all() and (sig_lam <= max(sig)).all(), 'Sigma array out of expected range'
+            assert (eps_lam >= min(eps)).all() and (eps_lam <= max(eps)).all(), 'Epsilon array out of expected range'
+          
+            plt.scatter(sig_lam,eps_lam,c=F_lam,cmap=cmaps[ilam],label=r'$\lambda$ = '+str(lam_scan))
+            
+        plt.ylabel('$\epsilon$ (kJ/mol)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.legend()
+        plt.title('Objective Function')
+        ax = plt.colorbar()
+        ax.set_label('log(SSE)')
         f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_F.pdf')
+        
+        f = plt.figure()
+        plot_columns = int(np.ceil(len(lam)/2))
+        
+        lam_plot = lam[lam>=lam_low]
+        lam_plot = lam_plot[lam_plot<=lam_high]
+
+        for ilam, lam_scan in enumerate(lam_plot):
+            
+            sig_lam = sig_reruns[lam_reruns==lam_scan]
+            eps_lam = eps_reruns[lam_reruns==lam_scan]
+            F_lam = F_ITIC[lam_reruns==lam_scan]
+            
+            assert len(sig_lam) == len(eps_lam), 'Length of epsilon and sigma arrays do not match'
+            assert (sig_lam >= min(sig)).all() and (sig_lam <= max(sig)).all(), 'Sigma array out of expected range'
+            assert (eps_lam >= min(eps)).all() and (eps_lam <= max(eps)).all(), 'Epsilon array out of expected range'
+          
+            plt.subplot(2,plot_columns,ilam+1)
+            plt.scatter(sig_lam,eps_lam,c=F_lam,cmap='Blues',label=r'$\lambda$ = '+str(int(lam_scan)))
+            plt.ylabel('$\epsilon$ (kJ/mol)')
+            plt.xlabel('$\sigma$ (nm)')
+#            plt.ylim([min(eps),max(eps)])
+#            plt.xlim([min(sig),max(sig)])
+            plt.ylim([eps_low,eps_high])
+            plt.xlim([np.round(sig_low,3),np.round(sig_high,3)])
+            #plt.legend()
+            plt.title(r'$\lambda$ = '+str(int(lam_scan)))
+            ax = plt.colorbar()
+            ax.set_label('log(SSE)')
+            
+        f.tight_layout()    
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_lam_all_F.pdf')
+            
     
 def main():
 
