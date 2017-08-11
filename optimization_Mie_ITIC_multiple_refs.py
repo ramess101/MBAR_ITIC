@@ -103,22 +103,30 @@ lam_high = np.loadtxt('lam_high')
 ###
 
 iRef = int(np.loadtxt('iRef'))
-nRefs = iRef + 1 #Plus 1 because we need one more for the zeroth state
-iRefs = range(nRefs)  
+
+mult_refs = True
+
+if mult_refs: #Trying to make this backwards comptabile so that it can work when only a single reference
+
+    nRefs = iRef + 1 #Plus 1 because we need one more for the zeroth state
+    iRefs = range(nRefs)  
+
+else:
+    
+    nRefs = 1
+    iRefs = iRef
 
 iRerun = 0
 
-eps_sig_lam_refs = np.empty([iRef+1,3])
+eps_sig_lam_refs = np.empty([nRefs,3])
     
-for iiRef in range(iRef + 1): #We want to perform a rerun with each reference
+for iiRef in iRefs: #We want to perform a rerun with each reference
 
     fpathRef = "../ref"+str(iiRef)+"/"
     eps_sig_lam_ref = np.loadtxt(fpathRef+'eps_sig_lam_ref')
     eps_sig_lam_refs[iiRef,:] = eps_sig_lam_ref
 
 #print(eps_sig_lam_refs)
-
-TOL = np.loadtxt('TOL_MBAR') 
 
 def U_to_u(U,T): #Converts internal energy into reduced potential energy in NVT ensemble
     beta = 1./(R_g*T)
