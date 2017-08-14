@@ -512,7 +512,7 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     dP_MBAR = np.empty([nStates,nSets])
     Z_MBAR = np.empty([nStates,nSets])
     Z1rho_MBAR = np.empty([nStates,nSets])
-    
+    Neff_MBAR = np.empty([nStates,nSets])
     #print(nTemps['Isochore'])
     
     iState = 0
@@ -634,6 +634,7 @@ def MBAR_estimates(eps_sig_lam,iRerun):
                     dP_MBAR[iState] = dEPk.diagonal()
                     Z_MBAR[iState] = P_MBAR[iState]/rho_sim[iState]/Temp_sim[iState]/R_g * bar_nm3_to_kJ_per_mole #EP [bar] rho_sim [1/nm3] Temp_sim [K] R_g [kJ/mol/K] #There is probably a better way to assign Z_MBAR
                     #Z1rho_MBAR[iState] = (Z_MBAR[iState] - 1.)/rho_mass #[ml/gm]
+                    Neff_MBAR[iState] = mbar.computeEffectiveSampleNumber()
     
                 iState += 1
                     
@@ -677,7 +678,8 @@ def MBAR_estimates(eps_sig_lam,iRerun):
                     f.write(str(P_MBAR[iState][iSet])+'\t')
                     f.write(str(dP_MBAR[iState][iSet])+'\t')
                     f.write(str(Z_MBAR[iState][iSet])+'\t')
-                    f.write(str(Z1rho_MBAR[iState][iSet])+'\n')
+                    f.write(str(Z1rho_MBAR[iState][iSet])+'\t')
+                    f.write(str(Neff_MBAR[iState][iSet])+'\n')
                     
                     iState += 1
     

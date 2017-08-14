@@ -1,7 +1,7 @@
 #!/bin/bash
 
 Compound=Ethane
-Model=TraPPE_Potoff_Ufirst_lamarray
+Model=LJtoMie_Ufirst_lamseq
 
 #Specify the path location, note do not include a space at the end of the line
 
@@ -21,31 +21,31 @@ eps_range_low=(0.1 0.1 0.1 0.1 0.1 0.1)
 eps_range_high=(0.1 0.1 0.1 0.1 0.1 0.1)
 sig_range=(0.02 0.02 0.02 0.02 0.02 0.02)
 lam_low=13
-lam_high=18
+lam_high=13
 
 TOL_eps=0.1
 TOL_sig=0.0003
 TOL_lam=0.1
 TOL_MBAR=0.001
 
-iRef=1
+iRef=0
 
-eps_guess=121.25 # (K)
-sig_guess=0.3783 # (nm)
-lam_guess=16.  
+eps_guess=98. # (K)
+sig_guess=0.375 # (nm)
+lam_guess=12.  
 
 bond_length=0.154 #[nm]
 
 conv_overall=0
 
-max_iterations=5
+max_iterations=6
 
 while [ "$conv_overall" -lt 1 ] && [ "$iRef" -lt "$max_iterations" ] #Checks to see if the loop has converged for epsilon
 do
 
 cd "$output_path" || exit
 
-if [ $iRef -ge 2 ] #If you have already run (i.e. just rerunning the optimization)
+if [ $iRef -ge 1 ] #If you have already run (i.e. just rerunning the optimization)
 then
 
 #### Start the mdrun simulations for the initial epsilon and sigma values
@@ -149,6 +149,11 @@ conv_overall=$(<conv_overall)
 eps_guess=$eps_optimal
 sig_guess=$sig_optimal
 lam_guess=$lam_optimal
+
+if [ $lam_high -lt 18 ] #This allows for lam_high to progressively increase (start at 13 and increase to 18)
+then
+lam_high=$((lam_high + 1))
+fi
 
 echo "$eps_guess"
 echo "$sig_guess"
