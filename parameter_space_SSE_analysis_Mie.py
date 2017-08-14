@@ -132,7 +132,7 @@ def analyze_ITIC(iRerun):
 
     ###
     
-    USim, dUSim, PSim, dPSim, ZSim, Z1rhoSim = np.loadtxt('MBAR_ref'+str(iRef)+'rr'+str(iRerun),unpack=True)
+    USim, dUSim, PSim, dPSim, ZSim, Z1rhoSim, NeffSim = np.loadtxt('MBAR_ref'+str(iRef)+'rr'+str(iRerun),unpack=True)
     Tsat, rhoLSim, PsatSim, rhovSim = np.loadtxt('ITIC_'+str(iRerun),skiprows=1,unpack=True)
     
     #print(Tsat)
