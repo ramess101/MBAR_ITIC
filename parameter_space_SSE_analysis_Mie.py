@@ -625,7 +625,7 @@ def print_figures(opt_type):
             ax.set_label('log(SSE)')
             
         f.tight_layout()    
-        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_lam_all_F.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_lamarray_F.pdf')
             
     
 def main():
@@ -639,5 +639,10 @@ def main():
         print('Please specify an optimizer type')
 
 if __name__ == '__main__':
+    '''
+    python parameter_space_SSE_analysis_Mie.py --optimizer XX
+  
+    "--optimizer XX" flag is requiered, sets which optimizer to use
+    '''
     
     main()

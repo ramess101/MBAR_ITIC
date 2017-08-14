@@ -1064,5 +1064,12 @@ def main():
     f.close()
 
 if __name__ == '__main__':
-    
+    '''
+    python optimization_Mie_ITIC_multiple_refs.py --optimizer XX --properties XX --lam XX
+  
+    "--optimizer XX" flag is requiered, sets which optimizer to use
+    "--properties XX" flag is required, sets which properties to optimize to
+    "--lam XX" flag is optional, sets if lambda is a fixed parameter
+    '''
+
     main()
