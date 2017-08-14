@@ -633,7 +633,7 @@ def MBAR_estimates(eps_sig_lam,iRerun):
                     P_MBAR[iState] = EPk.diagonal()
                     dP_MBAR[iState] = dEPk.diagonal()
                     Z_MBAR[iState] = P_MBAR[iState]/rho_sim[iState]/Temp_sim[iState]/R_g * bar_nm3_to_kJ_per_mole #EP [bar] rho_sim [1/nm3] Temp_sim [K] R_g [kJ/mol/K] #There is probably a better way to assign Z_MBAR
-                    Z1rho_MBAR[iState] = (Z_MBAR[iState] - 1.)/rho_mass * 1000. #[ml/gm]
+                    Z1rho_MBAR[iState] = (Z_MBAR[iState] - 1.)/rho_mass[iState] * 1000. #[ml/gm]
                     Neff_MBAR[iState] = mbar.computeEffectiveSampleNumber()
     
                 iState += 1
