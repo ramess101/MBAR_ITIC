@@ -687,6 +687,144 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     
     return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
 
+def rerun_basis_functions(lam,iRef,iRerun):
+    
+    eps_basis = np.zeros(2)
+    sig_basis = np.zeros(2)
+    Clam = np.zeros(2)
+    C6 = np.zeros(2)
+    U_basis = np.zeros(2)
+    P_basis = np.zeros(2)
+    Cmatrix = np.zeros([2,2])
+    iReruns = np.zeros(2)
+    
+    eps_basis[0] = eps_low
+    eps_basis[1] = eps_high
+    sig_basis[0] = sig_high
+    sig_basis[1] = sig_low
+    lam_basis = lam  
+           
+    for ibasis in range(2):
+
+        eps_rerun = eps_basis[ibasis]
+        sig_rerun = sig_basis[ibasis]
+        lam_rerun = lam_basis
+        
+        fpathRef = "../ref"+str(iRef)+"/"
+        print(fpathRef)
+    
+        f = open(fpathRef+'eps_it','w')
+        f.write(str(eps_rerun))
+        f.close()
+    
+        f = open(fpathRef+'sig_it','w')
+        f.write(str(sig_rerun))
+        f.close()
+    
+        f = open(fpathRef+'lam_it','w')
+        f.write(str(lam_rerun))
+        f.close()
+        
+        f = open(fpathRef+'iRerun','w')
+        f.write(str(iRerun))
+        f.close()
+        
+        subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
+            
+        #print('Rerun with epsilon = '+str(eps_rerun)+' and sigma = '+str(sig_rerun))       
+        
+        Clam[ibasis] = eps_rerun * sig_rerun ** lam_rerun
+        C6[ibasis] = eps_rerun * sig_rerun ** 6.
+        
+        Cmatrix[ibasis,0] = Clam[ibasis]
+        Cmatrix[ibasis,1] = C6[ibasis]
+        
+        iReruns[ibasis] = iRerun
+        iRerun += 1
+    
+    g_start = 28 #Row where data starts in g_energy output
+    g_t = 0 #Column for the snapshot time
+    g_LJsr = 1 #Column where the 'Lennard-Jones' short-range interactions are located
+    g_LJdc = 2 #Column where the 'Lennard-Jones' dispersion corrections are located
+    g_en = 3 #Column where the potential energy is located
+    g_T = 4 #Column where T is located
+    g_p = 5 #Column where p is located
+    
+    iState = 0
+    
+    for run_type in ITIC: 
+    
+        for irho  in np.arange(0,nrhos[run_type]):
+    
+            for iTemp in np.arange(0,nTemps[run_type]):
+    
+                if run_type == 'Isochore':
+    
+                    fpath = run_type+'/rho'+str(irho)+'/T'+str(iTemp)+'/NVT_eq/NVT_prod/'
+    
+                else:
+    
+                    fpath = run_type+'/rho_'+str(irho)+'/NVT_eq/NVT_prod/'
+                    
+                for iiRerun in iReruns:
+                    
+                    en_p = open('../ref'+str(iRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iRef,iiRerun),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+   
+                    nSnapsRef = len(en_p) #Number of snapshots
+                    
+                nSnaps = np.sum(N_k)
+                #print(N_k)
+                #print(nSnaps)
+                
+                t = np.zeros([nSets,nSnaps])
+                LJsr = np.zeros([nSets,nSnaps])
+                LJdc = np.zeros([nSets,nSnaps])
+                en = np.zeros([nSets,nSnaps])
+                p = np.zeros([nSets,nSnaps])
+                U_total = np.zeros([nSets,nSnaps])
+                LJ_total = np.zeros([nSets,nSnaps])
+                T = np.zeros([nSets,nSnaps])
+    
+                for iSet, iter in enumerate(iSets):
+                    
+                    frame_shift = 0
+                    
+                    for iiRef in iRefs:
+                        
+                        en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+        
+                        #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
+                        
+                        nSnapsRef = N_k[iiRef]
+                        #print(nSnapsRef)
+                        assert nSnapsRef == len(en_p), 'The value of N_k does not match the length of the energy file.'
+                                   
+                        for frame in xrange(nSnapsRef):
+                            t[iSet][frame+frame_shift] = float(en_p[frame].split()[g_t])
+                            LJsr[iSet][frame+frame_shift] = float(en_p[frame].split()[g_LJsr])
+                            LJdc[iSet][frame+frame_shift] = float(en_p[frame].split()[g_LJdc])
+                            en[iSet][frame+frame_shift] = float(en_p[frame].split()[g_en])
+                            p[iSet][frame+frame_shift] = float(en_p[frame].split()[g_p])
+                            T[iSet][frame+frame_shift] = float(en_p[frame].split()[g_T])
+                            #f.write(str(p[iSet][frame])+'\n')
+                            
+                        frame_shift += nSnapsRef
+                        #print(frame_shift)
+                        #print(t[iSet])
+    
+                    U_total[iSet] = en[iSet] # For TraPPEfs we just used potential because dispersion was erroneous. I believe we still want potential even if there are intramolecular contributions. 
+                    LJ_total[iSet] = LJsr[iSet] + LJdc[iSet] #In case we want just the LJ total (since that would be U_res as long as no LJ intra). We would still use U_total for MBAR reweighting but LJ_total would be the observable
+   
+    
+    rarray = np.linalg.solve(Cmatrix,U_basis)
+    print(rarray)
+    
+    Ulam = np.linalg.multi_dot([Clam,rarray[0]])
+    U6 = np.linalg.multi_dot([C6,rarray[1]])
+    
+    for ibasis in range(2):
+        assert Ulam[ibasis]+U6[ibasis] - U_basis[ibasis] < 1e-6, 'Energies do not add up'
+
 def GOLDEN(AX,BX,CX,TOL):
 
     R_ratio=0.61803399
