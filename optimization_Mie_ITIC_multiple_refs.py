@@ -495,8 +495,8 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     g_start = 28 #Row where data starts in g_energy output
     g_t = 0 #Column for the snapshot time
     g_LJsr = 1 #Column where the 'Lennard-Jones' short-range interactions are located
-    g_en = 2 #Column where the potential energy is located
-    g_LJdc = 3 #Column where the 'Lennard-Jones' dispersion corrections are located
+    g_LJdc = 2 #Column where the 'Lennard-Jones' dispersion corrections are located
+    g_en = 3 #Column where the potential energy is located
     g_T = 4 #Column where T is located
     g_p = 5 #Column where p is located
     

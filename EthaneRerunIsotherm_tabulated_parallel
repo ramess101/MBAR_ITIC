@@ -38,7 +38,7 @@ done
 
 echo "Waiting for Isotherm reruns to finish"
 
-sleep 15s
+sleep 18s
 
 for j in $(seq $j_start $j_end)
 
@@ -47,8 +47,8 @@ do
 cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
 
 echo "1
+2
 4
-6
 8
 10
 0" | gmx energy -dp -f prod_ref"$iRef"rr"$iRerun".edr -o energy_press_ref"$iRef"rr"$iRerun".xvg > energyout 2>> energyout
