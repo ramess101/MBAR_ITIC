@@ -184,10 +184,10 @@ def REFPROP_UP(TSim,rho_mass,NmolSim,compound):
 
 RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
 
-def objective_ITIC(eps_sig_lam,prop_type): 
+def objective_ITIC(eps_sig_lam,prop_type,basis_fun): 
     global iRerun
     
-    USim, dUSim, PSim, dPSim, ZSim = MBAR_estimates(eps_sig_lam,iRerun)
+    USim, dUSim, PSim, dPSim, ZSim = MBAR_estimates(eps_sig_lam,iRerun,basis_fun)
     
     Tsat, rhoLSim, PsatSim, rhovSim = ITIC_calc(USim, ZSim)
     
@@ -447,7 +447,7 @@ def rerun_refs():
 
 #print(objective_ITIC(1.))
 
-def MBAR_estimates(eps_sig_lam,iRerun):
+def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
     
     #eps = eps.tolist()
     
@@ -687,28 +687,31 @@ def MBAR_estimates(eps_sig_lam,iRerun):
     
     return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
 
-def rerun_basis_functions(lam,iRef,iRerun):
-    
-    eps_basis = np.zeros(2)
-    sig_basis = np.zeros(2)
-    Clam = np.zeros(2)
-    C6 = np.zeros(2)
-    U_basis = np.zeros(2)
-    P_basis = np.zeros(2)
-    Cmatrix = np.zeros([2,2])
-    iReruns = np.zeros(2)
-    
-    eps_basis[0] = eps_low
-    eps_basis[1] = eps_high
-    sig_basis[0] = sig_high
-    sig_basis[1] = sig_low
-    lam_basis = lam  
-           
-    for ibasis in range(2):
+def rerun_basis_functions(lam_range,iRef):
+    global iRerun
+#    if lam == 6.:
+#        Clam = 0.
+#        
+#        f = open('Clam_it','w')
+#        f.write(str(Clam))
+#        f.close()
+#        
+#    else:
+#        C6 = 0.
+#        f = open('C6_it','w')
+#        f.write(str(C6))
+#        f.close()
 
-        eps_rerun = eps_basis[ibasis]
-        sig_rerun = sig_basis[ibasis]
-        lam_rerun = lam_basis
+# I am going to keep it the way I had it where I just submit with real parameters 
+# And solve linear system of equations
+    
+    eps_basis = eps_low
+    sig_basis = sig_low  
+           
+    for lam_rerun in lam_range:
+
+        eps_rerun = eps_basis
+        sig_rerun = sig_basis
         
         fpathRef = "../ref"+str(iRef)+"/"
         print(fpathRef)
@@ -731,16 +734,11 @@ def rerun_basis_functions(lam,iRef,iRerun):
         
         subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
             
-        #print('Rerun with epsilon = '+str(eps_rerun)+' and sigma = '+str(sig_rerun))       
-        
-        Clam[ibasis] = eps_rerun * sig_rerun ** lam_rerun
-        C6[ibasis] = eps_rerun * sig_rerun ** 6.
-        
-        Cmatrix[ibasis,0] = Clam[ibasis]
-        Cmatrix[ibasis,1] = C6[ibasis]
-        
-        iReruns[ibasis] = iRerun
+        print('Rerun with epsilon = '+str(eps_rerun)+' and sigma = '+str(sig_rerun)+'and lambda = '+str(lam_rerun))       
+
         iRerun += 1
+
+def generate_basis_functions():
     
     g_start = 28 #Row where data starts in g_energy output
     g_t = 0 #Column for the snapshot time
@@ -1045,9 +1043,9 @@ def leapfrog(fun,x_guess,bounds,constrained,lam_cons,tol,max_it=500,max_trials=1
     #print(players[ibest,:])
     return best_player, best
 
-def call_optimizers(opt_type,prop_type,lam_cons=lam_guess):
+def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,basis_fun=False):
     
-    objective = lambda eps_sig_lam: objective_ITIC(eps_sig_lam,prop_type)
+    objective = lambda eps_sig_lam: objective_ITIC(eps_sig_lam,prop_type,basis_fun)
 
     eps_opt = 0.
     sig_opt = 0.
@@ -1141,9 +1139,15 @@ def main():
     parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points','SLSQP'],help="choose which type of optimizer to use")
     parser.add_argument("-prop","--properties",type=str,nargs='+',choices=['rhoL','Psat','rhov','P','U','Z'],help="choose one or more properties to use in optimization" )
     parser.add_argument("-lam","--lam",help="Scan the lambda space incrementally",action="store_true")
+    parser.add_argument("-bas","--basis",help="Develop the basis functions for integer values of lambda",action="store_true")
     args = parser.parse_args()
     if args.optimizer:
         rerun_refs() #Perform the reruns for the references prior to anything
+        if args.basis: #Perform the reruns for the basis functions
+            lam_range = np.array([6.])
+            rerun_basis(lam_range,iRef)
+            lam_range = range(int(lam_low),int(lam_high)+1)
+            rerun_basis(lam_range,iRef)
         for eps_sig_lam in eps_sig_lam_refs:
             objective_ITIC(eps_sig_lam,args.properties) #Call objective for each of the references
         if args.lam:
@@ -1153,7 +1157,7 @@ def main():
             lam_opt_range = np.zeros(len(lam_range))
             f_opt_range = np.zeros(len(lam_range))
             for ilam, lam_cons in enumerate(lam_range):
-                eps_opt_range[ilam], sig_opt_range[ilam], lam_opt_range[ilam], f_opt_range[ilam] = call_optimizers(args.optimizer,args.properties,lam_cons)
+                eps_opt_range[ilam], sig_opt_range[ilam], lam_opt_range[ilam], f_opt_range[ilam] = call_optimizers(args.optimizer,args.properties,lam_cons,args.basis)
                 assert lam_opt_range[ilam] == lam_cons, 'Optimal lambda is different than the constrained lambda value'
             iopt = f_opt_range.argmin()
             eps_opt, sig_opt, lam_opt, f_opt = eps_opt_range[iopt], sig_opt_range[iopt], lam_opt_range[iopt], f_opt_range[iopt]           
