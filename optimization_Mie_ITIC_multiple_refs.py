@@ -687,31 +687,35 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
     
     return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
 
-def rerun_basis_functions(lam_range,iRef):
+def rerun_basis_functions(iRef):
+'''
+This function submits the rerun simulations that are necessary to generate the
+basis functions. It starts by performing a rerun simulation with the LJ model 
+at the highest epsilon and sigma. It then submits a rerun using LJ with the 
+lowest epsilon and sigma. Then, it submits a single rerun for all the different
+Mie values for lambda.
+'''
     global iRerun
-#    if lam == 6.:
-#        Clam = 0.
-#        
-#        f = open('Clam_it','w')
-#        f.write(str(Clam))
-#        f.close()
-#        
-#    else:
-#        C6 = 0.
-#        f = open('C6_it','w')
-#        f.write(str(C6))
-#        f.close()
 
 # I am going to keep it the way I had it where I just submit with real parameters 
-# And solve linear system of equations
+# And solve linear system of equations. 
     
-    eps_basis = eps_low
-    sig_basis = sig_low  
-           
+    nBasis = len(range(lam_low,lam_high+1))+2
+
+    eps_basis = np.ones(nBasis)*eps_low
+    sig_basis = np.ones(nBasis)*sig_low 
+    lam_range = np.zeros(len(range(lam_low,lam_high+1))+2)
+    
+    eps_basis[0] = eps_high
+    sig_basis[0] = sig_high
+    lam_range[0] = lam_TraPPE #Should always be 12
+    lam_range[1] = lam_TraPPE
+    lam_range[2:] = range(lam_low,lam_high+1)
+               
     for lam_rerun in lam_range:
 
-        eps_rerun = eps_basis
-        sig_rerun = sig_basis
+        eps_rerun = eps_basis[iRerun]
+        sig_rerun = sig_basis[iRerun]
         
         fpathRef = "../ref"+str(iRef)+"/"
         print(fpathRef)
@@ -1144,10 +1148,7 @@ def main():
     if args.optimizer:
         rerun_refs() #Perform the reruns for the references prior to anything
         if args.basis: #Perform the reruns for the basis functions
-            lam_range = np.array([6.])
-            rerun_basis(lam_range,iRef)
-            lam_range = range(int(lam_low),int(lam_high)+1)
-            rerun_basis(lam_range,iRef)
+            rerun_basis(iRef)
         for eps_sig_lam in eps_sig_lam_refs:
             objective_ITIC(eps_sig_lam,args.properties) #Call objective for each of the references
         if args.lam:
