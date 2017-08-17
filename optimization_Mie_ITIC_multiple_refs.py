@@ -490,8 +490,10 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
         iSets[iiRef] = iiRef
         
         if iRerun > iRef: #We only need to perform the reruns if not one of the references
-    
-            subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
+        
+            if not basis_fun:
+                
+                subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
 
     g_start = 28 #Row where data starts in g_energy output
     g_t = 0 #Column for the snapshot time
@@ -689,21 +691,40 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
     return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
 
 def create_Cmatrix(eps_basis,sig_basis,lam_basis):
+    '''
+    This function creates the matrix of C6, C12, C13... where C6 is always the
+    zeroth column and the rest is the range of lambda from lam_low to lam_high.
+    These values were predefined in rerun_basis_functions
+    '''
     
     Cmatrix = np.zeros([len(lam_basis),len(lam_basis)])
     
     C6_basis, Clam_basis = convert_eps_sig_C6_Clam(eps_basis,sig_basis,lam_basis,print_Cit=False)
     
-    lam_col = lam_basis.copy()
-    lam_col[0] = 6
+    lam_index = lam_basis.copy()
+    lam_index[0] = 6
 
     Cmatrix[:,0] = C6_basis
            
-    for ilam, lam in enumerate(lam_col):
+    for ilam, lam in enumerate(lam_index):
         for iBasis, lam_rerun in enumerate(lam_basis):
             if lam == lam_rerun:
                 Cmatrix[iBasis,ilam] = Clam_basis[iBasis]
                 
+    fpath = "../ref"+str(iRef)+"/"
+    
+    f = open(fpath+'Cmatrix','w')
+    g = open(fpath+'lam_index','w')
+    
+    for ilam, lam in enumerate(lam_index):
+        for jlam in range(len(lam_basis)):
+            f.write(str(Cmatrix[ilam,jlam])+'\t')
+        f.write('\n')
+        g.write(str(lam)+'\t')              
+    
+    f.close()
+    g.close()       
+            
     return Cmatrix 
 
 def check_basis_functions(LJsr,sumr6lam,Cmatrix):
@@ -850,17 +871,49 @@ def generate_basis_functions(iRef,iBasis,Cmatrix):
                 
                 check_basis_functions(LJsr,sumr6lam,Cmatrix)
                     
-#                    Clam = Cmatrix[:,1:]
-#                    C6 = Cmatrix[:,0]
-#                    
-#                    Ulam = np.linalg.multi_dot([Clam,rarray[1:]])
-#                    U6 = np.linalg.multi_dot([C6,rarray[0]])
-#    
-#                    for ibasis in range(2):
-#                        assert Ulam[ibasis]+U6[ibasis] - U_basis[ibasis] < 1e-6, 'Energies do not add up'
-
                 iState += 1   
-
+                
+def create_Carray(eps_sig_lam,sumr6lam):
+    '''
+    This function creates a single column array of C6, C12, C13... where C6 is always the
+    zeroth column and the rest are 0 except for the column that pertains to lambda.
+    '''
+    
+    eps = eps_sig_lam[0]
+    sig = eps_sig_lam[1]
+    lam = eps_sig_lam[2]
+    
+    lam_index = np.loadtxt('lam_index')
+    
+    Carray = np.zeros([len(lam_index)])
+    
+    C6, Clam = convert_eps_sig_C6_Clam(eps,sig,lam,print_Cit=False)
+    
+    Carray[0] = C6
+           
+    for ilam, lam_basis in enumerate(lam_index):
+        if lam == lam_basis:
+            Carray[ilam] = Clam
+                
+    fpath = "../ref"+str(iRef)+"/"
+    
+    f = open(fpath+'Carrayit','a')
+    
+    for ilam, Ci in enumerate(Carray):
+        f.write(str(Ci)+'\t')
+    
+    f.write('\n')              
+    f.close()
+            
+    return Carray
+                
+def LJ_basis_functions(sumr6lam,eps_sig_lam):
+    Carray = create_Carray(eps_sig_lam,sumr6lam)
+    LJ_SR = np.linalg.multi_dot([Carray,sumr6lam])
+    LJ_dc = 0. # Use Carray[0] to convert C6 into LJ_dc
+    #print('For epsilon = '+str(eps)+' sigma = '+str(sig)+' lambda = '+str(lam))
+    #print('The initial LJ energy is'+str(LJ_hat[0]))
+    return LJ_hat
 
 def GOLDEN(AX,BX,CX,TOL):
 
@@ -1182,10 +1235,10 @@ def main():
     args = parser.parse_args()
     if args.optimizer:
         rerun_refs() #Perform the reruns for the references prior to anything
-        if args.basis: #Perform the reruns for the basis functions
-            rerun_basis_functions(iRef)
         for eps_sig_lam in eps_sig_lam_refs:
             objective_ITIC(eps_sig_lam,args.properties,args.basis) #Call objective for each of the references
+        if args.basis: #Perform the reruns for the basis functions
+            rerun_basis_functions(iRef)
         if args.lam:
             lam_range = range(int(lam_low),int(lam_high)+1)
             eps_opt_range = np.zeros(len(lam_range))
