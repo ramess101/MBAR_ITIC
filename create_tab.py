@@ -32,19 +32,25 @@ def create_tab(nrep,natt=6.,ncoul=1.):
         f.write(str(ri)+'\t'+str(U1)+'\t'+str(F1)+'\t'+str(U2)+'\t'+str(F2)+'\t'+str(U3)+'\t'+str(F3)+'\n')
     f.close()
     
-def convert_eps_sig_C6_Clam(eps,sig,lam,n=6.):
+def convert_eps_sig_C6_Clam(eps,sig,lam,n=6.,print_Cit=True):
     Ncoef = lam/(lam-n)*(lam/n)**(n/(lam-n))
     eps *= kb * NA
     C6 = Ncoef * eps * sig ** n
     Clam = Ncoef * eps * sig ** lam
     
-    f = open('C6_it','w')
-    f.write(str(C6))
-    f.close()
+    if print_Cit:
     
-    f = open('Clam_it','w')
-    f.write(str(Clam))
-    f.close()
+        f = open('C6_it','w')
+        f.write(str(C6))
+        f.close()
+        
+        f = open('Clam_it','w')
+        f.write(str(Clam))
+        f.close()
+        
+    else:
+        
+        return C6, Clam
 
 def main():
 

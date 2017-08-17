@@ -10,6 +10,7 @@ import subprocess
 import time
 from scipy.optimize import minimize, minimize_scalar, fsolve
 import scipy.integrate as integrate
+from create_tab import *
 
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
@@ -687,35 +688,59 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
     
     return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
 
+def create_Cmatrix(eps_basis,sig_basis,lam_basis):
+    
+    Cmatrix = np.zeros([len(lam_basis),len(lam_basis)])
+    
+    C6_basis, Clam_basis = convert_eps_sig_C6_Clam(eps_basis,sig_basis,lam_basis,print_Cit=False)
+    
+    lam_col = lam_basis.copy()
+    lam_col[0] = 6
+
+    Cmatrix[:,0] = C6_basis
+           
+    for ilam, lam in enumerate(lam_col):
+        for iBasis, lam_rerun in enumerate(lam_basis):
+            if lam == lam_rerun:
+                Cmatrix[iBasis,ilam] = Clam_basis[iBasis]
+                
+    return Cmatrix 
+
+def check_basis_functions(LJsr,sumr6lam,Cmatrix):
+    LJhat = np.linalg.multi_dot([Cmatrix,sumr6lam])
+    assert np.abs((LJsr - LJhat)).all() < 1e-3, 'Basis functions do not reproduce energies'
+
 def rerun_basis_functions(iRef):
-'''
+    ''' 
 This function submits the rerun simulations that are necessary to generate the
 basis functions. It starts by performing a rerun simulation with the LJ model 
 at the highest epsilon and sigma. It then submits a rerun using LJ with the 
 lowest epsilon and sigma. Then, it submits a single rerun for all the different
-Mie values for lambda.
-'''
+Mie values for lambda. 
+    '''
+
     global iRerun
+    iRerun0 = iRerun
 
 # I am going to keep it the way I had it where I just submit with real parameters 
 # And solve linear system of equations. 
-    
-    nBasis = len(range(lam_low,lam_high+1))+2
+#    print(lam_low)
+#    print(lam_high)
+    nBasis = len(range(int(lam_low),int(lam_high)+1))+2
 
     eps_basis = np.ones(nBasis)*eps_low
     sig_basis = np.ones(nBasis)*sig_low 
-    lam_range = np.zeros(len(range(lam_low,lam_high+1))+2)
+    lam_basis = np.ones(nBasis)*lam_TraPPE # Should be 12 to start
     
     eps_basis[0] = eps_high
     sig_basis[0] = sig_high
-    lam_range[0] = lam_TraPPE #Should always be 12
-    lam_range[1] = lam_TraPPE
-    lam_range[2:] = range(lam_low,lam_high+1)
+    lam_basis[2:] = range(int(lam_low),int(lam_high)+1)
+    
+#    print(eps_basis)
+#    print(sig_basis)
+#    print(lam_basis)
                
-    for lam_rerun in lam_range:
-
-        eps_rerun = eps_basis[iRerun]
-        sig_rerun = sig_basis[iRerun]
+    for eps_rerun, sig_rerun, lam_rerun in zip(eps_basis, sig_basis, lam_basis):
         
         fpathRef = "../ref"+str(iRef)+"/"
         print(fpathRef)
@@ -736,13 +761,18 @@ Mie values for lambda.
         f.write(str(iRerun))
         f.close()
         
-        subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
-            
-        print('Rerun with epsilon = '+str(eps_rerun)+' and sigma = '+str(sig_rerun)+'and lambda = '+str(lam_rerun))       
+        #subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
 
         iRerun += 1
+        
+        iBasis = range(iRerun0,iRerun)
+        
+    Cmatrix = create_Cmatrix(eps_basis,sig_basis,lam_basis)
+    generate_basis_functions(iRef,iBasis,Cmatrix)
 
-def generate_basis_functions():
+def generate_basis_functions(iRef,iBasis,Cmatrix):
+    
+    nSets = len(iBasis)
     
     g_start = 28 #Row where data starts in g_energy output
     g_t = 0 #Column for the snapshot time
@@ -767,14 +797,11 @@ def generate_basis_functions():
                 else:
     
                     fpath = run_type+'/rho_'+str(irho)+'/NVT_eq/NVT_prod/'
+                
+                  
+                en_p = open('../ref'+str(iRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iRef,iRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
                     
-                for iiRerun in iReruns:
-                    
-                    en_p = open('../ref'+str(iRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iRef,iiRerun),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
-   
-                    nSnapsRef = len(en_p) #Number of snapshots
-                    
-                nSnaps = np.sum(N_k)
+                nSnaps = len(en_p)
                 #print(N_k)
                 #print(nSnaps)
                 
@@ -787,45 +814,53 @@ def generate_basis_functions():
                 LJ_total = np.zeros([nSets,nSnaps])
                 T = np.zeros([nSets,nSnaps])
     
-                for iSet, iter in enumerate(iSets):
-                    
-                    frame_shift = 0
-                    
-                    for iiRef in iRefs:
+                for iSet, iter in enumerate(iBasis):
                         
-                        en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
-        
-                        #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
-                        
-                        nSnapsRef = N_k[iiRef]
-                        #print(nSnapsRef)
-                        assert nSnapsRef == len(en_p), 'The value of N_k does not match the length of the energy file.'
-                                   
-                        for frame in xrange(nSnapsRef):
-                            t[iSet][frame+frame_shift] = float(en_p[frame].split()[g_t])
-                            LJsr[iSet][frame+frame_shift] = float(en_p[frame].split()[g_LJsr])
-                            LJdc[iSet][frame+frame_shift] = float(en_p[frame].split()[g_LJdc])
-                            en[iSet][frame+frame_shift] = float(en_p[frame].split()[g_en])
-                            p[iSet][frame+frame_shift] = float(en_p[frame].split()[g_p])
-                            T[iSet][frame+frame_shift] = float(en_p[frame].split()[g_T])
-                            #f.write(str(p[iSet][frame])+'\n')
-                            
-                        frame_shift += nSnapsRef
-                        #print(frame_shift)
-                        #print(t[iSet])
-    
+                    en_p = open('../ref'+str(iRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+                  
+                    for frame in xrange(nSnaps):
+                        t[iSet][frame] = float(en_p[frame].split()[g_t])
+                        LJsr[iSet][frame] = float(en_p[frame].split()[g_LJsr])
+                        LJdc[iSet][frame] = float(en_p[frame].split()[g_LJdc])
+                        en[iSet][frame] = float(en_p[frame].split()[g_en])
+                        p[iSet][frame] = float(en_p[frame].split()[g_p])
+                        T[iSet][frame] = float(en_p[frame].split()[g_T])
+                        #f.write(str(p[iSet][frame])+'\n')
+
                     U_total[iSet] = en[iSet] # For TraPPEfs we just used potential because dispersion was erroneous. I believe we still want potential even if there are intramolecular contributions. 
                     LJ_total[iSet] = LJsr[iSet] + LJdc[iSet] #In case we want just the LJ total (since that would be U_res as long as no LJ intra). We would still use U_total for MBAR reweighting but LJ_total would be the observable
-   
-    
-    rarray = np.linalg.solve(Cmatrix,U_basis)
-    print(rarray)
-    
-    Ulam = np.linalg.multi_dot([Clam,rarray[0]])
-    U6 = np.linalg.multi_dot([C6,rarray[1]])
-    
-    for ibasis in range(2):
-        assert Ulam[ibasis]+U6[ibasis] - U_basis[ibasis] < 1e-6, 'Energies do not add up'
+
+                sumr6lam = np.zeros([nSets,nSnaps])
+                
+                f = open('../ref'+str(iRef)+'/'+fpath+'basis_functions','w')
+
+                for frame in xrange(nSnaps):
+                    U_basis = LJsr[:,frame]
+                    sumr6lam[:,frame] = np.linalg.solve(Cmatrix,U_basis)
+                    
+                    assert sumr6lam[0,frame] < 0, 'The attractive contribution has the wrong sign'
+                
+                    for iSet in range(nSets):
+                        if iSet < nSets-1:
+                            f.write(str(sumr6lam[iSet,frame])+'\t')
+                        else:
+                            f.write(str(sumr6lam[iSet,frame])+'\n')
+                    
+                f.close()
+                
+                check_basis_functions(LJsr,sumr6lam,Cmatrix)
+                    
+#                    Clam = Cmatrix[:,1:]
+#                    C6 = Cmatrix[:,0]
+#                    
+#                    Ulam = np.linalg.multi_dot([Clam,rarray[1:]])
+#                    U6 = np.linalg.multi_dot([C6,rarray[0]])
+#    
+#                    for ibasis in range(2):
+#                        assert Ulam[ibasis]+U6[ibasis] - U_basis[ibasis] < 1e-6, 'Energies do not add up'
+
+                iState += 1   
+
 
 def GOLDEN(AX,BX,CX,TOL):
 
@@ -1121,7 +1156,7 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,basis_fun=False):
     elif opt_type == 'points':
         objective(eps_sig_lam_guess)
         eps_sig_lam_spec = np.array([121.25,0.3783,16.])
-        objective_ITIC(eps_sig_lam_spec)
+        objective_ITIC(eps_sig_lam_spec,prop_type,basis_fun)
         
     elif opt_type == 'SLSQP':
         eps_sig_lam_guess_scaled = eps_sig_lam_guess/eps_sig_lam_guess
@@ -1148,9 +1183,9 @@ def main():
     if args.optimizer:
         rerun_refs() #Perform the reruns for the references prior to anything
         if args.basis: #Perform the reruns for the basis functions
-            rerun_basis(iRef)
+            rerun_basis_functions(iRef)
         for eps_sig_lam in eps_sig_lam_refs:
-            objective_ITIC(eps_sig_lam,args.properties) #Call objective for each of the references
+            objective_ITIC(eps_sig_lam,args.properties,args.basis) #Call objective for each of the references
         if args.lam:
             lam_range = range(int(lam_low),int(lam_high)+1)
             eps_opt_range = np.zeros(len(lam_range))
