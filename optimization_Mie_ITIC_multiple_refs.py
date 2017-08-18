@@ -562,8 +562,14 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
                     
                     for iiRef in iRefs:
                         
-                        en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
-        
+                        if basis_fun and iter == int(iRerun):
+                            # Use the reference as the starting point for basis functions, note that values are changed after assignment
+                            en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+                            
+                        else:
+                        
+                            en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+            
                         #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
                         
                         nSnapsRef = N_k[iiRef]
@@ -578,7 +584,18 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
                             p[iSet][frame+frame_shift] = float(en_p[frame].split()[g_p])
                             T[iSet][frame+frame_shift] = float(en_p[frame].split()[g_T])
                             #f.write(str(p[iSet][frame])+'\n')
-                            
+                        
+                        if basis_fun and iter == int(iRerun):
+                            sumr6lam = np.loadtxt('../ref'+str(iiRef)+'/'+fpath+'basis_functions')
+                            #en_p[:,g_LJsr], en_p[:,g_LJdc], en_p[:,g_p] = UP_basis_function(eps_sig_lam)
+                            LJsr_rerun, LJdc_rerun = UP_basis_functions(sumr6lam,eps_sig_lam)
+                            LJ_tot_rerun = LJsr_rerun + LJdc_rerun
+                            for frame in xrange(nSnapsRef):
+                                nonLJ = en[iSet][frame+frame_shift] - LJsr[iSet][frame+frame_shift] - LJdc[iSet][frame+frame_shift]
+                                LJsr[iSet][frame+frame_shift] = LJsr_rerun[frame]
+                                LJdc[iSet][frame+frame_shift] = LJdc_rerun[frame]
+                                en[iSet][frame+frame_shift] = LJ_tot_rerun[frame]+nonLJ
+                        
                         frame_shift += nSnapsRef
                         #print(frame_shift)
                         #print(t[iSet])
@@ -906,14 +923,19 @@ def create_Carray(eps_sig_lam,sumr6lam):
     f.close()
             
     return Carray
+
+def LJ_tail_corr(C6):
+    return 0.
                 
-def LJ_basis_functions(sumr6lam,eps_sig_lam):
+def UP_basis_functions(sumr6lam,eps_sig_lam):
     Carray = create_Carray(eps_sig_lam,sumr6lam)
-    LJ_SR = np.linalg.multi_dot([Carray,sumr6lam])
-    LJ_dc = 0. # Use Carray[0] to convert C6 into LJ_dc
+    C6 = Carray[0]
+    LJ_SR = np.linalg.multi_dot([sumr6lam,Carray])
+    LJ_dc = np.ones(len(LJ_SR))*LJ_tail_corr(C6) # Use Carray[0] to convert C6 into LJ_dc
+    press = np.zeros(len(LJ_SR))
     #print('For epsilon = '+str(eps)+' sigma = '+str(sig)+' lambda = '+str(lam))
-    #print('The initial LJ energy is'+str(LJ_hat[0]))
-    return LJ_hat
+    print('The initial LJ energy is '+str(LJ_SR[0]))
+    return LJ_SR, LJ_dc
 
 def GOLDEN(AX,BX,CX,TOL):
 
