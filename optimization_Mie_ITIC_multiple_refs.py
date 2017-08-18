@@ -562,7 +562,7 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
                     
                     for iiRef in iRefs:
                         
-                        if basis_fun and iter == int(iRerun):
+                        if basis_fun and iter > nRefs:
                             # Use the reference as the starting point for basis functions, note that values are changed after assignment
                             en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
                             
@@ -585,7 +585,7 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
                             T[iSet][frame+frame_shift] = float(en_p[frame].split()[g_T])
                             #f.write(str(p[iSet][frame])+'\n')
                         
-                        if basis_fun and iter == int(iRerun):
+                        if basis_fun and iter > nRefs:
                             sumr6lam = np.loadtxt('../ref'+str(iiRef)+'/'+fpath+'basis_functions')
                             #en_p[:,g_LJsr], en_p[:,g_LJdc], en_p[:,g_p] = UP_basis_function(eps_sig_lam)
                             LJsr_rerun, LJdc_rerun = UP_basis_functions(sumr6lam,eps_sig_lam)
@@ -934,7 +934,7 @@ def UP_basis_functions(sumr6lam,eps_sig_lam):
     LJ_dc = np.ones(len(LJ_SR))*LJ_tail_corr(C6) # Use Carray[0] to convert C6 into LJ_dc
     press = np.zeros(len(LJ_SR))
     #print('For epsilon = '+str(eps)+' sigma = '+str(sig)+' lambda = '+str(lam))
-    print('The initial LJ energy is '+str(LJ_SR[0]))
+    #print('The initial LJ energy is '+str(LJ_SR[0]))
     return LJ_SR, LJ_dc
 
 def GOLDEN(AX,BX,CX,TOL):
@@ -1080,13 +1080,12 @@ def initialize_players(nplayers,dim,bounds,constrained,int_lam,cons_lam,lam_cons
                     players[iplayer,1] = sig_trial
     return players
 
-def leapfrog(fun,x_guess,bounds,constrained,lam_cons,tol,max_it=500,max_trials=100,int_lam=True,cons_lam=True,restart=False):
+def leapfrog(fun,x_guess,bounds,constrained,lam_cons,cons_lam,tol,max_it=500,max_trials=100,int_lam=True,restart=False):
     dim = len(x_guess)
     if cons_lam:
         nplayers = 10*(dim-1)
     else:
         nplayers = 10*dim
-    
     if restart:
         global iRerun
         players = np.loadtxt('eps_sig_lam_all_failed',skiprows=2) #Recall that initial objective call is the reference system
@@ -1157,7 +1156,7 @@ def leapfrog(fun,x_guess,bounds,constrained,lam_cons,tol,max_it=500,max_trials=1
     #print(players[ibest,:])
     return best_player, best
 
-def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,basis_fun=False):
+def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,cons_lam=True,basis_fun=False):
     
     objective = lambda eps_sig_lam: objective_ITIC(eps_sig_lam,prop_type,basis_fun)
 
@@ -1179,7 +1178,7 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,basis_fun=False):
     bnds = ((eps_low,eps_high),(sig_low,sig_high),(lam_low,lam_high)) 
     
     constrained = False # Default is to not use constraint
-    if len(prop_type) == 1: #If only optimizing to U it is best to constrain sigma and rmin
+    if len(prop_type) == 1 and lam_cons != 12: #If only optimizing to U for non-LJ it is best to constrain sigma and rmin
         if prop_type[0] == 'U':
             constrained = True
             print('This is a constrained optimization')
@@ -1212,7 +1211,8 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,basis_fun=False):
         #objective(eps_sig_lam_guess) #To call objective before running loop
         # Moved this outside of loop
         
-        eps_sig_lam_opt, f_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,lam_cons,tol_eps_sig_lam)
+        
+        eps_sig_lam_opt, f_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,lam_cons,cons_lam,tol_eps_sig_lam,cons_lam)
         eps_opt = eps_sig_lam_opt[0]
         sig_opt = eps_sig_lam_opt[1]
         lam_opt = eps_sig_lam_opt[2]
@@ -1268,12 +1268,12 @@ def main():
             lam_opt_range = np.zeros(len(lam_range))
             f_opt_range = np.zeros(len(lam_range))
             for ilam, lam_cons in enumerate(lam_range):
-                eps_opt_range[ilam], sig_opt_range[ilam], lam_opt_range[ilam], f_opt_range[ilam] = call_optimizers(args.optimizer,args.properties,lam_cons,args.basis)
+                eps_opt_range[ilam], sig_opt_range[ilam], lam_opt_range[ilam], f_opt_range[ilam] = call_optimizers(args.optimizer,args.properties,lam_cons,cons_lam=True,basis_fun=args.basis)
                 assert lam_opt_range[ilam] == lam_cons, 'Optimal lambda is different than the constrained lambda value'
             iopt = f_opt_range.argmin()
             eps_opt, sig_opt, lam_opt, f_opt = eps_opt_range[iopt], sig_opt_range[iopt], lam_opt_range[iopt], f_opt_range[iopt]           
         else:
-            eps_opt, sig_opt, lam_opt = call_optimizers(args.optimizer,args.properties)
+            eps_opt, sig_opt, lam_opt, f_opt = call_optimizers(args.optimizer,args.properties,cons_lam=False,basis_fun=args.basis)
     else:
         print('Please specify an optimizer type')
         eps_opt = 0.
