@@ -494,7 +494,21 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
             if not basis_fun:
                 
                 subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
+                
+            else:
+                
+                iBasis = np.loadtxt('iBasis')
 
+                print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
+                
+                if iRerun > iBasis:
+                
+                    f = open('eps_sig_lam_all','a')
+                    f.write(str(eps_sig_lam[0])+'\t')
+                    f.write(str(eps_sig_lam[1])+'\t')
+                    f.write(str(eps_sig_lam[2])+'\n')
+                    f.close()
+                    
     g_start = 28 #Row where data starts in g_energy output
     g_t = 0 #Column for the snapshot time
     g_LJsr = 1 #Column where the 'Lennard-Jones' short-range interactions are located
@@ -614,9 +628,9 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
                 mbar = MBAR(u_kn,N_k)
                 
                 (Deltaf_ij, dDeltaf_ij, Theta_ij) = mbar.getFreeEnergyDifferences(return_theta=True)
-                print "effective sample numbers"
+                #print "effective sample numbers"
                 
-                print mbar.computeEffectiveSampleNumber() #Check to see if sampled adequately
+                #print mbar.computeEffectiveSampleNumber() #Check to see if sampled adequately
                 
                 # MRS: The observable we are interested in is U, internal energy.  The
                 # question is, WHICH internal energy.  We are interested in the
@@ -757,8 +771,7 @@ lowest epsilon and sigma. Then, it submits a single rerun for all the different
 Mie values for lambda. 
     '''
 
-    global iRerun
-    iRerun0 = iRerun
+    iRerun_basis = iRerun
 
 # I am going to keep it the way I had it where I just submit with real parameters 
 # And solve linear system of equations. 
@@ -777,6 +790,8 @@ Mie values for lambda.
 #    print(eps_basis)
 #    print(sig_basis)
 #    print(lam_basis)
+
+    eps_sig_lam_basis = np.array([eps_basis,sig_basis,lam_basis]).transpose()
                
     for eps_rerun, sig_rerun, lam_rerun in zip(eps_basis, sig_basis, lam_basis):
         
@@ -796,17 +811,25 @@ Mie values for lambda.
         f.close()
         
         f = open(fpathRef+'iRerun','w')
-        f.write(str(iRerun))
+        f.write(str(iRerun_basis))
         f.close()
         
-        #subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
+        subprocess.call(fpathRef+"EthaneRerunITIC_subprocess")
 
-        iRerun += 1
+        iRerun_basis += 1
         
-        iBasis = range(iRerun0,iRerun)
+        print('iRerun is = '+str(iRerun)+', while iRerun_basis = '+str(iRerun_basis))
+        
+    f = open(fpathRef+'iBasis','w')
+    f.write(str(iRerun_basis-1))
+    f.close()
+        
+    iBasis = range(iRerun,iRerun_basis)
         
     Cmatrix = create_Cmatrix(eps_basis,sig_basis,lam_basis)
     generate_basis_functions(iRef,iBasis,Cmatrix)
+    
+    return eps_sig_lam_basis
 
 def generate_basis_functions(iRef,iBasis,Cmatrix):
     
@@ -933,7 +956,7 @@ def UP_basis_functions(sumr6lam,eps_sig_lam):
     LJ_SR = np.linalg.multi_dot([sumr6lam,Carray])
     LJ_dc = np.ones(len(LJ_SR))*LJ_tail_corr(C6) # Use Carray[0] to convert C6 into LJ_dc
     press = np.zeros(len(LJ_SR))
-    #print('For epsilon = '+str(eps)+' sigma = '+str(sig)+' lambda = '+str(lam))
+    #print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
     #print('The initial LJ energy is '+str(LJ_SR[0]))
     return LJ_SR, LJ_dc
 
@@ -1178,7 +1201,7 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,cons_lam=True,basis_fu
     bnds = ((eps_low,eps_high),(sig_low,sig_high),(lam_low,lam_high)) 
     
     constrained = False # Default is to not use constraint
-    if len(prop_type) == 1 and lam_cons != 12: #If only optimizing to U for non-LJ it is best to constrain sigma and rmin
+    if len(prop_type) == 1 and not(cons_lam and lam_cons == 12): #If only optimizing to U for non-LJ it is best to constrain sigma and rmin
         if prop_type[0] == 'U':
             constrained = True
             print('This is a constrained optimization')
@@ -1212,7 +1235,7 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,cons_lam=True,basis_fu
         # Moved this outside of loop
         
         
-        eps_sig_lam_opt, f_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,lam_cons,cons_lam,tol_eps_sig_lam,cons_lam)
+        eps_sig_lam_opt, f_opt = leapfrog(objective,eps_sig_lam_guess,bnds,constrained,lam_cons,cons_lam,tol_eps_sig_lam)
         eps_opt = eps_sig_lam_opt[0]
         sig_opt = eps_sig_lam_opt[1]
         lam_opt = eps_sig_lam_opt[2]
@@ -1260,7 +1283,9 @@ def main():
         for eps_sig_lam in eps_sig_lam_refs:
             objective_ITIC(eps_sig_lam,args.properties,args.basis) #Call objective for each of the references
         if args.basis: #Perform the reruns for the basis functions
-            rerun_basis_functions(iRef)
+            eps_sig_lam_basis = rerun_basis_functions(iRef)
+            for eps_sig_lam in eps_sig_lam_basis:
+                objective_ITIC(eps_sig_lam,args.properties,args.basis) #Call objective for each of the basis functions
         if args.lam:
             lam_range = range(int(lam_low),int(lam_high)+1)
             eps_opt_range = np.zeros(len(lam_range))
