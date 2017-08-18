@@ -32,6 +32,12 @@ nm3_to_m3 = 10**27
 bar_nm3_to_kJ_per_mole = 0.0602214086
 R_g = 8.3144598 / 1000. #[kJ/mol/K]
 
+# Simulation system specifications
+
+rc = 1.4 #[nm]
+N_sites = 2
+N_inter = N_sites**2
+
 #Read in the simulation specifications
 
 ITIC = np.array(['Isotherm', 'Isochore'])
@@ -498,10 +504,10 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
             else:
                 
                 iBasis = np.loadtxt('iBasis')
-
-                print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
                 
-                if iRerun > iBasis:
+                if iRerun > iBasis and iiRef == iRef: #Only print out eps,sig,lam for the most recent reference
+                    
+                    print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
                 
                     f = open('eps_sig_lam_all','a')
                     f.write(str(eps_sig_lam[0])+'\t')
@@ -539,6 +545,9 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
         for irho  in np.arange(0,nrhos[run_type]):
     
             for iTemp in np.arange(0,nTemps[run_type]):
+                
+                rho_state = rho_sim[iState]
+                Nstate = Nmol_sim[iState]
     
                 if run_type == 'Isochore':
     
@@ -602,7 +611,7 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
                         if basis_fun and iter > nRefs:
                             sumr6lam = np.loadtxt('../ref'+str(iiRef)+'/'+fpath+'basis_functions')
                             #en_p[:,g_LJsr], en_p[:,g_LJdc], en_p[:,g_p] = UP_basis_function(eps_sig_lam)
-                            LJsr_rerun, LJdc_rerun = UP_basis_functions(sumr6lam,eps_sig_lam)
+                            LJsr_rerun, LJdc_rerun = UP_basis_functions(sumr6lam,eps_sig_lam,rho_state,Nstate)
                             LJ_tot_rerun = LJsr_rerun + LJdc_rerun
                             for frame in xrange(nSnapsRef):
                                 nonLJ = en[iSet][frame+frame_shift] - LJsr[iSet][frame+frame_shift] - LJdc[iSet][frame+frame_shift]
@@ -947,14 +956,22 @@ def create_Carray(eps_sig_lam,sumr6lam):
             
     return Carray
 
-def LJ_tail_corr(C6):
-    return 0.
+def LJ_tail_corr(C6,rho,Nmol):
+    '''
+    Calculate the LJ tail correction to U using the Gromacs approach (i.e. only C6 is used)
+    '''
+    U_Corr = -2./3. * np.pi * C6 * rc**(-3.)
+    U_Corr *= Nmol * rho * N_inter
+    return U_Corr
                 
-def UP_basis_functions(sumr6lam,eps_sig_lam):
+def UP_basis_functions(sumr6lam,eps_sig_lam,rho,Nmol):
+    '''
+    
+    '''
     Carray = create_Carray(eps_sig_lam,sumr6lam)
     C6 = Carray[0]
     LJ_SR = np.linalg.multi_dot([sumr6lam,Carray])
-    LJ_dc = np.ones(len(LJ_SR))*LJ_tail_corr(C6) # Use Carray[0] to convert C6 into LJ_dc
+    LJ_dc = np.ones(len(LJ_SR))*LJ_tail_corr(C6,rho,Nmol) # Use Carray[0] to convert C6 into LJ_dc
     press = np.zeros(len(LJ_SR))
     #print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
     #print('The initial LJ energy is '+str(LJ_SR[0]))
