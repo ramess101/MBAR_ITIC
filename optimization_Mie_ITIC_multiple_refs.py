@@ -104,7 +104,7 @@ for run_type in ITIC:
                 
 assert nStates == len(fpath_all), 'Number of states does not match number of file paths'
 
-print(fpath_all)
+#print(fpath_all)
 
 print(os.getcwd())
 time.sleep(2)
@@ -1258,13 +1258,23 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,cons_lam=True,basis_fu
     elif opt_type == 'scan':
         # For scanning the parameter space
         
-        objective(eps_sig_lam_guess) #To call objective before running loop
-        lam_sim = lam_guess
-                 
+        f_guess = objective(eps_sig_lam_guess) #To call objective before running loop
+        lam_sim = lam_cons
+        
+        f_opt = 1e20
+        eps_opt = eps_guess
+        sig_opt = sig_guess
+        lam_opt = lam_guess        
+         
         for iEps, eps_sim in enumerate(np.linspace(eps_low,eps_high,40)):
             for iSig, sig_sim in enumerate(np.linspace(sig_low,sig_high,40)):
                 eps_sig_lam_sim = np.array([eps_sim,sig_sim,lam_sim])
-                objective(eps_sig_lam_sim)
+                f_sim = objective(eps_sig_lam_sim)
+                
+                if f_sim < f_opt:
+                    f_opt = f_sim
+                    eps_opt = eps_sim
+                    sig_opt = sig_sim                
         
     elif opt_type == 'points':
         objective(eps_sig_lam_guess)
@@ -1319,6 +1329,8 @@ def main():
         eps_opt = 0.
         sig_opt = 0.
         lam_opt = 0.
+        
+    ### Move this to a function that checks for convergence
 
     if eps_opt == 0. or sig_opt == 0. or lam_opt == 0.:
         

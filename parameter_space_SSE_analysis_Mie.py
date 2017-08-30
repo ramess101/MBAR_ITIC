@@ -248,8 +248,10 @@ def analyze_ITIC(iRerun):
 #    f = open('SSE_Z','a')
 #    f.write('\n'+str(SSEZ))
 #    f.close()
+
+    Navg = np.mean(NeffSim)
     
-    return SSErhoL, SSEPsat, SSErhov, SSEU, SSEP, SSEZ
+    return SSErhoL, SSEPsat, SSErhov, SSEU, SSEP, SSEZ, Navg
 
 def initialize_files():
     
@@ -294,7 +296,7 @@ def print_figures(opt_type):
     
     initialize_files()  
         
-    if opt_type == 'scan':
+    if opt_type == 'scan_broken': #This doesn't work with basis functions or with multiple references
 
         # For scanning the parameter space
         
@@ -313,11 +315,12 @@ def print_figures(opt_type):
         SSEU = np.empty([neps,nsig])
         SSEP = np.empty([neps,nsig])
         SSEZ = np.empty([neps,nsig])
+        Neffavg = np.empty([neps,nsig])
     
         iRerun = 1
         for ieps in range(neps):
             for isig in range(nsig):
-                SSErhoL[ieps,isig], SSEPsat[ieps,isig], SSErhov[ieps,isig], SSEU[ieps,isig], SSEP[ieps,isig], SSEZ[ieps,isig] = analyze_ITIC(iRerun)
+                SSErhoL[ieps,isig], SSEPsat[ieps,isig], SSErhov[ieps,isig], SSEU[ieps,isig], SSEP[ieps,isig], SSEZ[ieps,isig], Neffavg[ieps,isig] = analyze_ITIC(iRerun)
                 iRerun += 1
                 
         SSErhoL = np.log10(SSErhoL)
@@ -380,6 +383,15 @@ def print_figures(opt_type):
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE Z')
         f.savefig(compound+'ref_'+str(iRef)+'_SSEZ.pdf')
+        
+        f = plt.figure()
+        plt.contour(sig,eps,Neffavg)
+        plt.ylabel('$\epsilon$ (K)')
+        plt.xlabel('$\sigma$ (nm)')
+        plt.ylim([min(eps),max(eps)])
+        plt.xlim([min(sig),max(sig)])
+        plt.title(r'Average Neff')
+        f.savefig(compound+'ref_'+str(iRef)+'_Neff.pdf')
     
     else:
         
@@ -409,9 +421,10 @@ def print_figures(opt_type):
         SSEU = np.empty(nReruns)
         SSEP = np.empty(nReruns)
         SSEZ = np.empty(nReruns)
+        Neffavg = np.empty(nReruns)
         
         for iRerun in range(nReruns):
-            SSErhoL[iRerun], SSEPsat[iRerun], SSErhov[iRerun], SSEU[iRerun], SSEP[iRerun], SSEZ[iRerun] = analyze_ITIC(iRerun)
+            SSErhoL[iRerun], SSEPsat[iRerun], SSErhov[iRerun], SSEU[iRerun], SSEP[iRerun], SSEZ[iRerun], Neffavg[iRerun] = analyze_ITIC(iRerun)
                 
            
         f = plt.figure()
@@ -553,6 +566,21 @@ def print_figures(opt_type):
         ax = plt.colorbar(p)
         ax.set_label('log(SSE)')
         f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_SSEZ.pdf')
+        
+        f = plt.figure()
+        ax = f.add_subplot(111,projection='3d')
+        p = ax.scatter(sig_reruns[1:],eps_reruns[1:],lam_reruns[1:],c=Neffavg[1:],cmap='Blues',label='Iterations')
+        ax.scatter(sig_reruns[0],eps_reruns[0],lam_reruns[0],marker='x',c=Neffavg[0],cmap='Blues',label='Reference')
+        ax.set_ylabel('$\epsilon$ (K)')
+        ax.set_xlabel('$\sigma$ (nm)')
+        ax.set_zlabel(r'$\lambda$')
+        ax.set_zlim([min(lam),max(lam)])
+        ax.set_ylim([min(eps),max(eps)])
+        ax.set_xlim([min(sig),max(sig)])
+        ax.legend()
+        plt.title('Average Neff')
+        ax = plt.colorbar(p)
+        f.savefig(compound+'ref_'+str(iRef)+'_eps_sig_lam_Neff.pdf')
         
         f = plt.figure()
         ax = f.add_subplot(111,projection='3d')
