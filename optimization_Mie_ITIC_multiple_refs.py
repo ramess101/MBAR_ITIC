@@ -80,10 +80,31 @@ for run_type in ITIC:
 nTemps['Isochore']=2 #Need to figure out how to get this without hardcoding
     
 rho_mass = rho_sim * Mw / N_A * nm3_to_m3 #[kg/m3]
+#rho_mass = rho_sim * Mw / N_A * nm3_to_ml #[gm/ml]
 
 nStates = len(Temp_sim)
 
-#rho_mass = rho_sim * Mw / N_A * nm3_to_ml #[gm/ml]
+# Create a list of all the file paths (without the reference directory, just the run_type, rho, Temp)
+
+fpath_all = []
+
+for run_type in ITIC: 
+
+    for irho  in np.arange(0,nrhos[run_type]):
+
+        for iTemp in np.arange(0,nTemps[run_type]):
+
+            if run_type == 'Isochore':
+
+                fpath_all.append(run_type+'/rho'+str(irho)+'/T'+str(iTemp)+'/NVT_eq/NVT_prod/')
+
+            else:
+
+                fpath_all.append(run_type+'/rho_'+str(irho)+'/NVT_eq/NVT_prod/')
+                
+assert nStates == len(fpath_all), 'Number of states does not match number of file paths'
+
+print(fpath_all)
 
 print(os.getcwd())
 time.sleep(2)
@@ -538,160 +559,145 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
     Neff_MBAR = np.zeros([nStates,nSets])
     #print(nTemps['Isochore'])
     
-    iState = 0
-    
-    for run_type in ITIC: 
-    
-        for irho  in np.arange(0,nrhos[run_type]):
-    
-            for iTemp in np.arange(0,nTemps[run_type]):
-                
-                rho_state = rho_sim[iState]
-                Nstate = Nmol_sim[iState]
-    
-                if run_type == 'Isochore':
-    
-                    fpath = run_type+'/rho'+str(irho)+'/T'+str(iTemp)+'/NVT_eq/NVT_prod/'
-    
-                else:
-    
-                    fpath = run_type+'/rho_'+str(irho)+'/NVT_eq/NVT_prod/'
-                                
-                for iiRef in iRefs: # To initialize arrays we must know how many snapshots come from each reference
-                    
-                    en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+    for iState in range(nStates):
         
-                    nSnapsRef = len(en_p) #Number of snapshots
-                    #print(nSnapsRef)
-                    
-                    N_k[iiRef] = nSnapsRef # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
-                    
-                nSnaps = np.sum(N_k)
-                #print(N_k)
-                #print(nSnaps)
-                
-                t = np.zeros([nSets,nSnaps])
-                LJsr = np.zeros([nSets,nSnaps])
-                LJdc = np.zeros([nSets,nSnaps])
-                en = np.zeros([nSets,nSnaps])
-                p = np.zeros([nSets,nSnaps])
-                U_total = np.zeros([nSets,nSnaps])
-                LJ_total = np.zeros([nSets,nSnaps])
-                T = np.zeros([nSets,nSnaps])
-    
-                for iSet, iter in enumerate(iSets):
-                    
-                    frame_shift = 0
-                    
-                    for iiRef in iRefs:
-                        
-                        if basis_fun and iter > nRefs:
-                            # Use the reference as the starting point for basis functions, note that values are changed after assignment
-                            en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
-                            
-                        else:
-                        
-                            en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+        rho_state = rho_sim[iState]
+        Nstate = Nmol_sim[iState]
+        fpath = fpath_all[iState]
+                                    
+        for iiRef in iRefs: # To initialize arrays we must know how many snapshots come from each reference
             
-                        #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
-                        
-                        nSnapsRef = N_k[iiRef]
-                        #print(nSnapsRef)
-                        assert nSnapsRef == len(en_p), 'The value of N_k does not match the length of the energy file.'
-                                   
-                        for frame in xrange(nSnapsRef):
-                            t[iSet][frame+frame_shift] = float(en_p[frame].split()[g_t])
-                            LJsr[iSet][frame+frame_shift] = float(en_p[frame].split()[g_LJsr])
-                            LJdc[iSet][frame+frame_shift] = float(en_p[frame].split()[g_LJdc])
-                            en[iSet][frame+frame_shift] = float(en_p[frame].split()[g_en])
-                            p[iSet][frame+frame_shift] = float(en_p[frame].split()[g_p])
-                            T[iSet][frame+frame_shift] = float(en_p[frame].split()[g_T])
-                            #f.write(str(p[iSet][frame])+'\n')
-                        
-                        if basis_fun and iter > nRefs:
-                            sumr6lam = np.loadtxt('../ref'+str(iiRef)+'/'+fpath+'basis_functions')
-                            #en_p[:,g_LJsr], en_p[:,g_LJdc], en_p[:,g_p] = UP_basis_function(eps_sig_lam)
-                            LJsr_rerun, LJdc_rerun = UP_basis_functions(sumr6lam,eps_sig_lam,rho_state,Nstate)
-                            LJ_tot_rerun = LJsr_rerun + LJdc_rerun
-                            for frame in xrange(nSnapsRef):
-                                nonLJ = en[iSet][frame+frame_shift] - LJsr[iSet][frame+frame_shift] - LJdc[iSet][frame+frame_shift]
-                                LJsr[iSet][frame+frame_shift] = LJsr_rerun[frame]
-                                LJdc[iSet][frame+frame_shift] = LJdc_rerun[frame]
-                                en[iSet][frame+frame_shift] = LJ_tot_rerun[frame]+nonLJ
-                        
-                        frame_shift += nSnapsRef
-                        #print(frame_shift)
-                        #print(t[iSet])
+            en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+
+            nSnapsRef = len(en_p) #Number of snapshots
+            #print(nSnapsRef)
+            
+            N_k[iiRef] = nSnapsRef # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
+            
+        nSnaps = np.sum(N_k)
+        #print(N_k)
+        #print(nSnaps)
+        
+        t = np.zeros([nSets,nSnaps])
+        LJsr = np.zeros([nSets,nSnaps])
+        LJdc = np.zeros([nSets,nSnaps])
+        en = np.zeros([nSets,nSnaps])
+        p = np.zeros([nSets,nSnaps])
+        U_total = np.zeros([nSets,nSnaps])
+        LJ_total = np.zeros([nSets,nSnaps])
+        T = np.zeros([nSets,nSnaps])
+
+        for iSet, iter in enumerate(iSets):
+            
+            frame_shift = 0
+            
+            for iiRef in iRefs:
+                
+                if basis_fun and iter > nRefs:
+                    # Use the reference as the starting point for basis functions, note that values are changed after assignment
+                    en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+                    
+                else:
+                
+                    en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
     
-                    U_total[iSet] = en[iSet] # For TraPPEfs we just used potential because dispersion was erroneous. I believe we still want potential even if there are intramolecular contributions. 
-                    LJ_total[iSet] = LJsr[iSet] + LJdc[iSet] #In case we want just the LJ total (since that would be U_res as long as no LJ intra). We would still use U_total for MBAR reweighting but LJ_total would be the observable
-    
-                    #f.close()
+                #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
                 
-                u_total = U_to_u(U_total,Temp_sim[iState]) #Call function to convert U to u
-                   
-                u_kn = u_total
-    
-                #print(u_kn)
-                
-                mbar = MBAR(u_kn,N_k)
-                
-                (Deltaf_ij, dDeltaf_ij, Theta_ij) = mbar.getFreeEnergyDifferences(return_theta=True)
-                #print "effective sample numbers"
-                
-                #print mbar.computeEffectiveSampleNumber() #Check to see if sampled adequately
-                
-                # MRS: The observable we are interested in is U, internal energy.  The
-                # question is, WHICH internal energy.  We are interested in the
-                # internal energy generated from the ith potential.  So there are
-                # actually _three_ observables.
-                
-                # Now, the confusing thing, we can estimate the expectation of the
-                # three observables in three different states. We can estimate the
-                # observable of U_0 in states 0, 1 and 2, the observable of U_1 in
-                # states 0, 1, and 2, etc.
-                            
-                EUk = np.zeros([nSets,nSets])
-                dEUk = np.zeros([nSets,nSets])
-                EUkn = U_total #First expectation value is internal energy
-                EPk = np.zeros([nSets,nSets])
-                dEPk = np.zeros([nSets,nSets])
-                EPkn = p #Second expectation value is pressure
+                nSnapsRef = N_k[iiRef]
+                #print(nSnapsRef)
+                assert nSnapsRef == len(en_p), 'The value of N_k does not match the length of the energy file.'
                            
-                for iSet, iter in enumerate(iSets):
-                    
-                    (EUk[:,iSet], dEUk[:,iSet]) = mbar.computeExpectations(EUkn[iSet]) # potential energy of 0, estimated in state 0:2 (sampled from just 0)
-                    (EPk[:,iSet], dEPk[:,iSet]) = mbar.computeExpectations(EPkn[iSet]) # pressure of 0, estimated in state 0:2 (sampled from just 0)
-            
-                    #f = open('W_'+str(iSet),'w')
-                    #for frame in xrange(nSnaps):
-                        #f.write(str(mbar.W_nk[frame,iSet])+'\n')
-                    #f.close()
+                for frame in xrange(nSnapsRef):
+                    t[iSet][frame+frame_shift] = float(en_p[frame].split()[g_t])
+                    LJsr[iSet][frame+frame_shift] = float(en_p[frame].split()[g_LJsr])
+                    LJdc[iSet][frame+frame_shift] = float(en_p[frame].split()[g_LJdc])
+                    en[iSet][frame+frame_shift] = float(en_p[frame].split()[g_en])
+                    p[iSet][frame+frame_shift] = float(en_p[frame].split()[g_p])
+                    T[iSet][frame+frame_shift] = float(en_p[frame].split()[g_T])
+                    #f.write(str(p[iSet][frame])+'\n')
                 
-                    # MRS: Some of these are of no practical importance.  We are most
-                    # interested in the observable of U_0 in the 0th state, U_1 in the 1st
-                    # state, etc., or the diagonal of the matrix EA (EUk, EPk).
-                    U_MBAR[iState] = EUk.diagonal()
-                    dU_MBAR[iState] = dEUk.diagonal()
-                    P_MBAR[iState] = EPk.diagonal()
-                    dP_MBAR[iState] = dEPk.diagonal()
-                    Z_MBAR[iState] = P_MBAR[iState]/rho_sim[iState]/Temp_sim[iState]/R_g * bar_nm3_to_kJ_per_mole #EP [bar] rho_sim [1/nm3] Temp_sim [K] R_g [kJ/mol/K] #There is probably a better way to assign Z_MBAR
-                    Z1rho_MBAR[iState] = (Z_MBAR[iState] - 1.)/rho_mass[iState] * 1000. #[ml/gm]
-                    Neff_MBAR[iState] = mbar.computeEffectiveSampleNumber()
-    
-                iState += 1
+                if basis_fun and iter > nRefs:
+                    sumr6lam = np.loadtxt('../ref'+str(iiRef)+'/'+fpath+'basis_functions')
+                    #en_p[:,g_LJsr], en_p[:,g_LJdc], en_p[:,g_p] = UP_basis_function(eps_sig_lam)
+                    LJsr_rerun, LJdc_rerun = UP_basis_functions(sumr6lam,eps_sig_lam,rho_state,Nstate)
+                    LJ_tot_rerun = LJsr_rerun + LJdc_rerun
+                    for frame in xrange(nSnapsRef):
+                        nonLJ = en[iSet][frame+frame_shift] - LJsr[iSet][frame+frame_shift] - LJdc[iSet][frame+frame_shift]
+                        LJsr[iSet][frame+frame_shift] = LJsr_rerun[frame]
+                        LJdc[iSet][frame+frame_shift] = LJdc_rerun[frame]
+                        en[iSet][frame+frame_shift] = LJ_tot_rerun[frame]+nonLJ
+                
+                frame_shift += nSnapsRef
+                #print(frame_shift)
+                #print(t[iSet])
+
+            U_total[iSet] = en[iSet] # For TraPPEfs we just used potential because dispersion was erroneous. I believe we still want potential even if there are intramolecular contributions. 
+            LJ_total[iSet] = LJsr[iSet] + LJdc[iSet] #In case we want just the LJ total (since that would be U_res as long as no LJ intra). We would still use U_total for MBAR reweighting but LJ_total would be the observable
+
+            #f.close()
+        
+        u_total = U_to_u(U_total,Temp_sim[iState]) #Call function to convert U to u
+           
+        u_kn = u_total
+
+        #print(u_kn)
+        
+        mbar = MBAR(u_kn,N_k)
+        
+        (Deltaf_ij, dDeltaf_ij, Theta_ij) = mbar.getFreeEnergyDifferences(return_theta=True)
+        #print "effective sample numbers"
+        
+        #print mbar.computeEffectiveSampleNumber() #Check to see if sampled adequately
+        
+        # MRS: The observable we are interested in is U, internal energy.  The
+        # question is, WHICH internal energy.  We are interested in the
+        # internal energy generated from the ith potential.  So there are
+        # actually _three_ observables.
+        
+        # Now, the confusing thing, we can estimate the expectation of the
+        # three observables in three different states. We can estimate the
+        # observable of U_0 in states 0, 1 and 2, the observable of U_1 in
+        # states 0, 1, and 2, etc.
                     
-        #Z_MBAR = P_MBAR/rho_sim/Temp_sim/R_g * bar_nm3_to_kJ_per_mole #EP [bar] rho_sim [1/nm3] Temp_sim [K] R_g [kJ/mol/K] #Unclear how to assing Z_MBAR without having it inside loops
+        EUk = np.zeros([nSets,nSets])
+        dEUk = np.zeros([nSets,nSets])
+        EUkn = U_total #First expectation value is internal energy
+        EPk = np.zeros([nSets,nSets])
+        dEPk = np.zeros([nSets,nSets])
+        EPkn = p #Second expectation value is pressure
+                   
+        for iSet, iter in enumerate(iSets):
+            
+            (EUk[:,iSet], dEUk[:,iSet]) = mbar.computeExpectations(EUkn[iSet]) # potential energy of 0, estimated in state 0:2 (sampled from just 0)
+            (EPk[:,iSet], dEPk[:,iSet]) = mbar.computeExpectations(EPkn[iSet]) # pressure of 0, estimated in state 0:2 (sampled from just 0)
     
-                            
-                #print 'Expectation values for internal energy in kJ/mol:'
-                #print(U_MBAR)
-                #print 'MBAR estimates of uncertainty in internal energy in kJ/mol:'
-                #print(dU_MBAR)
-                #print 'Expectation values for pressure in bar:'
-                #print(P_MBAR)
-                #print 'MBAR estimates of uncertainty in pressure in bar:'
-                #print(dP_MBAR)
+            #f = open('W_'+str(iSet),'w')
+            #for frame in xrange(nSnaps):
+                #f.write(str(mbar.W_nk[frame,iSet])+'\n')
+            #f.close()
+        
+            # MRS: Some of these are of no practical importance.  We are most
+            # interested in the observable of U_0 in the 0th state, U_1 in the 1st
+            # state, etc., or the diagonal of the matrix EA (EUk, EPk).
+            U_MBAR[iState] = EUk.diagonal()
+            dU_MBAR[iState] = dEUk.diagonal()
+            P_MBAR[iState] = EPk.diagonal()
+            dP_MBAR[iState] = dEPk.diagonal()
+            Z_MBAR[iState] = P_MBAR[iState]/rho_sim[iState]/Temp_sim[iState]/R_g * bar_nm3_to_kJ_per_mole #EP [bar] rho_sim [1/nm3] Temp_sim [K] R_g [kJ/mol/K] #There is probably a better way to assign Z_MBAR
+            Z1rho_MBAR[iState] = (Z_MBAR[iState] - 1.)/rho_mass[iState] * 1000. #[ml/gm]
+            Neff_MBAR[iState] = mbar.computeEffectiveSampleNumber()
+            
+#Z_MBAR = P_MBAR/rho_sim/Temp_sim/R_g * bar_nm3_to_kJ_per_mole #EP [bar] rho_sim [1/nm3] Temp_sim [K] R_g [kJ/mol/K] #Unclear how to assing Z_MBAR without having it inside loops
+
+                    
+        #print 'Expectation values for internal energy in kJ/mol:'
+        #print(U_MBAR)
+        #print 'MBAR estimates of uncertainty in internal energy in kJ/mol:'
+        #print(dU_MBAR)
+        #print 'Expectation values for pressure in bar:'
+        #print(P_MBAR)
+        #print 'MBAR estimates of uncertainty in pressure in bar:'
+        #print(dP_MBAR)
     
     U_rerun = U_MBAR[:,-1]
     dU_rerun = dU_MBAR[:,-1]
@@ -707,24 +713,16 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
     for iSet, iter in enumerate(iSets):
     
         f = open('MBAR_ref'+str(iRef)+'rr'+str(iter),'w')
-    
-        iState = 0
-    
-        for run_type in ITIC:
-    
-            for irho in np.arange(0,nrhos[run_type]):
-      
-                for iTemp in np.arange(0,nTemps[run_type]):
+        
+        for iState in range(nStates):
             
-                    f.write(str(U_MBAR[iState][iSet])+'\t')
-                    f.write(str(dU_MBAR[iState][iSet])+'\t')
-                    f.write(str(P_MBAR[iState][iSet])+'\t')
-                    f.write(str(dP_MBAR[iState][iSet])+'\t')
-                    f.write(str(Z_MBAR[iState][iSet])+'\t')
-                    f.write(str(Z1rho_MBAR[iState][iSet])+'\t')
-                    f.write(str(Neff_MBAR[iState][iSet])+'\n')
-                    
-                    iState += 1
+            f.write(str(U_MBAR[iState][iSet])+'\t')
+            f.write(str(dU_MBAR[iState][iSet])+'\t')
+            f.write(str(P_MBAR[iState][iSet])+'\t')
+            f.write(str(dP_MBAR[iState][iSet])+'\t')
+            f.write(str(Z_MBAR[iState][iSet])+'\t')
+            f.write(str(Z1rho_MBAR[iState][iSet])+'\t')
+            f.write(str(Neff_MBAR[iState][iSet])+'\n')
     
         f.close()
     
