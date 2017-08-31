@@ -53,16 +53,33 @@ dr = r[1] - r[0]
 class BasePCFR(object):
     __metaclass__ = abc.ABCMeta
     
-    def __init__(self, r, RDF, rho, Temp):
+    def __init__(self, r, RDF, rho, Temp, ref):
         self.r = r
         self.RDF = RDF
         self.rho = rho
         self.Temp = Temp
-
+        self.ref = ref
+        
     @abc.abstractmethod
     def get_Unb(self):
         """ Return the nonbonded potential """
         return None
+    
+    def get_Unb_ref(self):
+        """ Return the nonbonded potential for the reference system """
+        if not self.ref:
+            print('This is the reference system')
+            self.Unb_ref = self.get_Unb()
+        else:
+            print('Different reference system')
+            self.Unb_ref = self.ref.get_Unb()
+        return self.Unb_ref
+    
+    def get_deltaUnb(self):
+        deltaUnb = self.get_Unb() - self.get_Unb_ref()
+        deltaUnb[deltaUnb>1e3] = 1e3
+        deltaUnb[deltaUnb<-1e3] = -1e3
+        return deltaUnb
     
     @abc.abstractmethod
     def get_Ucorr(self):
@@ -79,6 +96,17 @@ class BasePCFR(object):
     
     def smooth_RDF(self):
         pass
+    
+    def pred_RDF(self):
+        """ Predicts the RDF based on the Unb and Unb_ref"""
+        RDF_hat = self.get_RDF()
+        for iTemp, Temp_i in enumerate(self.Temp):
+            rescale = np.exp(-self.get_deltaUnb()/Temp_i)
+            plt.plot(self.r,rescale)
+            plt.ylim([0,2])
+            plt.show()
+            RDF_hat[:,iTemp] *= rescale        
+        return RDF_hat
        
     def calc_Uint(self,RDF_pair):
         Uint = (self.get_Unb()*RDF_pair*self.r**2*dr).sum() # [K*nm^3]
@@ -110,6 +138,39 @@ class BasePCFR(object):
             RDF_state = self.RDF[:,istate*N_pair:istate*N_pair+N_pair]
             Ureal.append(R_g * rho_state * self.calc_Uhat(RDF_state) * N_int)
         return Ureal
+    
+#def RDF_0(U,T):
+#    return np.exp(-U/T)
+#
+#def RDF_hat_calc(RDF_real, RDF_0_ref,RDF_0_hat):
+#    RDF_0_ref_zero = RDF_0_ref[RDF_0_ref<1e-2] # Using exactly 0 leads to some unrealistic ratios at very close distances
+#    RDF_0_ref_non_zero = RDF_0_ref[RDF_0_ref>1e-2]
+#    RDF_real_non_zero = RDF_real[RDF_0_ref>1e-2]
+#    RDF_ratio_non_zero = RDF_real_non_zero / RDF_0_ref_non_zero
+#    RDF_ones = np.zeros(len(RDF_0_ref_zero))
+#    RDF_ratio = np.append(RDF_ones,RDF_ratio_non_zero)
+#    RDF_hat = RDF_ratio * RDF_0_hat
+#    #RDF_hat = RDF_real # Override so that not scaling
+##    
+##    print(len(np.array(RDF_0_ref)))
+##    print(len(RDF_0_hat))
+##    print(len(RDF_real))
+##    print(len(RDF_hat))
+#    
+##    if print_RDFs == 1:
+##        plt.scatter(r,RDF_real,label='Ref')
+##        plt.scatter(r,RDF_0_ref,label='Ref_0')
+##        plt.scatter(r,RDF_0_hat,label='Hat_0')
+##        plt.scatter(r,RDF_hat,label='Hat')
+##        plt.legend()
+##        plt.show()
+#        #plt.scatter(r,RDF_ratio)
+#        #plt.show()
+#        
+#        #plt.scatter(r,-np.log(RDF_ratio))
+#        #plt.show()
+#    
+#    return RDF_hat
     
 #    def calc_Udev(self):
 #        Udev = self.Uens - self.get_Uref()
@@ -158,11 +219,11 @@ class BasePCFR(object):
 #    return U_L_hat
         
 class LennardJones(BasePCFR):
-    def __init__(self, r, RDF, rho, T, epsilon, sigma, n=12., m =6.,**kwargs):
-        BasePCFR.__init__(self, r, RDF, rho, T)
+    def __init__(self, r, RDF, rho, T, epsilon, sigma, n=12., m =6., ref=None, **kwargs):
+        BasePCFR.__init__(self, r, RDF, rho, T, ref)
         for key in kwargs:
-            if key == 'ref':
-                print('This is the reference system')
+            if key == 'place holder':
+                pass                
         self.epsilon = epsilon
         self.sigma = sigma
         self.n = n
@@ -180,14 +241,14 @@ class LennardJones(BasePCFR):
     """
         epsilon, sigma, n, m, r, C = self.epsilon, self.sigma, self.n, self.m, self.r, self.C
         U = C*epsilon*((r/sigma)**-n - (r/sigma)**-m)
-        U[U>1e10] = np.max(U[U<1e10]) # No need to store extremely large values of U
+        U[U>1e8] = np.max(U[U<1e8]) # No need to store extremely large values of U
         return U        
     
     def get_Ucorr(self):
-        epsilon, sigma, n, m, r_c_plus, C = self.epsilon, self.sigma, self.n, self.m, self.r_c_plus, self.C
+        epsilon, sigma, n, r_c_plus, C = self.epsilon, self.sigma, self.n, self.r_c_plus, self.C
         U = C*epsilon*((1./(n-3.))*r_c_plus**(3.-n) - (1./3.) * r_c_plus **(-3.))*sigma**3. #[K * nm^3]
         return U
-    
+        
 #class Exp6(BasePCFR):
 #    def __init__(self, epsilon, alpha, r_m, RDF, rho, T):
 #        BasePCFR.__init__(self, RDF, rho, T)
@@ -198,11 +259,34 @@ class LennardJones(BasePCFR):
 #    def get_ur(self):
 #        return [1,2,3]        
 
-LJref = LennardJones(r,RDFs_highP, rhoL_highP, T_highP, eps_ref, sig_ref, lam_ref,ref=True)
+LJref = LennardJones(r,RDFs_highP, rhoL_highP, T_highP, eps_ref, sig_ref, lam_ref)
 Udev = U_L_highP_ens - LJref.calc_Ureal()
-LJPotoff = LennardJones(r,RDFs_highP, rhoL_highP, T_highP, 121.25, 0.3783, 16.)
+LJPotoff = LennardJones(r,RDFs_highP, rhoL_highP, T_highP, 121.25, 0.3783, 16., ref=LJref)
 UPotoff = LJPotoff.calc_Ureal() + Udev
+LJTraPPE = LennardJones(r,RDFs_highP,rhoL_highP,T_highP,98.,0.375,12., ref=LJref)
 #e6 = Exp6(100, 0.3, 4, [], rho, T)
+
+#plt.plot(r,LJref.get_Unb_ref(),label='Ref Ref')
+#plt.plot(r,LJPotoff.get_Unb_ref(),label='Potoff Ref')
+#plt.plot(r,LJTraPPE.get_Unb_ref(),label='TraPPE Ref')
+#plt.plot(r,LJPotoff.get_Unb(),label='Potoff')
+#plt.plot(r,LJTraPPE.get_Unb(),label='TraPPE')
+plt.plot(r,LJref.get_deltaUnb(),label='Ref deltaU')
+plt.plot(r,LJPotoff.get_deltaUnb(),label='Potoff deltaU')
+plt.plot(r,LJTraPPE.get_deltaUnb(),label='TraPPE deltaU')
+plt.xlim([0,0.5])
+plt.ylim([-2000,2000])
+plt.legend()
+plt.show()
+
+RDFref = LJref.get_RDF()
+RDFPotoff = LJPotoff.pred_RDF()
+RDFTraPPE = LJTraPPE.pred_RDF()
+
+plt.plot(r,RDFref[:,0],'r')
+plt.plot(r,RDFPotoff[:,0],'b')
+plt.plot(r,RDFTraPPE[:,0],'g')
+plt.show()
 
 class FFComparator(object):
     def __init__(self, reference,*args,**kwargs):
