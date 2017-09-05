@@ -299,6 +299,8 @@ class Mie(BasePCFR):
 
 def main():
     
+    model = 'Mie'
+
     eps_ref = 117.181 #[K]
     sig_ref = 0.380513 #[nm]
     lam_ref = 15.6796
@@ -317,8 +319,9 @@ def main():
                          
     # I think the values for this array are wrong. Should be 12.06117 
     rhoL_highP = np.array([12.06117]*len(T_highP)) #[1/nm**3]
+    # Testing out the pressure calculation with a different rho
+
     
-    # Example of how to initiate the reference system
     LJref = Mie(r,RDFs_highP, rhoL_highP, T_highP, eps_ref, sig_ref, lam_ref)
     Udev = U_L_highP_ens - LJref.calc_Ureal()
     Pdev = Pref_ens - LJref.calc_Preal()
@@ -331,6 +334,70 @@ def main():
     UTraPPE = LJTraPPE.calc_Ureal()
     LJPotoff = Mie(r,RDFs_highP, rhoL_highP, T_highP, 121.25, 0.3783, 16., ref=LJref,devU=Udev,devP=Pdev)
     UPotoff = LJPotoff.calc_Ureal()
+    
+    #This needs to be above the LJref reassignment
+    #RDFnosmooth = LJref.get_RDF()
+    #Udevnosmooth = Udev.copy()
+    #RDFsmooth = LJref.smooth_RDF()
+    #Udevsmooth = U_L_highP_ens - LJref.calc_Ureal()
+    #plt.plot(r,RDFnosmooth[:,3],label='No smooth')
+    #plt.plot(r,RDFsmooth[:,3],label='Smooth')
+    #plt.legend()
+    #plt.show()
+    
+    #plt.scatter(T_highP,Udevnosmooth,label='No smooth')
+    #plt.scatter(T_highP,Udevsmooth,label='Smooth')
+    #plt.legend()
+    #plt.show()
+    
+    RDFref = LJref.pred_RDF()
+    RDFPotoff = LJPotoff.pred_RDF()
+    RDFTraPPE = LJTraPPE.pred_RDF()
+    
+    plt.plot(r,RDFref[:,0],'r',label='Ref')
+    plt.plot(r,RDFPotoff[:,0],'b',label='Potoff')
+    plt.plot(r,RDFTraPPE[:,0],'g',label='TraPPE')
+    plt.legend()
+    plt.show()
+    
+    plt.plot(r/LJref.calc_rmin(),RDFref[:,0],'r',label='Ref')
+    plt.plot(r/LJPotoff.calc_rmin(),RDFPotoff[:,0],'b',label='Potoff')
+    plt.plot(r/LJTraPPE.calc_rmin(),RDFTraPPE[:,0],'g',label='TraPPE')
+    plt.legend()
+    plt.show()
+    
+    plt.plot(r/LJref.sigma,RDFref[:,0],'r',label='Ref')
+    plt.plot(r/LJPotoff.sigma,RDFPotoff[:,0],'b',label='Potoff')
+    plt.plot(r/LJTraPPE.sigma,RDFTraPPE[:,0],'g',label='TraPPE')
+    plt.legend()
+    plt.show()
+    
+    plt.plot(r/LJref.calc_rmin(),LJref.get_Unb(),'r',label='Ref')
+    plt.plot(r/LJPotoff.calc_rmin(),LJPotoff.get_Unb(),'b',label='Potoff')
+    plt.plot(r/LJTraPPE.calc_rmin(),LJTraPPE.get_Unb(),'g',label='TraPPE')
+    plt.ylim([-125,125])
+    plt.legend()
+    plt.show()
+    
+    plt.plot(r/LJref.sigma,LJref.get_Unb(),'r',label='Ref')
+    plt.plot(r/LJPotoff.sigma,LJPotoff.get_Unb(),'b',label='Potoff')
+    plt.plot(r/LJTraPPE.sigma,LJTraPPE.get_Unb(),'g',label='TraPPE')
+    plt.plot(r/LJhat(100,0.4,12).sigma,LJhat(100,0.4,12).get_Unb(),'k',label='Large')
+    plt.ylim([-125,125])
+    plt.legend()
+    plt.show()
+    
+    plt.plot(T_highP,U_L_highP_ens,label='Ref')
+    plt.plot(T_highP,UPotoff,label='Potoff')
+    plt.plot(T_highP,UTraPPE,label='TraPPE')  
+    plt.scatter(T_highP,UPotoff_ens,label='Potoff Sim')
+    plt.scatter(T_TraPPE,UTraPPE_ens,label='TraPPE Sim')
+    plt.legend()
+    plt.show()  
+    
+    Pref = LJref.calc_Preal()
+    PTraPPE = LJTraPPE.calc_Preal()
+    PPotoff = LJPotoff.calc_Preal()
     
     Zref = LJref.calc_Z()
     ZTraPPE = LJTraPPE.calc_Z()
@@ -348,6 +415,65 @@ def main():
     plt.scatter(1000./T_highP,Zref_ens,label='Ref Ens')
     plt.legend()
     plt.show()
+    
+    #class FFComparator(object):
+    #    def __init__(self, reference,*args,**kwargs):
+    #        self.reference = reference
+    #        self.Udev = U_L_highP_ens - self.reference.calc_Ureal()
+    #        for key in kwargs:
+    #            if key == 'model':
+    #                if kwargs[key] == 'LJ':
+    #                    self.epsilon = kwargs['epsilon']
+    #                    self.sigma = kwargs['sigma']
+    #                    self.lam = kwargs['lam']
+    #                    perturbed = LennardJones(self.reference.r, self.reference.RDF, self.reference.rho, self.reference.Temp, self.epsilon,self.sigma,self.lam) 
+    ##### Maybe I can just modify LennardJones so that if it is a reference it does things slightly differently. Or maybe
+    ## they can stay the same since the deltaU would be zero and so the RDF should be constant and Udev would be as well. 
+    #### Yeah, I can just have ref as a keyword and if it is a reference then it becomes its' own reference, effectively.        
+    #    def process_one(self, epsilon_i_sigma_i):
+    #        epsilon_i, sigma_i = epsilon_i_sigma_i
+    ##    def process_one(self, parameters):
+    ##        self.reference.process(parameters)
+    #        U = 30 # From these parameters
+    #        P = 300
+    #        Uhat = self.reference.calc_Utotal()
+    #        return Uhat-U+epsilon_i, P
+    #    
+    #comp = FFComparator(LJref,epsilon=121.25,sigma=0.3783,lam=16.,model='LJ')
+    #import itertools
+    #inputs = itertools.product([100,200,300], [0.3,0.4,0.5])
+    #
+    ##from  multiprocessing import Pool
+    ##p = Pool(5)
+    #outputs = map(comp.process_one, inputs)
+    #print(list(outputs))
+    
+    #
+    #
+    #class ref_ff:
+    #    def __init__(self, *params):
+    #        self.params = None
+    ##    def __init__(self, *coeffs):
+    ##        self.coeffs = coeffs
+    #
+    ## The general concept for this code is:
+    ## 1) Input:
+    ##    a) Reference system
+    ##        i) PCF
+    ##        ii) Force field parameters
+    ##    b) Target system
+    ##        i) Force field parameters
+    ##    c) State points
+    ##        i) Temperature
+    ##        ii) Density
+    ##    d) Compound details
+    ##        i) Molecular weight
+    ##       ii) Number/type of interaction sites
+    ##    e) Specific type of PCFR
+    ## 2) Output:
+    ##    a) U
+    ##    b) P
+    #    
 
 if __name__ == '__main__':
     
