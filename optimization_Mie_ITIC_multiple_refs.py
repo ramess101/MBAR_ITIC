@@ -11,6 +11,7 @@ import time
 from scipy.optimize import minimize, minimize_scalar, fsolve
 import scipy.integrate as integrate
 from create_tab import *
+from PCF_PSO_modules import *
 
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
@@ -587,19 +588,19 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
         LJ_total = np.zeros([nSets,nSnaps])
         T = np.zeros([nSets,nSnaps])
 
-        for iSet, iter in enumerate(iSets):
+        for iSet, enum in enumerate(iSets):
             
             frame_shift = 0
             
             for iiRef in iRefs:
                 
-                if basis_fun and iter > nRefs:
+                if basis_fun and enum > nRefs:
                     # Use the reference as the starting point for basis functions, note that values are changed after assignment
                     en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
                     
                 else:
                 
-                    en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+                    en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,enum),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
     
                 #f = open('p_rho'+str(irho)+'_T'+str(iTemp)+'_'+str(iEps),'w')
                 
@@ -616,7 +617,7 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
                     T[iSet][frame+frame_shift] = float(en_p[frame].split()[g_T])
                     #f.write(str(p[iSet][frame])+'\n')
                 
-                if basis_fun and iter > nRefs:
+                if basis_fun and enum > nRefs:
                     sumr6lam = np.loadtxt('../ref'+str(iiRef)+'/'+fpath+'basis_functions')
                     #en_p[:,g_LJsr], en_p[:,g_LJdc], en_p[:,g_p] = UP_basis_function(eps_sig_lam)
                     LJsr_rerun, LJdc_rerun = UP_basis_functions(sumr6lam,eps_sig_lam,rho_state,Nstate)
@@ -666,7 +667,7 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
         dEPk = np.zeros([nSets,nSets])
         EPkn = p #Second expectation value is pressure
                    
-        for iSet, iter in enumerate(iSets):
+        for iSet, enum in enumerate(iSets):
             
             (EUk[:,iSet], dEUk[:,iSet]) = mbar.computeExpectations(EUkn[iSet]) # potential energy of 0, estimated in state 0:2 (sampled from just 0)
             (EPk[:,iSet], dEPk[:,iSet]) = mbar.computeExpectations(EPkn[iSet]) # pressure of 0, estimated in state 0:2 (sampled from just 0)
@@ -710,9 +711,9 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
     #print(P_rerun)
     #print(dP_rerun)
     
-    for iSet, iter in enumerate(iSets):
+    for iSet, enum in enumerate(iSets):
     
-        f = open('MBAR_ref'+str(iRef)+'rr'+str(iter),'w')
+        f = open('MBAR_ref'+str(iRef)+'rr'+str(enum),'w')
         
         for iState in range(nStates):
             
@@ -725,6 +726,169 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
             f.write(str(Neff_MBAR[iState][iSet])+'\n')
     
         f.close()
+    
+    return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
+
+def PCFR_estimates(eps_sig_lam,iRerun,basis_fun):
+      
+    f = open('eps_all','a')
+    f.write('\n'+str(eps_sig_lam[0]))
+    f.close()
+    
+    f = open('sig_all','a')
+    f.write('\n'+str(eps_sig_lam[1]))
+    f.close()
+    
+    f = open('lam_all','a')
+    f.write('\n'+str(eps_sig_lam[2]))
+    f.close()
+    
+    iSets = [int(iRerun)]*(nRefs + 1) #Plus 1 because we need one more for the rerun  
+    
+    for iiRef in iRefs: #We want to perform analysis with each reference
+    
+        fpathRef = "../ref"+str(iiRef)+"/"
+        print(fpathRef)
+    
+        f = open(fpathRef+'eps_it','w')
+        f.write(str(eps_sig_lam[0]))
+        f.close()
+    
+        f = open(fpathRef+'sig_it','w')
+        f.write(str(eps_sig_lam[1]))
+        f.close()
+    
+        f = open(fpathRef+'lam_it','w')
+        f.write(str(eps_sig_lam[2]))
+        f.close()
+        
+        f = open(fpathRef+'iRerun','w')
+        f.write(str(iRerun))
+        f.close()
+        
+        iSets[iiRef] = iiRef
+        
+        print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
+    
+        f = open('eps_sig_lam_all','a')
+        f.write(str(eps_sig_lam[0])+'\t')
+        f.write(str(eps_sig_lam[1])+'\t')
+        f.write(str(eps_sig_lam[2])+'\n')
+        f.close()
+        
+        # The question is where the store the reference values, RDFs, and ensemble averages.
+        # I can read in the snapshots for the reference and calculate the ensemble averages. Or find a way to read from the logfiles.
+        # For the MBAR approach I should also store the snapshots for the previous references as an object of a class so that I don't
+        # have to keep opening up files, etc.
+        
+#        eps_ref = 117.181 #[K]
+#        sig_ref = 0.380513 #[nm]
+#        lam_ref = 15.6796
+#              
+#        fname = 'H:/PCF-PSO/RDF_Iteration_4_corrected_gromacs_Non_VLE.txt'
+#        RDFs_highP = np.loadtxt(fname,delimiter='\t')
+#        RDFs_highP = RDFs_highP[1:,:] 
+
+#        U_L_highP_ens = np.array([-15.37811761, -15.17739261, -14.56776761, -13.99989261, -13.46889261, -12.96789261, -12.49721761, -12.03651761, -11.60244261, -11.16036761, -10.74169261])
+                         
+#        # Example of how to initiate the reference system
+#        LJref = Mie(r,RDFs_highP, rhoL_highP, T_highP, eps_ref, sig_ref, lam_ref)
+#        Udev = U_L_highP_ens - LJref.calc_Ureal()
+#        Pdev = Pref_ens - LJref.calc_Preal()
+#        LJref = Mie(r,RDFs_highP, rhoL_highP, T_highP, eps_ref, sig_ref, lam_ref, ref=LJref,devU=Udev,devP=Pdev) #Redefine the reference system
+#        
+#        LJhat = lambda eps, sig, lam: Mie(r,RDFs_highP,rhoL_highP, T_highP, eps, sig, lam, ref=LJref,devU=Udev,devP=Pdev)
+#        Uhat = lambda eps,sig,lam: LJhat(eps,sig,lam).calc_Ureal()
+                    
+    g_start = 28 #Row where data starts in g_energy output
+    g_t = 0 #Column for the snapshot time
+    g_LJsr = 1 #Column where the 'Lennard-Jones' short-range interactions are located
+    g_LJdc = 2 #Column where the 'Lennard-Jones' dispersion corrections are located
+    g_en = 3 #Column where the potential energy is located
+    g_T = 4 #Column where T is located
+    g_p = 5 #Column where p is located
+    
+    nSets = len(iSets)
+    
+    N_k = [0]*nSets #This makes a list of nSets elements, need to be 0 for MBAR to work
+        
+    # Analyze snapshots
+    
+    U_MBAR = np.zeros([nStates,nSets])
+    dU_MBAR = np.zeros([nStates,nSets])
+    P_MBAR = np.zeros([nStates,nSets])
+    dP_MBAR = np.zeros([nStates,nSets])
+    Z_MBAR = np.zeros([nStates,nSets])
+    Z1rho_MBAR = np.zeros([nStates,nSets])
+    Neff_MBAR = np.zeros([nStates,nSets])
+    #print(nTemps['Isochore'])
+    
+    for iState in range(nStates):
+        
+        rho_state = rho_sim[iState]
+        Nstate = Nmol_sim[iState]
+        fpath = fpath_all[iState]
+                                    
+        for iiRef in iRefs: # To initialize arrays we must know how many snapshots come from each reference
+            
+            en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+
+            nSnapsRef = len(en_p) #Number of snapshots
+            #print(nSnapsRef)
+            
+            N_k[iiRef] = nSnapsRef # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
+            
+        nSnaps = np.sum(N_k)
+        #print(N_k)
+        #print(nSnaps)
+        
+        t = np.zeros([nSets,nSnaps])
+        LJsr = np.zeros([nSets,nSnaps])
+        LJdc = np.zeros([nSets,nSnaps])
+        en = np.zeros([nSets,nSnaps])
+        p = np.zeros([nSets,nSnaps])
+        U_total = np.zeros([nSets,nSnaps])
+        LJ_total = np.zeros([nSets,nSnaps])
+        T = np.zeros([nSets,nSnaps])
+
+        for iSet, enum in enumerate(iSets):
+            
+            frame_shift = 0
+            
+            for iiRef in iRefs:
+                
+                if basis_fun and enum > nRefs:
+                    # Use the reference as the starting point for basis functions, note that values are changed after assignment
+                    en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+                    
+                else:
+                
+                    en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,enum),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+    
+    U_rerun = U_MBAR[:,-1]
+    dU_rerun = dU_MBAR[:,-1]
+    P_rerun = P_MBAR[:,-1]
+    dP_rerun = dP_MBAR[:,-1]
+    Z_rerun = Z_MBAR[:,-1]
+    
+    #print(U_rerun)
+    #print(dU_rerun)
+    #print(P_rerun)
+    #print(dP_rerun)
+    
+    f = open('MBAR_ref'+str(iRef)+'rr'+str(iRerun),'w')
+    
+    for iState in range(nStates):
+        
+        f.write(str(U_PCFR[iState])+'\t')
+        f.write(str(dU_PCFR[iState])+'\t')
+        f.write(str(P_PCFR[iState])+'\t')
+        f.write(str(dP_PCFR[iState])+'\t')
+        f.write(str(Z_PCFR[iState])+'\t')
+        f.write(str(Z1rho_PCFR[iState])+'\t')
+        f.write(str(Neff_PCFR[iState])+'\n')
+
+    f.close()
     
     return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
 
@@ -882,9 +1046,9 @@ def generate_basis_functions(iRef,iBasis,Cmatrix):
                 LJ_total = np.zeros([nSets,nSnaps])
                 T = np.zeros([nSets,nSnaps])
     
-                for iSet, iter in enumerate(iBasis):
+                for iSet, enum in enumerate(iBasis):
                         
-                    en_p = open('../ref'+str(iRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iRef,iter),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
+                    en_p = open('../ref'+str(iRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iRef,enum),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
                   
                     for frame in xrange(nSnaps):
                         t[iSet][frame] = float(en_p[frame].split()[g_t])
