@@ -828,6 +828,10 @@ def PCFR_estimates(eps_sig_lam,iRerun,PCFR_hat):
     f.write(str(eps_sig_lam[2])+'\n')
     f.close()
     
+    f = open('iRerun','w')
+    f.write(str(iRerun))
+    f.close()
+    
     PCFR_eps_sig_lam = PCFR_hat(eps_sig_lam)
     U_PCFR = PCFR_eps_sig_lam.calc_Ureal()
     dU_PCFR = U_PCFR * 0.
@@ -1404,12 +1408,13 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,cons_lam=True,basis_fu
                 if f_sim < f_opt:
                     f_opt = f_sim
                     eps_opt = eps_sim
-                    sig_opt = sig_sim                
+                    sig_opt = sig_sim 
+                    lam_opt = lam_sim
         
     elif opt_type == 'points':
         objective(eps_sig_lam_guess)
         eps_sig_lam_spec = np.array([121.25,0.3783,16.])
-        objective_ITIC(eps_sig_lam_spec,prop_type,basis_fun)
+        objective_ITIC(eps_sig_lam_spec,prop_type,basis_fun,PCFR_hat)
         
     elif opt_type == 'SLSQP':
         eps_sig_lam_guess_scaled = eps_sig_lam_guess/eps_sig_lam_guess
