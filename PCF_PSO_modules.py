@@ -7,18 +7,19 @@ from scipy.optimize import minimize
 import sys
 import abc
 
+# Constants
 R_g = 8.314472e-3 # [kJ/mol/K]
 k_B = 13.806505 # [kPa * nm**3 / K]
+kPa_to_bar = 1./100.
 
 ## Simulation constants
 #
-Nmol = 400 # Number of molecules
 
 ## Gromacs uses a different format
 #    
-N_sites = 1
-N_pair = N_sites**2
-N_int = 4.
+#N_sites = 1
+N_pair = 1**2
+N_inter = 4
 
 ## RDF bins
 
@@ -33,10 +34,11 @@ r = r - dr/2. # I believe the histogram centers are different than the values re
 class BasePCFR(object):
     __metaclass__ = abc.ABCMeta
     
-    def __init__(self, r, RDF, rho, Temp, ref,devU,devP):
+    def __init__(self, r, RDF, rho, Nmol, Temp, ref,devU,devP):
         self.r = r
         self.RDF = RDF
         self.rho = rho
+        self.Nmol = Nmol
         self.Temp = Temp
         self.ref = ref
         if not self.ref:
@@ -176,7 +178,7 @@ class BasePCFR(object):
         #for rho_state, Temp_state in zip(self.rho, self.Temp):
         for istate, rho_state in enumerate(self.rho):
             RDF_state = RDF_hat[:,istate*N_pair:istate*N_pair+N_pair]
-            Ureal.append(R_g * rho_state * self.calc_Uhat(RDF_state) * N_int)
+            Ureal.append(R_g * rho_state * self.calc_Uhat(RDF_state) * N_inter * self.Nmol[istate])
         Ureal = np.array(Ureal) + self.devU
         return Ureal
     
@@ -218,23 +220,28 @@ class BasePCFR(object):
         #for rho_state, Temp_state in zip(self.rho, self.Temp):
         for istate, rho_state in enumerate(self.rho):
             RDF_state = RDF_hat[:,istate*N_pair:istate*N_pair+N_pair]
-            Preal.append(k_B * rho_state**2 * self.calc_Phat(RDF_state) * N_int)
+            Preal.append(k_B * rho_state**2 * self.calc_Phat(RDF_state) * N_inter)
         Preal += self.calc_Pideal()
+        Preal *= kPa_to_bar
         Preal = np.array(Preal) + self.devP
-        return Preal
+        return Preal #Pressure in bar
     
     def calc_Z(self):
         """ Returns the compressibility factor. """
-        return self.calc_Preal() / self.rho / self.Temp / k_B
+        return self.calc_Preal() / self.rho / self.Temp / k_B / kPa_to_bar
+    
+    def calc_Z1rho(self):
+        """ Returns Z-1/rho. """
+        return self.calc_Z() - 1. / self.rho  #Need to convert this rho into the correct units, currently just a placeholder
             
 class Mie(BasePCFR):
-    def __init__(self, r, RDF, rho, T, epsilon, sigma, n=12., m =6., ref=None,devU=0,devP=0, **kwargs):
+    def __init__(self, r, RDF, rho, Nmol, T, epsilon, sigma, n=12., m =6., ref=None,devU=0,devP=0, **kwargs):
 #        if ref: #I should probably make this its own function
 #            rmin = (n/m*sigma**(n-m))**(1./(n-m))
 #            #r = r / ref.sigma * sigma
 #            r = r / ref.calc_rmin() * rmin
 #        r_c = np.max(r)
-        BasePCFR.__init__(self, r, RDF, rho, T, ref,devU,devP)
+        BasePCFR.__init__(self, r, RDF, rho, Nmol, T, ref,devU,devP)
         for key in kwargs:
             if key == 'place holder':
                 pass                
@@ -311,32 +318,46 @@ def main():
     T_TraPPE = np.array([135,150,200,300,400,500,600]) #Only performed simulations at a few with TraPPE
     
     U_L_highP_ens = np.array([-15.37811761, -15.17739261, -14.56776761, -13.99989261, -13.46889261, -12.96789261, -12.49721761, -12.03651761, -11.60244261, -11.16036761, -10.74169261])
-    Pref_ens = np.array([245.684,583.268,1634.83,2597.47,3474.17,4313.14,5102.52,5876.44,6613.51,7317.49,7996.19])*100. #[kPa] #Simulated results
+    Pref_ens = np.array([245.684,583.268,1634.83,2597.47,3474.17,4313.14,5102.52,5876.44,6613.51,7317.49,7996.19]) #[bar] #Simulated results
     UPotoff_ens = np.array([-15.56048586,-15.37048586,-14.78298586,-14.24048586,-13.72048586,-13.24798586,-12.79548586,-12.34548586,-11.91298586,-11.49298586,-11.08548586]) #From Potoff simulation runs
     UTraPPE_ens = np.array([-13.80869237,-13.62916737,-13.06799237,-12.07034237,-11.19046737,-10.37736737,-9.631417372])
-                         
+      
+    U_L_highP_ens *= 400.
+    UPotoff_ens *= 400.
+    UTraPPE_ens *= 400.
+                   
     # I think the values for this array are wrong. Should be 12.06117 
     rhoL_highP = np.array([12.06117]*len(T_highP)) #[1/nm**3]
     
+    Nmol = 400*np.ones(len(T_highP)) # Number of molecules
+    
     # Example of how to initiate the reference system
-    LJref = Mie(r,RDFs_highP, rhoL_highP, T_highP, eps_ref, sig_ref, lam_ref)
+    LJref = Mie(r,RDFs_highP, rhoL_highP, Nmol, T_highP, eps_ref, sig_ref, lam_ref)
     Udev = U_L_highP_ens - LJref.calc_Ureal()
     Pdev = Pref_ens - LJref.calc_Preal()
-    LJref = Mie(r,RDFs_highP, rhoL_highP, T_highP, eps_ref, sig_ref, lam_ref, ref=LJref,devU=Udev,devP=Pdev) #Redefine the reference system
+    LJref = Mie(r,RDFs_highP, rhoL_highP, Nmol, T_highP, eps_ref, sig_ref, lam_ref, ref=LJref,devU=Udev,devP=Pdev) #Redefine the reference system
     
     LJhat = lambda eps, sig, lam: Mie(r,RDFs_highP,rhoL_highP, T_highP, eps, sig, lam, ref=LJref,devU=Udev,devP=Pdev)
     Uhat = lambda eps,sig,lam: LJhat(eps,sig,lam).calc_Ureal()
     
-    LJTraPPE = Mie(r,RDFs_highP,rhoL_highP,T_highP,98.,0.375,12., ref=LJref,devU=Udev,devP=Pdev)
+    LJTraPPE = Mie(r,RDFs_highP,rhoL_highP, Nmol,T_highP,98.,0.375,12., ref=LJref,devU=Udev,devP=Pdev)
     UTraPPE = LJTraPPE.calc_Ureal()
-    LJPotoff = Mie(r,RDFs_highP, rhoL_highP, T_highP, 121.25, 0.3783, 16., ref=LJref,devU=Udev,devP=Pdev)
+    LJPotoff = Mie(r,RDFs_highP, rhoL_highP, Nmol, T_highP, 121.25, 0.3783, 16., ref=LJref,devU=Udev,devP=Pdev)
     UPotoff = LJPotoff.calc_Ureal()
+    
+    plt.plot(T_highP,U_L_highP_ens,label='Ref')
+    plt.plot(T_highP,UPotoff,label='Potoff')
+    plt.plot(T_highP,UTraPPE,label='TraPPE')  
+    plt.scatter(T_highP,UPotoff_ens,label='Potoff Sim')
+    plt.scatter(T_TraPPE,UTraPPE_ens,label='TraPPE Sim')
+    plt.legend()
+    plt.show()  
     
     Zref = LJref.calc_Z()
     ZTraPPE = LJTraPPE.calc_Z()
     ZPotoff = LJPotoff.calc_Z()
     
-    Zref_ens = Pref_ens / rhoL_highP / T_highP / k_B
+    Zref_ens = Pref_ens / rhoL_highP / T_highP / k_B / kPa_to_bar
     
     invT_REFPROP = np.array([7.407407407,6.666666667,5,4,3.333333333,2.857142857,2.5,2.222222222,2,1.818181818,1.666666667])
     Z_REFPROP = np.array([0.000100675,1.187527847,3.614046302,4.832284851,5.50639937,5.903366448,6.145583131,6.295335384,6.386973899,6.440663168,6.46883802])

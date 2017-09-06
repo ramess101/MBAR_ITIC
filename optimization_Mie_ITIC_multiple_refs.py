@@ -213,10 +213,13 @@ def REFPROP_UP(TSim,rho_mass,NmolSim,compound):
 
 RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
 
-def objective_ITIC(eps_sig_lam,prop_type,basis_fun): 
+def objective_ITIC(eps_sig_lam,prop_type,basis_fun,PCFR_hat): 
     global iRerun
     
-    USim, dUSim, PSim, dPSim, ZSim = MBAR_estimates(eps_sig_lam,iRerun,basis_fun)
+    if PCFR_hat:
+        USim, dUSim, PSim, dPSim, ZSim = PCFR_estimates(eps_sig_lam,iRerun,PCFR_hat)
+    else:
+        USim, dUSim, PSim, dPSim, ZSim = MBAR_estimates(eps_sig_lam,iRerun,basis_fun)
     
     Tsat, rhoLSim, PsatSim, rhovSim = ITIC_calc(USim, ZSim)
     
@@ -729,7 +732,81 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun):
     
     return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
 
-def PCFR_estimates(eps_sig_lam,iRerun,basis_fun):
+def compile_PCFs(iRef):
+    
+    fpathRef = "../ref"+str(iRef)+"/"
+    print(fpathRef)
+    
+    g_start = 27 # Skipping the r = 0 bin
+    g_PCF = 1 #The column where the PCF is located
+    nbins = len(r)
+    
+    PCF_all = np.zeros([nbins,nStates])
+    
+    for iState in range(nStates):
+        
+        #rho_state = rho_sim[iState]
+        #Nstate = Nmol_sim[iState]
+        fpath = fpath_all[iState]
+        
+        r_PCF = open(fpathRef+fpath+'nvt_prod_rdf.xvg','r').readlines()[g_start:g_start+nbins] #Read only the PCF column
+    
+        for ibin in range(nbins):
+            PCF_all[ibin,iState] = float(r_PCF[ibin].split()[g_PCF])
+            
+    # Store the PCF compilation into a single file
+    
+    f = open(fpathRef+'PCFs_ref'+str(iRef),'w')
+    
+    for ibin in range(nbins):
+        
+        for iState in range(nStates):
+        
+            f.write(str(PCF_all[ibin,iState])+'\t')
+            
+        else: # For the last loop of states use a new line
+        
+            f.write('\n')
+            
+    f.close()
+
+def create_PCFRref(iRef):
+    fpathRef = "../ref"+str(iRef)+"/"
+    print(fpathRef)
+    
+    eps_sig_lam_ref = np.loadtxt(fpathRef+'eps_sig_lam_ref')
+    
+#    g_start = 27 # Skipping the r = 0 bin
+#    nbins = len(r)
+#    
+#    PCF_all = np.zeros([nbins,nStates])
+#    
+#    for iState in range(nStates):
+#        
+#        #rho_state = rho_sim[iState]
+#        #Nstate = Nmol_sim[iState]
+#        fpath = fpath_all[iState]
+#        
+#        PCF_all[:,iState] = open(fpathRef+fpath+'nvt_prod_rdf.xvg','r').readlines()[g_start:g_start+nbins,1] #Read only the PCF column
+    
+    PCF_all = np.loadtxt(fpathRef+'PCFs_ref'+str(iRef))
+                
+    LJref = Mie(r,PCF_all, rho_sim, Nmol_sim, Temp_sim, eps_sig_lam_ref[0], eps_sig_lam_ref[1], eps_sig_lam_ref[2])
+    Udev = 0#U_L_highP_ens - LJref.calc_Ureal()
+    Pdev = 0#Pref_ens - LJref.calc_Preal()
+    LJref = Mie(r,PCF_all, rho_sim, Nmol_sim, Temp_sim, eps_sig_lam_ref[0], eps_sig_lam_ref[1], eps_sig_lam_ref[2], ref=LJref,devU=Udev,devP=Pdev) #Redefine the reference system
+    return LJref
+
+def create_PCFR_hat(PCFRref):
+    PCF = PCFRref.RDF
+    rho = PCFRref.rho
+    Temp = PCFRref.Temp
+    Udev = PCFRref.devU
+    Pdev = PCFRref.devP
+    Mie_hat = lambda eps_sig_lam: Mie(r,PCF,rho, Nmol_sim, Temp, eps_sig_lam[0], eps_sig_lam[1], eps_sig_lam[2], ref=PCFRref,devU=Udev,devP=Pdev)
+    return Mie_hat
+
+def PCFR_estimates(eps_sig_lam,iRerun,PCFR_hat):
       
     f = open('eps_all','a')
     f.write('\n'+str(eps_sig_lam[0]))
@@ -743,140 +820,29 @@ def PCFR_estimates(eps_sig_lam,iRerun,basis_fun):
     f.write('\n'+str(eps_sig_lam[2]))
     f.close()
     
-    iSets = [int(iRerun)]*(nRefs + 1) #Plus 1 because we need one more for the rerun  
+    print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
     
-    for iiRef in iRefs: #We want to perform analysis with each reference
+    f = open('eps_sig_lam_all','a')
+    f.write(str(eps_sig_lam[0])+'\t')
+    f.write(str(eps_sig_lam[1])+'\t')
+    f.write(str(eps_sig_lam[2])+'\n')
+    f.close()
     
-        fpathRef = "../ref"+str(iiRef)+"/"
-        print(fpathRef)
-    
-        f = open(fpathRef+'eps_it','w')
-        f.write(str(eps_sig_lam[0]))
-        f.close()
-    
-        f = open(fpathRef+'sig_it','w')
-        f.write(str(eps_sig_lam[1]))
-        f.close()
-    
-        f = open(fpathRef+'lam_it','w')
-        f.write(str(eps_sig_lam[2]))
-        f.close()
-        
-        f = open(fpathRef+'iRerun','w')
-        f.write(str(iRerun))
-        f.close()
-        
-        iSets[iiRef] = iiRef
-        
-        print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
-    
-        f = open('eps_sig_lam_all','a')
-        f.write(str(eps_sig_lam[0])+'\t')
-        f.write(str(eps_sig_lam[1])+'\t')
-        f.write(str(eps_sig_lam[2])+'\n')
-        f.close()
-        
+    PCFR_eps_sig_lam = PCFR_hat(eps_sig_lam)
+    U_PCFR = PCFR_eps_sig_lam.calc_Ureal()
+    dU_PCFR = U_PCFR * 0.
+    P_PCFR = PCFR_eps_sig_lam.calc_Preal()
+    dP_PCFR = P_PCFR * 0.
+    Z_PCFR = PCFR_eps_sig_lam.calc_Z()
+    Z1rho_PCFR = PCFR_eps_sig_lam.calc_Z1rho()
+    Neff_PCFR = U_PCFR/U_PCFR * 1001.
+           
         # The question is where the store the reference values, RDFs, and ensemble averages.
         # I can read in the snapshots for the reference and calculate the ensemble averages. Or find a way to read from the logfiles.
         # For the MBAR approach I should also store the snapshots for the previous references as an object of a class so that I don't
-        # have to keep opening up files, etc.
-        
-#        eps_ref = 117.181 #[K]
-#        sig_ref = 0.380513 #[nm]
-#        lam_ref = 15.6796
-#              
-#        fname = 'H:/PCF-PSO/RDF_Iteration_4_corrected_gromacs_Non_VLE.txt'
-#        RDFs_highP = np.loadtxt(fname,delimiter='\t')
-#        RDFs_highP = RDFs_highP[1:,:] 
+        # have to keep opening up files, etc.     
 
-#        U_L_highP_ens = np.array([-15.37811761, -15.17739261, -14.56776761, -13.99989261, -13.46889261, -12.96789261, -12.49721761, -12.03651761, -11.60244261, -11.16036761, -10.74169261])
-                         
-#        # Example of how to initiate the reference system
-#        LJref = Mie(r,RDFs_highP, rhoL_highP, T_highP, eps_ref, sig_ref, lam_ref)
-#        Udev = U_L_highP_ens - LJref.calc_Ureal()
-#        Pdev = Pref_ens - LJref.calc_Preal()
-#        LJref = Mie(r,RDFs_highP, rhoL_highP, T_highP, eps_ref, sig_ref, lam_ref, ref=LJref,devU=Udev,devP=Pdev) #Redefine the reference system
-#        
-#        LJhat = lambda eps, sig, lam: Mie(r,RDFs_highP,rhoL_highP, T_highP, eps, sig, lam, ref=LJref,devU=Udev,devP=Pdev)
-#        Uhat = lambda eps,sig,lam: LJhat(eps,sig,lam).calc_Ureal()
-                    
-    g_start = 28 #Row where data starts in g_energy output
-    g_t = 0 #Column for the snapshot time
-    g_LJsr = 1 #Column where the 'Lennard-Jones' short-range interactions are located
-    g_LJdc = 2 #Column where the 'Lennard-Jones' dispersion corrections are located
-    g_en = 3 #Column where the potential energy is located
-    g_T = 4 #Column where T is located
-    g_p = 5 #Column where p is located
-    
-    nSets = len(iSets)
-    
-    N_k = [0]*nSets #This makes a list of nSets elements, need to be 0 for MBAR to work
-        
-    # Analyze snapshots
-    
-    U_MBAR = np.zeros([nStates,nSets])
-    dU_MBAR = np.zeros([nStates,nSets])
-    P_MBAR = np.zeros([nStates,nSets])
-    dP_MBAR = np.zeros([nStates,nSets])
-    Z_MBAR = np.zeros([nStates,nSets])
-    Z1rho_MBAR = np.zeros([nStates,nSets])
-    Neff_MBAR = np.zeros([nStates,nSets])
-    #print(nTemps['Isochore'])
-    
-    for iState in range(nStates):
-        
-        rho_state = rho_sim[iState]
-        Nstate = Nmol_sim[iState]
-        fpath = fpath_all[iState]
-                                    
-        for iiRef in iRefs: # To initialize arrays we must know how many snapshots come from each reference
-            
-            en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
-
-            nSnapsRef = len(en_p) #Number of snapshots
-            #print(nSnapsRef)
-            
-            N_k[iiRef] = nSnapsRef # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
-            
-        nSnaps = np.sum(N_k)
-        #print(N_k)
-        #print(nSnaps)
-        
-        t = np.zeros([nSets,nSnaps])
-        LJsr = np.zeros([nSets,nSnaps])
-        LJdc = np.zeros([nSets,nSnaps])
-        en = np.zeros([nSets,nSnaps])
-        p = np.zeros([nSets,nSnaps])
-        U_total = np.zeros([nSets,nSnaps])
-        LJ_total = np.zeros([nSets,nSnaps])
-        T = np.zeros([nSets,nSnaps])
-
-        for iSet, enum in enumerate(iSets):
-            
-            frame_shift = 0
-            
-            for iiRef in iRefs:
-                
-                if basis_fun and enum > nRefs:
-                    # Use the reference as the starting point for basis functions, note that values are changed after assignment
-                    en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,iiRef),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
-                    
-                else:
-                
-                    en_p = open('../ref'+str(iiRef)+'/'+fpath+'energy_press_ref%srr%s.xvg' %(iiRef,enum),'r').readlines()[g_start:] #Read all lines starting at g_start for "state" k
-    
-    U_rerun = U_MBAR[:,-1]
-    dU_rerun = dU_MBAR[:,-1]
-    P_rerun = P_MBAR[:,-1]
-    dP_rerun = dP_MBAR[:,-1]
-    Z_rerun = Z_MBAR[:,-1]
-    
-    #print(U_rerun)
-    #print(dU_rerun)
-    #print(P_rerun)
-    #print(dP_rerun)
-    
-    f = open('MBAR_ref'+str(iRef)+'rr'+str(iRerun),'w')
+    f = open('PCFR_ref'+str(iRef)+'rr'+str(iRerun),'w')
     
     for iState in range(nStates):
         
@@ -890,7 +856,7 @@ def PCFR_estimates(eps_sig_lam,iRerun,basis_fun):
 
     f.close()
     
-    return U_rerun, dU_rerun, P_rerun, dP_rerun, Z_rerun
+    return U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR
 
 def create_Cmatrix(eps_basis,sig_basis,lam_basis):
     '''
@@ -1358,9 +1324,9 @@ def leapfrog(fun,x_guess,bounds,constrained,lam_cons,cons_lam,tol,max_it=500,max
     #print(players[ibest,:])
     return best_player, best
 
-def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,cons_lam=True,basis_fun=False):
+def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,cons_lam=True,basis_fun=False,PCFR_hat=None):
     
-    objective = lambda eps_sig_lam: objective_ITIC(eps_sig_lam,prop_type,basis_fun)
+    objective = lambda eps_sig_lam: objective_ITIC(eps_sig_lam,prop_type,basis_fun,PCFR_hat)
 
     eps_opt = 0.
     sig_opt = 0.
@@ -1466,15 +1432,22 @@ def main():
     parser.add_argument("-prop","--properties",type=str,nargs='+',choices=['rhoL','Psat','rhov','P','U','Z'],help="choose one or more properties to use in optimization" )
     parser.add_argument("-lam","--lam",help="Scan the lambda space incrementally",action="store_true")
     parser.add_argument("-bas","--basis",help="Develop the basis functions for integer values of lambda",action="store_true")
+    parser.add_argument("-PCFR","--PCFR",help="Use pair correlation function rescaling",action="store_true")
     args = parser.parse_args()
+    if args.PCFR: #Compile PCFs if using PCFR
+        compile_PCFs(iRef)
+        PCFRref = create_PCFRref(iRef)
+        PCFR_hat_Mie = create_PCFR_hat(PCFRref)
+    else:
+        PCFR_hat_Mie = None
     if args.optimizer:
         rerun_refs() #Perform the reruns for the references prior to anything
         for eps_sig_lam in eps_sig_lam_refs:
-            objective_ITIC(eps_sig_lam,args.properties,args.basis) #Call objective for each of the references
+            objective_ITIC(eps_sig_lam,args.properties,args.basis,PCFR_hat_Mie) #Call objective for each of the references
         if args.basis: #Perform the reruns for the basis functions
             eps_sig_lam_basis = rerun_basis_functions(iRef) # Make this more like rerun_refs where it loops for all references, at least if basis has not already been run there
             for eps_sig_lam in eps_sig_lam_basis:
-                objective_ITIC(eps_sig_lam,args.properties,args.basis) #Call objective for each of the basis functions
+                objective_ITIC(eps_sig_lam,args.properties,args.basis,PCFR_hat_Mie) #Call objective for each of the basis functions
         if args.lam:
             lam_range = range(int(lam_low),int(lam_high)+1)
             eps_opt_range = np.zeros(len(lam_range))
@@ -1482,12 +1455,12 @@ def main():
             lam_opt_range = np.zeros(len(lam_range))
             f_opt_range = np.zeros(len(lam_range))
             for ilam, lam_cons in enumerate(lam_range):
-                eps_opt_range[ilam], sig_opt_range[ilam], lam_opt_range[ilam], f_opt_range[ilam] = call_optimizers(args.optimizer,args.properties,lam_cons,cons_lam=True,basis_fun=args.basis)
+                eps_opt_range[ilam], sig_opt_range[ilam], lam_opt_range[ilam], f_opt_range[ilam] = call_optimizers(args.optimizer,args.properties,lam_cons,cons_lam=True,basis_fun=args.basis,PCFR_hat=PCFR_hat_Mie)
                 assert lam_opt_range[ilam] == lam_cons, 'Optimal lambda is different than the constrained lambda value'
             iopt = f_opt_range.argmin()
             eps_opt, sig_opt, lam_opt, f_opt = eps_opt_range[iopt], sig_opt_range[iopt], lam_opt_range[iopt], f_opt_range[iopt]           
         else:
-            eps_opt, sig_opt, lam_opt, f_opt = call_optimizers(args.optimizer,args.properties,cons_lam=False,basis_fun=args.basis)
+            eps_opt, sig_opt, lam_opt, f_opt = call_optimizers(args.optimizer,args.properties,cons_lam=False,basis_fun=args.basis,PCFR_hat=PCFR_hat_Mie)
     else:
         print('Please specify an optimizer type')
         eps_opt = 0.

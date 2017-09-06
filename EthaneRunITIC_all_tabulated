@@ -37,18 +37,18 @@ sed -i -e s@some_output_path@"$output_path"@ EthaneRunVirial
 
 #jretemp 
 ./EthaneRunIsochore
-echo "Waiting for isochore productions"
+#echo "Waiting for isochore productions"
 #jretemp
 #sleep 5s
-sleep 15m #Tabulated takes more than twice as long
+#sleep 15m #Tabulated takes more than twice as long #This has been moved inside of RunIsochore
 
 #jretemp 
 ./EthaneRunIsotherm
 #jretemp echo "Waiting for next epsilon."
 #jretemp 
 #sleep 5s
-sleep 20m #Tabulated takes more than twice as long
-
+#sleep 20m #Tabulated takes more than twice as long #This has been moved inside of RunIsotherm
+ 
 #jretemp 
 #./EthaneRunVirial
 #jretemp 

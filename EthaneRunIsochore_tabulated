@@ -137,6 +137,89 @@ done #for t
 
 done #for j
 
+echo "Waiting for isochore productions"
+
+sleep 15m #Tabulated takes more than twice as long # Previously this was outside of script, but now performing some analysis inside script
+
+
+
+# Loop back through to compute RDFs and ensemble averages
+
+for j in $(seq $j_start $j_end)
+
+do
+
+if [ "$j" -eq "0" ]; then Tic="${Tic0[@]}"; fi  
+if [ "$j" -eq "1" ]; then Tic="${Tic1[@]}"; fi #JRE: Evidently, the @ assigns the address of Tic1 to Tic. This statement uses strings when numbers might work simpler.
+if [ "$j" -eq "2" ]; then Tic="${Tic2[@]}"; fi  
+if [ "$j" -eq "3" ]; then Tic="${Tic3[@]}"; fi  
+if [ "$j" -eq "4" ]; then Tic="${Tic4[@]}"; fi  
+
+t=-1  #do not put space after equal sign. 
+for Temp in ${Tic} 
+do
+t=$((t+1))
+
+cd "$output_path"/ref"$iRef"/Isochore/rho"$j"/T"$t"/NVT_eq/NVT_prod || exit  #start fresh for do cycle instead of multiple "cd .."'s
+
+#First perform the RDF tabulation
+gmx rdf -f nvt_prod.trr -s nvt_prod.tpr -o nvt_prod_rdf.xvg -ref CHX -sel CHX -cut 0.2
+
+#Then perform rerun of reference
+cp "$input_path"/md_nocord.mdp md_nocord.mdp 
+
+sed -i -e s/some_temperature/"$Temp"/ md_nocord.mdp #Temperature might not matter in rerun
+
+gmx grompp -f md_nocord.mdp -p ../../../../../ethane.top -c nvt_prod.gro -o prod_ref"$iRef" -maxwarn 1 > gromppout 2>> gromppout 
+
+gmx mdrun -table ../../../../../tab_it.xvg -nt 1 -rerun nvt_prod.trr -deffnm prod_ref"$iRef > rerunout 2>> rerunout & 
+
+done #for t
+
+done #for j
+
+echo "Waiting for Isochore post processing to finish"
+
+sleep 18s
+
+
+### Analyze the rerun results
+
+for j in $(seq $j_start $j_end)
+
+do
+
+if [ "$j" -eq "0" ]; then Tic="${Tic0[@]}"; fi  
+if [ "$j" -eq "1" ]; then Tic="${Tic1[@]}"; fi 
+if [ "$j" -eq "2" ]; then Tic="${Tic2[@]}"; fi  
+if [ "$j" -eq "3" ]; then Tic="${Tic3[@]}"; fi  
+if [ "$j" -eq "4" ]; then Tic="${Tic4[@]}"; fi  
+
+t=-1  #do not put space after equal sign. 
+for Temp in ${Tic} 
+do
+t=$((t+1))
+
+cd "$output_path"/ref"$iRef"/Isochore/rho"$j"/T"$t"/NVT_eq/NVT_prod || exit
+
+echo "1
+2
+4
+8
+10
+0" | gmx energy -dp -f prod_ref"$iRef".edr -o energy_press_ref"$iRef".xvg > energyout 2>> energyout
+
+rm -f \#*
+rm -f prod_ref*.log
+rm -f prod_ref*.tpr
+rm -f prod_ref*.edr
+
+done #for t
+
+done #for j
+
+
+
 exit 0
 
 #######

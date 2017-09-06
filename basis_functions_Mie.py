@@ -12,6 +12,12 @@ nm3tom3 = 1e27
 kJm3tobar = 1./100.
 NA = 6.022140857e23
 
+#Constant with respect to force field       
+KE = 1185.967041015625      
+# Constants from state point
+Lbox = 3.2168 #[nm]
+Vbox = Lbox**3. #[nm3]
+
 # Not needed anymore
 #eps_low = 117.4997658
 #eps_high = 123.377174904
@@ -90,14 +96,10 @@ for ibasis in range(2):
        
 #Dispersive contributions
 Pdc_basis[0] = -127.706733703613
-Pdc_basis[1] = -143.719940185547   
+Pdc_basis[1] = -143.719940185547  
+         
+Virdc_basis = KE/3-Pdc_basis/2*Vbox/nm3tom3/kJm3tobar*NA
        
-#Constant with respect to force field       
-KE = 1185.967041015625      
-# Constants from state point
-Lbox = 3.2168 #[nm]
-Vbox = Lbox**3. #[nm3]
-
 # Values for a different force field, not used in the basis function development
        
 eps_new = 101.250841825
@@ -112,6 +114,8 @@ PXX_new = 188.633544921875
 PYY_new = 211.936065673828
 PZZ_new = 469.600616455078
 P_new = (PXX_new + PYY_new + PZZ_new)/3.
+        
+Virdc_new = KE/3-Pdc_new/2*Vbox/nm3tom3/kJm3tobar*NA
        
 for ibasis in range(2):
     eps_rerun = eps_basis[ibasis]
@@ -128,12 +132,12 @@ for ibasis in range(2):
 rarray = np.linalg.solve(Cmatrix,U_basis) #First entry of rarray is the sum of r^-lambda and second entry is sum of r^-6
 print(rarray)
 
-rdrarray = np.linalg.solve(Cmatrix,Vir_basis-Pdc_basis) #First entry of rdrarray is the sum of r*d(r^-lambda)/dr and second entry is sum of r*d(r^-6)/dr
+rdrarray = np.linalg.solve(Cmatrix,Vir_basis-Virdc_basis) #First entry of rdrarray is the sum of r*d(r^-lambda)/dr and second entry is sum of r*d(r^-6)/dr
 print(rdrarray)
 
-rdrXXarray = np.linalg.solve(Cmatrix,VirXX_basis-Pdc_basis) #First entry of rdrarray is the sum of r*d(r^-lambda)/dr and second entry is sum of r*d(r^-6)/dr
-rdrYYarray = np.linalg.solve(Cmatrix,VirYY_basis-Pdc_basis) #First entry of rdrarray is the sum of r*d(r^-lambda)/dr and second entry is sum of r*d(r^-6)/dr
-rdrZZarray = np.linalg.solve(Cmatrix,VirZZ_basis-Pdc_basis) #First entry of rdrarray is the sum of r*d(r^-lambda)/dr and second entry is sum of r*d(r^-6)/dr
+rdrXXarray = np.linalg.solve(Cmatrix,VirXX_basis-Virdc_basis) #First entry of rdrarray is the sum of r*d(r^-lambda)/dr and second entry is sum of r*d(r^-6)/dr
+rdrYYarray = np.linalg.solve(Cmatrix,VirYY_basis-Virdc_basis) #First entry of rdrarray is the sum of r*d(r^-lambda)/dr and second entry is sum of r*d(r^-6)/dr
+rdrZZarray = np.linalg.solve(Cmatrix,VirZZ_basis-Virdc_basis) #First entry of rdrarray is the sum of r*d(r^-lambda)/dr and second entry is sum of r*d(r^-6)/dr
 
 Ulam = np.linalg.multi_dot([Clam,rarray[0]])
 U6 = np.linalg.multi_dot([C6,rarray[1]])
@@ -150,7 +154,7 @@ U_new_hat = np.linalg.multi_dot([Cmatrix_new,rarray])
 print('Predicted internal energy: '+str(U_new_hat))
 print('Actual internal energy is '+str(U_new))
 
-Vir_new_hat = np.linalg.multi_dot([Cmatrix_new,rdrarray])+Pdc_new
+Vir_new_hat = np.linalg.multi_dot([Cmatrix_new,rdrarray])+Virdc_new
 print('Predicted virial: '+str(Vir_new_hat))
 print('Actual virial is '+str(Vir_new))
 
@@ -158,19 +162,19 @@ P_new_hat = 2./Vbox*(KE/3.-Vir_new_hat)*nm3tom3*kJm3tobar/NA
 print('Predicted pressure: '+str(P_new_hat))
 print('Actual pressure is '+str(P_new))
 
-VirXX_new_hat = np.linalg.multi_dot([Cmatrix_new,rdrXXarray])+Pdc_new
+VirXX_new_hat = np.linalg.multi_dot([Cmatrix_new,rdrXXarray])+Virdc_new
 print('Predicted virial-XX: '+str(VirXX_new_hat))
 print('Actual virial-XX is '+str(VirXX_new))
 
-VirYY_new_hat = np.linalg.multi_dot([Cmatrix_new,rdrYYarray])+Pdc_new
+VirYY_new_hat = np.linalg.multi_dot([Cmatrix_new,rdrYYarray])+Virdc_new
 print('Predicted virial-YY: '+str(VirYY_new_hat))
 print('Actual virial-YY is '+str(VirYY_new))
 
-VirZZ_new_hat = np.linalg.multi_dot([Cmatrix_new,rdrZZarray])+Pdc_new
+VirZZ_new_hat = np.linalg.multi_dot([Cmatrix_new,rdrZZarray])+Virdc_new
 print('Predicted virial-ZZ: '+str(VirZZ_new_hat))
 print('Actual virial-ZZ is '+str(VirZZ_new))
 
-Vir_new_hat_alt = (VirXX_new_hat + VirYY_new_hat + VirZZ_new_hat)/3.
+Vir_new_hat_alt = (VirXX_new_hat + VirYY_new_hat + VirZZ_new_hat)/3.+Virdc_new
                   
 P_new_hat_alt = 2./Vbox*(KE/3.-Vir_new_hat_alt)*nm3tom3*kJm3tobar/NA
 print('Predicted pressure alternative: '+str(P_new_hat))

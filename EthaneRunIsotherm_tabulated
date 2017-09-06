@@ -127,7 +127,7 @@ sleep 2m # At 360 K and isochore_0 it takes about 2 m with a single thread
 echo "Waiting for NVT_eq: Energy equilibration"
 
 
-# Production period for liquid phase
+# Production period
 
 for j in $(seq $j_start $j_end)
 
@@ -141,5 +141,56 @@ gmx grompp -f nvt_prod.mdp -c ../nvt_eq.gro -p ../../../../ethane.top -o nvt_pro
 gmx mdrun -table ../../../../tab_it.xvg -nt "${nCores[j]}" -deffnm nvt_prod > runout 2>> runout & #Can use more cores in liquid phase since vapor phase will have already finished
 
 done
+
+echo "Waiting for isotherm productions"
+
+sleep 20m #Tabulated takes more than twice as long # Previously this was outside of script, but now performing some analysis inside script
+
+# Loop back through to compute RDFs and ensemble averages
+
+for j in $(seq $j_start $j_end)
+
+do
+
+cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
+
+#First perform the RDF tabulation
+gmx rdf -f nvt_prod.trr -s nvt_prod.tpr -o nvt_prod_rdf.xvg -ref CHX -sel CHX -cut 0.2
+
+#Then perform rerun of reference
+cp "$input_path"/md_nocord.mdp md_nocord.mdp 
+
+sed -i -e s/some_temperature/"$Temp"/ md_nocord.mdp #Temperature might not matter in rerun
+
+gmx grompp -f md_nocord.mdp -p ../../../../../ethane.top -c nvt_prod.gro -o prod_ref"$iRef" -maxwarn 1 > gromppout 2>> gromppout 
+
+gmx mdrun -table ../../../../../tab_it.xvg -nt 1 -rerun nvt_prod.trr -deffnm prod_ref"$iRef > rerunout 2>> rerunout & 
+
+done
+
+echo "Waiting for Isotherm post processing to finish"
+
+sleep 18s
+
+for j in $(seq $j_start $j_end)
+
+do
+
+cd "$output_path"/ref"$iRef"/Isotherm/rho_"$j"/NVT_eq/NVT_prod || exit
+
+echo "1
+2
+4
+8
+10
+0" | gmx energy -dp -f prod_ref"$iRef".edr -o energy_press_ref"$iRef".xvg > energyout 2>> energyout
+
+rm -f \#*
+rm -f prod_ref*.log
+rm -f prod_ref*.tpr
+rm -f prod_ref*.edr
+
+done
+
 
 exit 0

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 Compound=Ethane
-Model=LJtoMie_basis
+Model=Mie_16_Ufirst_basis
 
 #Specify the path location, note do not include a space at the end of the line
 
@@ -11,41 +11,41 @@ output_path=~/"$Compound"/Gromacs/"$Model"
 
 #MolWt=30.0698
 
-opt_method='leapfrog'
+opt_method='scan'
 opt_prop1='U'
 #opt_prop2='Psat'
 
-eps_range_low=(0. 0.1 0.1 0.1 0.1 0.1)
-eps_range_high=(0.25 0.2 0.1 0.1 0.1 0.1)
-#eps_range_low=(0.1 0.1 0.1 0.1 0.1 0.1)
-#eps_range_high=(0.1 0.1 0.1 0.1 0.1 0.1)
+#eps_range_low=(0. 0.1 0.1 0.1 0.1 0.1)
+#eps_range_high=(0.25 0.2 0.1 0.1 0.1 0.1)
+eps_range_low=(0.1 0.1 0.1 0.1 0.1 0.1)
+eps_range_high=(0.1 0.1 0.1 0.1 0.1 0.1)
 sig_range=(0.02 0.02 0.02 0.02 0.02 0.02)
-lam_low=13
-lam_high=18
+lam_low=15
+lam_high=15
 
 TOL_eps=0.1
 TOL_sig=0.0003
 TOL_lam=0.1
 TOL_MBAR=0.001
 
-iRef=2
+iRef=0
 
-eps_guess=120.701324415   # (K)
-sig_guess=0.379231092422 # (nm)
+eps_guess=121.25 # (K)
+sig_guess=0.3783 # (nm)
 lam_guess=16.0
 
 bond_length=0.154 #[nm]
 
 conv_overall=0
 
-max_iterations=4
+max_iterations=1
 
 while [ "$conv_overall" -lt 1 ] && [ "$iRef" -lt "$max_iterations" ] #Checks to see if the loop has converged for epsilon
 do
 
 cd "$output_path" || exit
 
-if [ $iRef -ge 2 ] #If you have already run (i.e. just rerunning the optimization)
+if [ $iRef -ge 1 ] #If you have already run (i.e. just rerunning the optimization)
 then
 
 #### Start the mdrun simulations for the initial epsilon and sigma values

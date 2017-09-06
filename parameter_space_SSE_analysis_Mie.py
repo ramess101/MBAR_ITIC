@@ -124,7 +124,7 @@ lam_high = np.loadtxt('lam_high')
 
 iRef = int(np.loadtxt('iRef'))
 
-def analyze_ITIC(iRerun): 
+def analyze_ITIC(iRerun,use_PCFR): 
 
     #Generate REFPROP values, prints out into a file in the correct directory
 
@@ -132,7 +132,10 @@ def analyze_ITIC(iRerun):
 
     ###
     
-    USim, dUSim, PSim, dPSim, ZSim, Z1rhoSim, NeffSim = np.loadtxt('MBAR_ref'+str(iRef)+'rr'+str(iRerun),unpack=True)
+    if use_PCFR:
+        USim, dUSim, PSim, dPSim, ZSim, Z1rhoSim, NeffSim = np.loadtxt('PCFR_ref'+str(iRef)+'rr'+str(iRerun),unpack=True)
+    else:
+        USim, dUSim, PSim, dPSim, ZSim, Z1rhoSim, NeffSim = np.loadtxt('MBAR_ref'+str(iRef)+'rr'+str(iRerun),unpack=True)
     Tsat, rhoLSim, PsatSim, rhovSim = np.loadtxt('ITIC_'+str(iRerun),skiprows=1,unpack=True)
     
     #print(Tsat)
@@ -292,7 +295,7 @@ def initialize_files():
 #    f = open('SSE_Z','w')
 #    f.close()
 
-def print_figures(opt_type):
+def print_figures(opt_type,use_PCFR):
     
     initialize_files()  
         
@@ -320,7 +323,7 @@ def print_figures(opt_type):
         iRerun = 1
         for ieps in range(neps):
             for isig in range(nsig):
-                SSErhoL[ieps,isig], SSEPsat[ieps,isig], SSErhov[ieps,isig], SSEU[ieps,isig], SSEP[ieps,isig], SSEZ[ieps,isig], Neffavg[ieps,isig] = analyze_ITIC(iRerun)
+                SSErhoL[ieps,isig], SSEPsat[ieps,isig], SSErhov[ieps,isig], SSEU[ieps,isig], SSEP[ieps,isig], SSEZ[ieps,isig], Neffavg[ieps,isig] = analyze_ITIC(iRerun,use_PCFR)
                 iRerun += 1
                 
         SSErhoL = np.log10(SSErhoL)
@@ -424,7 +427,7 @@ def print_figures(opt_type):
         Neffavg = np.empty(nReruns)
         
         for iRerun in range(nReruns):
-            SSErhoL[iRerun], SSEPsat[iRerun], SSErhov[iRerun], SSEU[iRerun], SSEP[iRerun], SSEZ[iRerun], Neffavg[iRerun] = analyze_ITIC(iRerun)
+            SSErhoL[iRerun], SSEPsat[iRerun], SSErhov[iRerun], SSEU[iRerun], SSEP[iRerun], SSEZ[iRerun], Neffavg[iRerun] = analyze_ITIC(iRerun,use_PCFR)
                 
            
         f = plt.figure()
@@ -660,9 +663,14 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points','SLSQP'],help="choose which type of optimizer to use")
+    parser.add_argument("-PCFR","--PCFR",help="Use pair correlation function rescaling",action="store_true")
     args = parser.parse_args()
+    if args.PCFR: #Compile PCFs if using PCFR
+        use_PCFR = True
+    else:
+        use_PCFR = False
     if args.optimizer:
-        print_figures(args.optimizer)
+        print_figures(args.optimizer,use_PCFR)
     else:
         print('Please specify an optimizer type')
 
