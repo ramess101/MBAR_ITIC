@@ -164,7 +164,7 @@ sed -i -e s/some_temperature/"$Temp"/ md_nocord.mdp #Temperature might not matte
 
 gmx grompp -f md_nocord.mdp -p ../../../../../ethane.top -c nvt_prod.gro -o prod_ref"$iRef" -maxwarn 1 > gromppout 2>> gromppout 
 
-gmx mdrun -table ../../../../../tab_it.xvg -nt 1 -rerun nvt_prod.trr -deffnm prod_ref"$iRef > rerunout 2>> rerunout & 
+gmx mdrun -table ../../../../../tab_it.xvg -nt 1 -rerun nvt_prod.trr -deffnm prod_ref"$iRef" > rerunout 2>> rerunout & 
 
 done
 

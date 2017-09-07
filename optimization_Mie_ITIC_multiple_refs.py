@@ -1446,13 +1446,14 @@ def main():
     else:
         PCFR_hat_Mie = None
     if args.optimizer:
-        rerun_refs() #Perform the reruns for the references prior to anything
-        for eps_sig_lam in eps_sig_lam_refs:
-            objective_ITIC(eps_sig_lam,args.properties,args.basis,PCFR_hat_Mie) #Call objective for each of the references
-        if args.basis: #Perform the reruns for the basis functions
-            eps_sig_lam_basis = rerun_basis_functions(iRef) # Make this more like rerun_refs where it loops for all references, at least if basis has not already been run there
-            for eps_sig_lam in eps_sig_lam_basis:
-                objective_ITIC(eps_sig_lam,args.properties,args.basis,PCFR_hat_Mie) #Call objective for each of the basis functions
+        if not args.PCFR:
+            rerun_refs() #Perform the reruns for the references prior to anything
+            for eps_sig_lam in eps_sig_lam_refs:
+                objective_ITIC(eps_sig_lam,args.properties,args.basis,PCFR_hat_Mie) #Call objective for each of the references
+            if args.basis: #Perform the reruns for the basis functions
+                eps_sig_lam_basis = rerun_basis_functions(iRef) # Make this more like rerun_refs where it loops for all references, at least if basis has not already been run there
+                for eps_sig_lam in eps_sig_lam_basis:
+                    objective_ITIC(eps_sig_lam,args.properties,args.basis,PCFR_hat_Mie) #Call objective for each of the basis functions
         if args.lam:
             lam_range = range(int(lam_low),int(lam_high)+1)
             eps_opt_range = np.zeros(len(lam_range))
