@@ -58,13 +58,18 @@ def main():
     parser.add_argument("-l","--lam",type=float,help="Set the value for lambda")
     parser.add_argument("-e","--epsilon",type=float,help="Set the value for epsilon (K)")
     parser.add_argument("-s","--sigma",type=float,help="Set the value for sigma (nm)")
+    parser.add_argument("-LJ","--LennardJones",help="Flag if using LJ model",action="store_true")
     args = parser.parse_args()
     if args.lam:
         create_tab(args.lam)
         if args.epsilon and args.sigma:
             convert_eps_sig_C6_Clam(args.epsilon,args.sigma,args.lam)
     else:
-        print('Please specify a value for lambda')
+        if args.LennardJones:
+            if args.epsilon and args.sigma:
+                convert_eps_sig_C6_Clam(args.epsilon,args.sigma,12.)
+        else:
+            print('Please specify a value for lambda if using Mie potential. Or specify model type as LJ.')
 
 if __name__ == '__main__':
     

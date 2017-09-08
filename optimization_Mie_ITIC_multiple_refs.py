@@ -2,7 +2,9 @@ from __future__ import division
 import numpy as np 
 import os, sys, argparse, shutil
 from pymbar import MBAR
-#import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from pymbar import timeseries
 import CoolProp.CoolProp as CP
 #from REFPROP_values import *
@@ -833,12 +835,12 @@ def PCFR_estimates(eps_sig_lam,iRerun,PCFR_hat):
     f.close()
     
     PCFR_eps_sig_lam = PCFR_hat(eps_sig_lam)
-    U_PCFR = PCFR_eps_sig_lam.calc_Ureal()
+    U_PCFR = PCFR_eps_sig_lam.calc_Ureal('Constant')
     dU_PCFR = U_PCFR * 0.
-    P_PCFR = PCFR_eps_sig_lam.calc_Preal()
+    P_PCFR = PCFR_eps_sig_lam.calc_Preal('Constant')
     dP_PCFR = P_PCFR * 0.
-    Z_PCFR = PCFR_eps_sig_lam.calc_Z()
-    Z1rho_PCFR = PCFR_eps_sig_lam.calc_Z1rho()
+    Z_PCFR = PCFR_eps_sig_lam.calc_Z('Constant')
+    Z1rho_PCFR = PCFR_eps_sig_lam.calc_Z1rho('Constant')
     Neff_PCFR = U_PCFR/U_PCFR * 1001.
            
         # The question is where the store the reference values, RDFs, and ensemble averages.
@@ -1428,7 +1430,40 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,cons_lam=True,basis_fu
     if 'f_opt' not in locals():
         f_opt = objective(np.array([eps_opt,sig_opt,lam_opt]))
     
-    return eps_opt, sig_opt, lam_opt, f_opt        
+    return eps_opt, sig_opt, lam_opt, f_opt 
+
+def lambda_plots(eps_opt,sig_opt,lam_opt,f_opt): #Plots the dependence of optimized eps, sig, and objective function with respect to lambda
+    
+    fpath = "../ref"+str(iRef)+"/"
+    
+    f = open(fpath+'lam_dep','a')
+    
+    for eps, sig, lam, f_obj in zip(eps_opt,sig_opt,lam_opt,f_opt):
+        f.write(str(eps)+'\t')
+        f.write(str(sig)+'\t')
+        f.write(str(lam)+'\t')
+        f.write(str(f_obj)+'\t')
+        f.write('\n')   
+           
+    f.close()
+                
+    f = plt.figure()
+    plt.semilogy(lam_opt,f_opt,marker='o',linestyle='none')
+    plt.xlabel(r'$\lambda$')
+    plt.ylabel('Objective Function')
+    f.savefig(compound+'ref_'+str(iRef)+'_F_lam_dep.pdf')     
+    
+    f = plt.figure()
+    plt.scatter(lam_opt,eps_opt)
+    plt.xlabel(r'$\lambda$')
+    plt.ylabel(r'$\epsilon$')
+    f.savefig(compound+'ref_'+str(iRef)+'_eps_lam_dep.pdf')  
+    
+    f = plt.figure()
+    plt.scatter(lam_opt,sig_opt)
+    plt.xlabel(r'$\lambda$')
+    plt.ylabel(r'$\sigma$')
+    f.savefig(compound+'ref_'+str(iRef)+'_sig_lam_dep.pdf')  
             
 def main():
     
@@ -1464,7 +1499,8 @@ def main():
                 eps_opt_range[ilam], sig_opt_range[ilam], lam_opt_range[ilam], f_opt_range[ilam] = call_optimizers(args.optimizer,args.properties,lam_cons,cons_lam=True,basis_fun=args.basis,PCFR_hat=PCFR_hat_Mie)
                 assert lam_opt_range[ilam] == lam_cons, 'Optimal lambda is different than the constrained lambda value'
             iopt = f_opt_range.argmin()
-            eps_opt, sig_opt, lam_opt, f_opt = eps_opt_range[iopt], sig_opt_range[iopt], lam_opt_range[iopt], f_opt_range[iopt]           
+            eps_opt, sig_opt, lam_opt, f_opt = eps_opt_range[iopt], sig_opt_range[iopt], lam_opt_range[iopt], f_opt_range[iopt]  
+            lambda_plots(eps_opt_range,sig_opt_range,lam_opt_range,f_opt_range) #Print plots to see the dependence of eps, sig, and the objective function on lambda
         else:
             eps_opt, sig_opt, lam_opt, f_opt = call_optimizers(args.optimizer,args.properties,cons_lam=False,basis_fun=args.basis,PCFR_hat=PCFR_hat_Mie)
     else:

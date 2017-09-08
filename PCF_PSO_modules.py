@@ -130,20 +130,26 @@ class BasePCFR(object):
         self.RDF = RDFs_smoothed
         return self.RDF
     
-    def pred_RDF(self):
-        """ Predicts the RDF based on the Unb and Unb_ref"""
+    def pred_RDF(self,PCFR_type):
+        """ Predicts the RDF. If PCFR_type is set to 'PMF' the RDF is scaled 
+        based on the Unb and Unb_ref. If PCFR_type is 'sigma' the RDF is scaled
+        just in the distance direction (yet to be coded). Otherwise the RDF is 
+        left constant."""
         RDF_hat = self.RDF.copy()
-        for iTemp, Temp_i in enumerate(self.Temp):
-            rescale = np.exp(-self.get_deltaUnb()/Temp_i)
-#            plt.plot(self.r,rescale)
-#            plt.ylim([0,2])
-#            plt.show()
-            RDF_hat[:,iTemp] *= rescale
-#            plt.plot(self.r,RDF_hat[:,iTemp],label='Predicted')
-#            plt.plot(self.r,self.RDF[:,iTemp],label='Reference')
-#            plt.ylim([0,2])
-#            plt.legend()
-#            plt.show()        
+        if PCFR_type == 'PMF':
+            for iTemp, Temp_i in enumerate(self.Temp):
+                rescale = np.exp(-self.get_deltaUnb()/Temp_i)
+    #            plt.plot(self.r,rescale)
+    #            plt.ylim([0,2])
+    #            plt.show()
+                RDF_hat[:,iTemp] *= rescale
+    #            plt.plot(self.r,RDF_hat[:,iTemp],label='Predicted')
+    #            plt.plot(self.r,self.RDF[:,iTemp],label='Reference')
+    #            plt.ylim([0,2])
+    #            plt.legend()
+    #            plt.show()
+        elif PCFR_type == 'sigma':
+            pass
         return RDF_hat
        
     def calc_Uint(self,RDF_pair):
@@ -171,10 +177,10 @@ class BasePCFR(object):
             
         return Uhat
     
-    def calc_Ureal(self):
+    def calc_Ureal(self,PCFR_type='Constant'):
         """ Converts the internal energy value into the appropriate units. Also includes the deviation term from reference."""
         Ureal = []
-        RDF_hat = self.pred_RDF() # Predict the RDF before predicting the energy and pressure
+        RDF_hat = self.pred_RDF(PCFR_type) # Predict the RDF before predicting the energy and pressure
         #for rho_state, Temp_state in zip(self.rho, self.Temp):
         for istate, rho_state in enumerate(self.rho):
             RDF_state = RDF_hat[:,istate*N_pair:istate*N_pair+N_pair]
@@ -213,10 +219,10 @@ class BasePCFR(object):
             
         return Phat 
     
-    def calc_Preal(self):
+    def calc_Preal(self,PCFR_type='Constant'):
         """ Converts the pressure value into the appropriate units. Also includes the deviation term from reference."""
         Preal = []
-        RDF_hat = self.pred_RDF() # Predict the RDF before predicting the energy and pressure
+        RDF_hat = self.pred_RDF(PCFR_type) # Predict the RDF before predicting the energy and pressure
         #for rho_state, Temp_state in zip(self.rho, self.Temp):
         for istate, rho_state in enumerate(self.rho):
             RDF_state = RDF_hat[:,istate*N_pair:istate*N_pair+N_pair]
@@ -226,13 +232,13 @@ class BasePCFR(object):
         Preal = np.array(Preal) + self.devP
         return Preal #Pressure in bar
     
-    def calc_Z(self):
+    def calc_Z(self,PCFR_type='Constant'):
         """ Returns the compressibility factor. """
-        return self.calc_Preal() / self.rho / self.Temp / k_B / kPa_to_bar
+        return self.calc_Preal(PCFR_type) / self.rho / self.Temp / k_B / kPa_to_bar
     
-    def calc_Z1rho(self):
+    def calc_Z1rho(self,PCFR_type='Constant'):
         """ Returns Z-1/rho. """
-        return self.calc_Z() - 1. / self.rho  #Need to convert this rho into the correct units, currently just a placeholder
+        return self.calc_Z(PCFR_type) - 1. / self.rho  #Need to convert this rho into the correct units, currently just a placeholder
             
 class Mie(BasePCFR):
     def __init__(self, r, RDF, rho, Nmol, T, epsilon, sigma, n=12., m =6., ref=None,devU=0,devP=0, **kwargs):
@@ -341,9 +347,9 @@ def main():
     Uhat = lambda eps,sig,lam: LJhat(eps,sig,lam).calc_Ureal()
     
     LJTraPPE = Mie(r,RDFs_highP,rhoL_highP, Nmol,T_highP,98.,0.375,12., ref=LJref,devU=Udev,devP=Pdev)
-    UTraPPE = LJTraPPE.calc_Ureal()
+    UTraPPE = LJTraPPE.calc_Ureal('PMF')
     LJPotoff = Mie(r,RDFs_highP, rhoL_highP, Nmol, T_highP, 121.25, 0.3783, 16., ref=LJref,devU=Udev,devP=Pdev)
-    UPotoff = LJPotoff.calc_Ureal()
+    UPotoff = LJPotoff.calc_Ureal('PMF')
     
     plt.plot(T_highP,U_L_highP_ens,label='Ref')
     plt.plot(T_highP,UPotoff,label='Potoff')
@@ -353,9 +359,9 @@ def main():
     plt.legend()
     plt.show()  
     
-    Zref = LJref.calc_Z()
-    ZTraPPE = LJTraPPE.calc_Z()
-    ZPotoff = LJPotoff.calc_Z()
+    Zref = LJref.calc_Z('')
+    ZTraPPE = LJTraPPE.calc_Z('')
+    ZPotoff = LJPotoff.calc_Z('')
     
     Zref_ens = Pref_ens / rhoL_highP / T_highP / k_B / kPa_to_bar
     
