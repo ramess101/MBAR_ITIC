@@ -1290,13 +1290,13 @@ def leapfrog(fun,x_guess,bounds,constrained,lam_cons,cons_lam,tol,max_it=500,max
             xtrial = np.random.random(dim)
             xtrial *= dx
             xtrial += best_player
+            trials = 0
             if int_lam:
                 xtrial[2] = int(round(xtrial[2]))
             if cons_lam:
                 xtrial[2] = lam_cons
             if constrained: #This approach makes more sense, just change sigma until the constraint is satisfied without leaping back over
                 valid = False
-                trials = 0
                 while not valid and trials < max_trials:
                     if constraint_sig(xtrial) > 0 and constraint_rmin(xtrial) > 0:
                         valid = True
