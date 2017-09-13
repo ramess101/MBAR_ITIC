@@ -70,24 +70,47 @@ lam_basis = 13.0
 
 #Taken from the first snapshot, where ref0 is TraPPE
 
+# Constrained with LINCS
 U_basis[0] =  -5432.041503906250
 U_basis[1] =  -6055.096191406250
        
 #Virial XX,YY,ZZ
-VirXX_basis[0] = 212.644409179688
-VirXX_basis[1] = 80.657455444336
-VirYY_basis[0] = 161.777313232422
-VirYY_basis[1] = 22.583724975586
-VirZZ_basis[0] = -78.521842956543
-VirZZ_basis[1] = -249.451858520508
+#VirXX_basis[0] = 212.644409179688
+#VirXX_basis[1] = 80.657455444336
+#VirYY_basis[0] = 161.777313232422
+#VirYY_basis[1] = 22.583724975586
+#VirZZ_basis[0] = -78.521842956543
+#VirZZ_basis[1] = -249.451858520508
+#   
+##Pressure XX,YY,ZZ
+#PXX_basis[0] = 190.447357177734
+#PXX_basis[1] = 322.132843017578    
+#PYY_basis[0] = 216.155670166016  
+#PYY_basis[1] = 355.031341552734
+#PZZ_basis[0] = 481.431274414062
+#PZZ_basis[1] = 651.970825195312 
+         
+# Harmonic bonds
+
+U_basis[0] =  -5431.397949
+U_basis[1] =  -6054.361816
+         
+#Virial XX,YY,ZZ
+VirXX_basis[0] = 723.5198364
+VirXX_basis[1] = 672.4127808
+VirYY_basis[0] = 646.8673706
+VirYY_basis[1] = 589.6341553
+VirZZ_basis[0] = 279.9454956
+VirZZ_basis[1] = 185.5500641
    
 #Pressure XX,YY,ZZ
-PXX_basis[0] = 190.447357177734
-PXX_basis[1] = 322.132843017578    
-PYY_basis[0] = 216.155670166016  
-PYY_basis[1] = 355.031341552734
-PZZ_basis[0] = 481.431274414062
-PZZ_basis[1] = 651.970825195312           
+PXX_basis[0] = -319.2722778
+PXX_basis[1] = -268.2819519    
+PYY_basis[0] = -267.854248  
+PYY_basis[1] = -210.7517548
+PZZ_basis[0] = 123.8242874
+PZZ_basis[1] = 218.0041199           
+                
        
 #Virial and pressure average (with respect to XX,YY,ZZ-not time)
 for ibasis in range(2):
@@ -104,15 +127,29 @@ Virdc_basis = KE/3-Pdc_basis/2*Vbox/nm3tom3/kJm3tobar*NA
        
 eps_new = 101.250841825
 sig_new = 0.37511601053
-U_new = -5264.714843750000
-VirXX_new = 214.462371826172
-VirYY_new = 166.006591796875
-VirZZ_new = -66.664085388184
-Vir_new = (VirXX_new + VirYY_new + VirZZ_new)/3.
+
+# Constrained LINCS
+#U_new = -5264.714843750000
+#VirXX_new = 214.462371826172
+#VirYY_new = 166.006591796875
+#VirZZ_new = -66.664085388184
+#Pdc_new = -123.732154846191
+#PXX_new = 188.633544921875
+#PYY_new = 211.936065673828
+#PZZ_new = 469.600616455078
+
+# Harmonic bonds
+U_new = -5264.100586
+VirXX_new = 709.1787109
+VirYY_new = 633.9317017
+VirZZ_new = 275.1833801
 Pdc_new = -123.732154846191
-PXX_new = 188.633544921875
-PYY_new = 211.936065673828
-PZZ_new = 469.600616455078
+PXX_new = -304.9638672
+PYY_new = -254.9480896
+PZZ_new = 128.575531
+
+Vir_new = (VirXX_new + VirYY_new + VirZZ_new)/3.
+
 P_new = (PXX_new + PYY_new + PZZ_new)/3.
         
 Virdc_new = KE/3-Pdc_new/2*Vbox/nm3tom3/kJm3tobar*NA

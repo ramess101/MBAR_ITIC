@@ -179,13 +179,17 @@ class BasePCFR(object):
     
     def calc_Ureal(self,PCFR_type='Constant'):
         """ Converts the internal energy value into the appropriate units. Also includes the deviation term from reference."""
-        Ureal = []
-        RDF_hat = self.pred_RDF(PCFR_type) # Predict the RDF before predicting the energy and pressure
-        #for rho_state, Temp_state in zip(self.rho, self.Temp):
-        for istate, rho_state in enumerate(self.rho):
-            RDF_state = RDF_hat[:,istate*N_pair:istate*N_pair+N_pair]
-            Ureal.append(R_g * rho_state * self.calc_Uhat(RDF_state) * N_inter * self.Nmol[istate])
-        Ureal = np.array(Ureal) + self.devU
+        
+        if PCFR_type =='CS':
+            Ureal = self.ref.calc_Ureal() * self.epsilon / self.ref.epsilon
+        else:
+            Ureal = []
+            RDF_hat = self.pred_RDF(PCFR_type) # Predict the RDF before predicting the energy and pressure
+            #for rho_state, Temp_state in zip(self.rho, self.Temp):
+            for istate, rho_state in enumerate(self.rho):
+                RDF_state = RDF_hat[:,istate*N_pair:istate*N_pair+N_pair]
+                Ureal.append(R_g * rho_state * self.calc_Uhat(RDF_state) * N_inter * self.Nmol[istate])
+            Ureal = np.array(Ureal) + self.devU
         return Ureal
     
     def calc_Pideal(self):
@@ -221,12 +225,19 @@ class BasePCFR(object):
     
     def calc_Preal(self,PCFR_type='Constant'):
         """ Converts the pressure value into the appropriate units. Also includes the deviation term from reference."""
+        
         Preal = []
         RDF_hat = self.pred_RDF(PCFR_type) # Predict the RDF before predicting the energy and pressure
         #for rho_state, Temp_state in zip(self.rho, self.Temp):
         for istate, rho_state in enumerate(self.rho):
-            RDF_state = RDF_hat[:,istate*N_pair:istate*N_pair+N_pair]
-            Preal.append(k_B * rho_state**2 * self.calc_Phat(RDF_state) * N_inter)
+            if PCFR_type == 'CS':
+                RDF_state = self.ref.RDF[:,istate*N_pair:istate*N_pair+N_pair]
+                Preal.append(k_B * rho_state**2 * self.ref.calc_Phat(RDF_state) * N_inter)
+                Preal[istate] *= self.epsilon / self.ref.epsilon
+                Preal[istate] *= (self.ref.calc_rmin() / self.calc_rmin()) ** 3.
+            else:
+                RDF_state = RDF_hat[:,istate*N_pair:istate*N_pair+N_pair]
+                Preal.append(k_B * rho_state**2 * self.calc_Phat(RDF_state) * N_inter)
         Preal += self.calc_Pideal()
         Preal *= kPa_to_bar
         Preal = np.array(Preal) + self.devP
@@ -234,7 +245,14 @@ class BasePCFR(object):
     
     def calc_Z(self,PCFR_type='Constant'):
         """ Returns the compressibility factor. """
-        return self.calc_Preal(PCFR_type) / self.rho / self.Temp / k_B / kPa_to_bar
+        if PCFR_type == 'CS':
+            Zres = (1. - self.ref.calc_Z())
+            Zres *= self.epsilon / self.ref.epsilon
+            Zres *= (self.ref.calc_rmin() / self.calc_rmin()) ** 3.
+            Zreal = 1. - Zres
+        else:
+            Zreal = self.calc_Preal(PCFR_type) / self.rho / self.Temp / k_B / kPa_to_bar
+        return Zreal
     
     def calc_Z1rho(self,PCFR_type='Constant'):
         """ Returns Z-1/rho. """
@@ -347,9 +365,9 @@ def main():
     Uhat = lambda eps,sig,lam: LJhat(eps,sig,lam).calc_Ureal()
     
     LJTraPPE = Mie(r,RDFs_highP,rhoL_highP, Nmol,T_highP,98.,0.375,12., ref=LJref,devU=Udev,devP=Pdev)
-    UTraPPE = LJTraPPE.calc_Ureal('PMF')
+    UTraPPE = LJTraPPE.calc_Ureal('CS')
     LJPotoff = Mie(r,RDFs_highP, rhoL_highP, Nmol, T_highP, 121.25, 0.3783, 16., ref=LJref,devU=Udev,devP=Pdev)
-    UPotoff = LJPotoff.calc_Ureal('PMF')
+    UPotoff = LJPotoff.calc_Ureal('CS')
     
     plt.plot(T_highP,U_L_highP_ens,label='Ref')
     plt.plot(T_highP,UPotoff,label='Potoff')
@@ -360,10 +378,13 @@ def main():
     plt.show()  
     
     Zref = LJref.calc_Z('')
-    ZTraPPE = LJTraPPE.calc_Z('')
-    ZPotoff = LJPotoff.calc_Z('')
+    ZTraPPE = LJTraPPE.calc_Z('CS')
+    ZPotoff = LJPotoff.calc_Z('CS')
     
     Zref_ens = Pref_ens / rhoL_highP / T_highP / k_B / kPa_to_bar
+    
+    ZTraPPE_CS = 1 - (1 - Zref_ens) * (LJTraPPE.epsilon/LJref.epsilon)/(LJTraPPE.calc_rmin()/LJref.calc_rmin())**3
+    ZPotoff_CS = 1 - (1 - Zref_ens) * (LJPotoff.epsilon/LJref.epsilon)/(LJPotoff.calc_rmin()/LJref.calc_rmin())**3
     
     invT_REFPROP = np.array([7.407407407,6.666666667,5,4,3.333333333,2.857142857,2.5,2.222222222,2,1.818181818,1.666666667])
     Z_REFPROP = np.array([0.000100675,1.187527847,3.614046302,4.832284851,5.50639937,5.903366448,6.145583131,6.295335384,6.386973899,6.440663168,6.46883802])

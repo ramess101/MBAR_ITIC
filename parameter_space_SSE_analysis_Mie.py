@@ -340,6 +340,7 @@ def print_figures(opt_type,use_PCFR):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE $\rho_l$')
+        plt.colorbar()
         f.savefig(compound+'ref_'+str(iRef)+'_SSErhoL.pdf')
         
         f = plt.figure()
@@ -349,6 +350,7 @@ def print_figures(opt_type,use_PCFR):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE $P_{sat}$')
+        plt.colorbar()
         f.savefig(compound+'ref_'+str(iRef)+'_SSEPsat.pdf')
         
         f = plt.figure()
@@ -367,6 +369,7 @@ def print_figures(opt_type,use_PCFR):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE U')
+        plt.colorbar()
         f.savefig(compound+'ref_'+str(iRef)+'_SSEU.pdf')
         
         f = plt.figure()
@@ -376,6 +379,7 @@ def print_figures(opt_type,use_PCFR):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE P')
+        plt.colorbar()
         f.savefig(compound+'ref_'+str(iRef)+'_SSEP.pdf')
         
         f = plt.figure()
@@ -385,6 +389,7 @@ def print_figures(opt_type,use_PCFR):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'SSE Z')
+        plt.colorbar()
         f.savefig(compound+'ref_'+str(iRef)+'_SSEZ.pdf')
         
         f = plt.figure()
@@ -394,6 +399,7 @@ def print_figures(opt_type,use_PCFR):
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
         plt.title(r'Average Neff')
+        plt.colorbar()
         f.savefig(compound+'ref_'+str(iRef)+'_Neff.pdf')
     
     else:
