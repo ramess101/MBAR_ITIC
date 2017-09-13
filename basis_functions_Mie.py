@@ -94,6 +94,9 @@ if bonds == 'LINCS':
     PYY_basis[1] = 355.031341552734
     PZZ_basis[0] = 481.431274414062
     PZZ_basis[1] = 651.970825195312 
+             
+    P_basis[0] = 296.0114441
+    P_basis[1] = 443.0450134
 
 elif bonds == 'Harmonic':
              
@@ -116,19 +119,22 @@ elif bonds == 'Harmonic':
     PYY_basis[0] = -267.854248  
     PYY_basis[1] = -210.7517548
     PZZ_basis[0] = 123.8242874
-    PZZ_basis[1] = 218.0041199           
-                
+    PZZ_basis[1] = 218.0041199   
+             
+    P_basis[0] = -154.434082
+    P_basis[1] = -87.00985718               
        
 #Virial and pressure average (with respect to XX,YY,ZZ-not time)
 for ibasis in range(2):
     Vir_basis[ibasis] = (VirXX_basis[ibasis]+VirYY_basis[ibasis]+VirZZ_basis[ibasis])/3.
-    P_basis[ibasis] = (PXX_basis[ibasis]+PYY_basis[ibasis]+PZZ_basis[ibasis])/3.
+    assert np.abs(P_basis[ibasis] - (PXX_basis[ibasis]+PYY_basis[ibasis]+PZZ_basis[ibasis])/3.) < 1e-3, 'Error in pressure inputs'
        
 #Dispersive contributions
 Pdc_basis[0] = -127.706733703613
 Pdc_basis[1] = -143.719940185547  
-         
-Virdc_basis = (KE/3-Pdc_basis/2*Vbox/nm3tom3/kJm3tobar*NA)/3.
+     
+Vir_basis_alt = KE/3-P_basis/2*Vbox/nm3tom3/kJm3tobar*NA
+Virdc_basis = (KE/3-Pdc_basis/2*Vbox/nm3tom3/kJm3tobar*NA)/3. #Dividing by 3 is an important step
        
 # Values for a different force field, not used in the basis function development
        
@@ -146,6 +152,7 @@ if bonds == 'LINCS':
     PXX_new = 188.633544921875
     PYY_new = 211.936065673828
     PZZ_new = 469.600616455078
+    P_new = 290.0567627
 
 elif bonds == 'Harmonic':
     
@@ -158,10 +165,11 @@ elif bonds == 'Harmonic':
     PXX_new = -304.9638672
     PYY_new = -254.9480896
     PZZ_new = 128.575531
+    P_new = -143.7788086
 
-Vir_new = (VirXX_new + VirYY_new + VirZZ_new)/3.
+Vir_new = (VirXX_new + VirYY_new + VirZZ_new)/3. #Dividing by 3 is an important step
 
-P_new = (PXX_new + PYY_new + PZZ_new)/3.
+assert np.abs(P_new - (PXX_new + PYY_new + PZZ_new)/3.) < 1e-3, 'Error in pressure input for new system'
         
 Virdc_new = (KE/3-Pdc_new/2*Vbox/nm3tom3/kJm3tobar*NA)/3.
        
