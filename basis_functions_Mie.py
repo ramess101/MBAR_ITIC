@@ -8,7 +8,7 @@ from __future__ import division
 import numpy as np
 
 
-bonds='Harmonic'
+bonds='LINCS'
 
 nm3tom3 = 1e27
 kJm3tobar = 1./100.
@@ -69,6 +69,7 @@ sig_basis[0] = 0.375138117621
 sig_basis[1] = 0.375768262189
          
 lam_basis = 13.0
+N_basis = (lam_basis/(lam_basis-6.))*(lam_basis/6.)**(6./(lam_basis-6.))
 
 #Taken from the first snapshot, where ref0 is TraPPE
 
@@ -127,7 +128,7 @@ for ibasis in range(2):
 Pdc_basis[0] = -127.706733703613
 Pdc_basis[1] = -143.719940185547  
          
-Virdc_basis = KE/3-Pdc_basis/2*Vbox/nm3tom3/kJm3tobar*NA
+Virdc_basis = (KE/3-Pdc_basis/2*Vbox/nm3tom3/kJm3tobar*NA)/3.
        
 # Values for a different force field, not used in the basis function development
        
@@ -162,7 +163,7 @@ Vir_new = (VirXX_new + VirYY_new + VirZZ_new)/3.
 
 P_new = (PXX_new + PYY_new + PZZ_new)/3.
         
-Virdc_new = KE/3-Pdc_new/2*Vbox/nm3tom3/kJm3tobar*NA
+Virdc_new = (KE/3-Pdc_new/2*Vbox/nm3tom3/kJm3tobar*NA)/3.
        
 for ibasis in range(2):
     eps_rerun = eps_basis[ibasis]
@@ -179,6 +180,10 @@ for ibasis in range(2):
 rarray = np.linalg.solve(Cmatrix,U_basis) #First entry of rarray is the sum of r^-lambda and second entry is sum of r^-6
 print(rarray)
 
+#Attempted to just multiply by the r du/dr terms
+#rdrarray = rarray.copy()
+#rdrarray[0] *= lam_basis
+#rdrarray[1] *= 6.
 rdrarray = np.linalg.solve(Cmatrix,Vir_basis-Virdc_basis) #First entry of rdrarray is the sum of r*d(r^-lambda)/dr and second entry is sum of r*d(r^-6)/dr
 print(rdrarray)
 
@@ -188,10 +193,14 @@ rdrZZarray = np.linalg.solve(Cmatrix,VirZZ_basis-Virdc_basis) #First entry of rd
 
 Ulam = np.linalg.multi_dot([Clam,rarray[0]])
 U6 = np.linalg.multi_dot([C6,rarray[1]])
+VirXXlam = np.linalg.multi_dot([Clam,rdrXXarray[0]])
+VirXX6 = np.linalg.multi_dot([C6,rdrXXarray[1]])
 
 for ibasis in range(2):
     assert np.abs(Ulam[ibasis]+U6[ibasis] - U_basis[ibasis]) < 1e-6, 'Energies do not add up'
+    assert np.abs(VirXXlam[ibasis]+VirXX6[ibasis]+Virdc_basis[ibasis] - VirXX_basis[ibasis]) < 1e-6, 'Pressures do not add up'
 
+# Verified that N_basis prefactor does not matter
 Clam_new = eps_new * sig_new ** lam_basis #I intentionally ommitted the prefactor (4 for LJ) and just lumped it into the rarray
 C6_new = eps_new * sig_new ** 6.
 
