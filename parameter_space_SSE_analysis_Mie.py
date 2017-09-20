@@ -13,6 +13,7 @@ import subprocess
 import time
 from scipy.optimize import minimize, minimize_scalar, fsolve
 import scipy.integrate as integrate
+from VLE_model_fit import ITIC_VLE
 
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
@@ -124,8 +125,8 @@ lam_high = np.loadtxt('lam_high')
 
 iRef = int(np.loadtxt('iRef'))
 
-def analyze_ITIC(iRerun,use_PCFR): 
-
+def analyze_ITIC(iRerun,use_PCFR,smoothed=True): 
+    print(iRerun)
     #Generate REFPROP values, prints out into a file in the correct directory
 
     RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
@@ -140,16 +141,40 @@ def analyze_ITIC(iRerun,use_PCFR):
     
     #print(Tsat)
     #print(rhoLSim)
-    #print(PsatSim)
+    print(PsatSim)
     #print(rhovSim)
-
-    RP_rhoL = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',0,'REFPROP::'+compound) #[kg/m3]   
-    RP_rhov = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound) #[kg/m3]
-    RP_Psat = CP.PropsSI('P','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound)/100000. #[bar]
-
-    devrhoL = rhoLSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhoL #In case Tsat is greater than RP_TC
-    devPsat = PsatSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_Psat
-    devrhov = rhovSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhov
+    
+    if smoothed:
+                
+        ITIC_fit = ITIC_VLE(Tsat,rhoLSim,rhovSim,PsatSim)
+        Tsat = ITIC_fit.Tsat #Processes the data to determine if some points are unreliable
+        print('CP 1')
+        rhoL_fit = ITIC_fit.rholHat(Tsat)
+        print('CP 2')
+        Psat_fit = ITIC_fit.PsatHat(Tsat)
+        print('CP 3')
+        rhov_fit = ITIC_fit.rhov
+        
+        #print(len(Tsat))
+        print(len(Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)]))
+        
+        RP_rhoL = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',0,'REFPROP::'+compound) #[kg/m3]   
+        RP_rhov = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound) #[kg/m3]
+        RP_Psat = CP.PropsSI('P','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound)/100000. #[bar]
+            
+        devrhoL = rhoL_fit[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhoL #In case Tsat is greater than RP_TC
+        devPsat = Psat_fit[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_Psat
+        devrhov = rhov_fit[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhov
+        
+    else:
+        
+        RP_rhoL = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',0,'REFPROP::'+compound) #[kg/m3]   
+        RP_rhov = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound) #[kg/m3]
+        RP_Psat = CP.PropsSI('P','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound)/100000. #[bar]
+    
+        devrhoL = rhoLSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhoL #In case Tsat is greater than RP_TC
+        devPsat = PsatSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_Psat
+        devrhov = rhovSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhov
                      
     devU = USim - RP_U_depN
     devP = PSim - RP_P
@@ -299,7 +324,7 @@ def print_figures(opt_type,use_PCFR):
     
     initialize_files()  
         
-    if opt_type == 'scan_broken': #This doesn't work with basis functions or with multiple references
+    if opt_type == 'scan': #This doesn't work with basis functions or with multiple references
 
         # For scanning the parameter space
         
