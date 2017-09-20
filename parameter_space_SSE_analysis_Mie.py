@@ -125,8 +125,8 @@ lam_high = np.loadtxt('lam_high')
 
 iRef = int(np.loadtxt('iRef'))
 
-def analyze_ITIC(iRerun,use_PCFR,smoothed=True): 
-    print(iRerun)
+def analyze_ITIC(iRerun,use_PCFR,metric,smoothed=True): 
+    #print(iRerun)
     #Generate REFPROP values, prints out into a file in the correct directory
 
     RP_U_depN, RP_P, RP_Z, RP_Z1rho = REFPROP_UP(Temp_sim,rho_mass,Nmol_sim,compound)
@@ -141,22 +141,20 @@ def analyze_ITIC(iRerun,use_PCFR,smoothed=True):
     
     #print(Tsat)
     #print(rhoLSim)
-    print(PsatSim)
+    #print(PsatSim)
     #print(rhovSim)
     
     if smoothed:
                 
         ITIC_fit = ITIC_VLE(Tsat,rhoLSim,rhovSim,PsatSim)
         Tsat = ITIC_fit.Tsat #Processes the data to determine if some points are unreliable
-        print('CP 1')
+        #Tsat = np.linspace(137.,165,50)
         rhoL_fit = ITIC_fit.rholHat(Tsat)
-        print('CP 2')
         Psat_fit = ITIC_fit.PsatHat(Tsat)
-        print('CP 3')
-        rhov_fit = ITIC_fit.rhov
+        rhov_fit = ITIC_fit.rhovHat(Tsat) #Currently this is not really doing a good fit
         
         #print(len(Tsat))
-        print(len(Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)]))
+        #print(len(Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)]))
         
         RP_rhoL = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',0,'REFPROP::'+compound) #[kg/m3]   
         RP_rhov = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound) #[kg/m3]
@@ -217,7 +215,14 @@ def analyze_ITIC(iRerun,use_PCFR,smoothed=True):
     RMS[2] = np.sqrt(SSErhov/len(devrhov))
     RMS[3] = np.sqrt(SSEU/len(devU))
     RMS[4] = np.sqrt(SSEP/len(devP))
-    RMS[5] = np.sqrt(SSEZ/len(devZ)) 
+    RMS[5] = np.sqrt(SSEZ/len(devZ))
+    
+    RMSrhoL = RMS[0]
+    RMSPsat = RMS[1]
+    RMSrhov = RMS[2]
+    RMSU = RMS[3]
+    RMSP = RMS[4]
+    RMSZ = RMS[5]
 
     for iAAD,ibias,iSSE,iRMS in zip(AAD,bias,SSE,RMS):
            
@@ -279,7 +284,10 @@ def analyze_ITIC(iRerun,use_PCFR,smoothed=True):
 
     Navg = np.mean(NeffSim)
     
-    return SSErhoL, SSEPsat, SSErhov, SSEU, SSEP, SSEZ, Navg
+    if metric == 'SSE':
+        return SSErhoL, SSEPsat, SSErhov, SSEU, SSEP, SSEZ, Navg
+    elif metric == 'RMS':
+        return RMSrhoL, RMSPsat, RMSrhov, RMSU, RMSP, RMSZ, Navg 
 
 def initialize_files():
     
@@ -320,7 +328,7 @@ def initialize_files():
 #    f = open('SSE_Z','w')
 #    f.close()
 
-def print_figures(opt_type,use_PCFR):
+def print_figures(opt_type,use_PCFR,metric):
     
     initialize_files()  
         
@@ -348,15 +356,16 @@ def print_figures(opt_type,use_PCFR):
         iRerun = 1
         for ieps in range(neps):
             for isig in range(nsig):
-                SSErhoL[ieps,isig], SSEPsat[ieps,isig], SSErhov[ieps,isig], SSEU[ieps,isig], SSEP[ieps,isig], SSEZ[ieps,isig], Neffavg[ieps,isig] = analyze_ITIC(iRerun,use_PCFR)
+                SSErhoL[ieps,isig], SSEPsat[ieps,isig], SSErhov[ieps,isig], SSEU[ieps,isig], SSEP[ieps,isig], SSEZ[ieps,isig], Neffavg[ieps,isig] = analyze_ITIC(iRerun,use_PCFR,metric)
                 iRerun += 1
-                
-        SSErhoL = np.log10(SSErhoL)
-        SSEPsat = np.log10(SSEPsat)
-        SSErhov = np.log10(SSErhov)
-        SSEU = np.log10(SSEU)
-        SSEP = np.log10(SSEP)
-        SSEZ = np.log10(SSEZ)
+        
+        if metric == 'SSE':        
+            SSErhoL = np.log10(SSErhoL)
+            SSEPsat = np.log10(SSEPsat)
+            SSErhov = np.log10(SSErhov)
+            SSEU = np.log10(SSEU)
+            SSEP = np.log10(SSEP)
+            SSEZ = np.log10(SSEZ)
                 
         f = plt.figure()
         plt.contour(sig,eps,SSErhoL)
@@ -364,9 +373,9 @@ def print_figures(opt_type,use_PCFR):
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE $\rho_l$')
+        plt.title(metric+r' $\rho_l$')
         plt.colorbar()
-        f.savefig(compound+'ref_'+str(iRef)+'_SSErhoL.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'rhoL.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,SSEPsat)
@@ -374,9 +383,9 @@ def print_figures(opt_type,use_PCFR):
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE $P_{sat}$')
+        plt.title(metric+r' $P_{sat}$')
         plt.colorbar()
-        f.savefig(compound+'ref_'+str(iRef)+'_SSEPsat.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'Psat.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,SSErhov)
@@ -384,8 +393,8 @@ def print_figures(opt_type,use_PCFR):
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE $\rho_v$')
-        f.savefig(compound+'ref_'+str(iRef)+'_SSErhov.pdf')
+        plt.title(metric+r' $\rho_v$')
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'rhov.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,SSEU)
@@ -393,9 +402,9 @@ def print_figures(opt_type,use_PCFR):
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE U')
+        plt.title(metric+r' U')
         plt.colorbar()
-        f.savefig(compound+'ref_'+str(iRef)+'_SSEU.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'U.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,SSEP)
@@ -403,9 +412,9 @@ def print_figures(opt_type,use_PCFR):
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE P')
+        plt.title(metric+r' P')
         plt.colorbar()
-        f.savefig(compound+'ref_'+str(iRef)+'_SSEP.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'P.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,SSEZ)
@@ -413,9 +422,9 @@ def print_figures(opt_type,use_PCFR):
         plt.xlabel('$\sigma$ (nm)')
         plt.ylim([min(eps),max(eps)])
         plt.xlim([min(sig),max(sig)])
-        plt.title(r'SSE Z')
+        plt.title(metric+r' Z')
         plt.colorbar()
-        f.savefig(compound+'ref_'+str(iRef)+'_SSEZ.pdf')
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'Z.pdf')
         
         f = plt.figure()
         plt.contour(sig,eps,Neffavg)
@@ -458,52 +467,53 @@ def print_figures(opt_type,use_PCFR):
         Neffavg = np.empty(nReruns)
         
         for iRerun in range(nReruns):
-            SSErhoL[iRerun], SSEPsat[iRerun], SSErhov[iRerun], SSEU[iRerun], SSEP[iRerun], SSEZ[iRerun], Neffavg[iRerun] = analyze_ITIC(iRerun,use_PCFR)
+            SSErhoL[iRerun], SSEPsat[iRerun], SSErhov[iRerun], SSEU[iRerun], SSEP[iRerun], SSEZ[iRerun], Neffavg[iRerun] = analyze_ITIC(iRerun,use_PCFR,metric)
                 
            
         f = plt.figure()
         plt.semilogy(SSErhoL,marker='o',linestyle='none')
         plt.xlabel('Iteration')
-        plt.ylabel('SSE')
-        f.savefig(compound+'ref_'+str(iRef)+'_SSErhoL.pdf')
+        plt.ylabel(metric)
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'rhoL.pdf')
         
         f = plt.figure()
         plt.semilogy(SSEPsat,marker='o',linestyle='none')
         plt.xlabel('Iteration')
-        plt.ylabel('SSE')
-        f.savefig(compound+'ref_'+str(iRef)+'_SSEPsat.pdf')
+        plt.ylabel(metric)
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'Psat.pdf')
         
         f = plt.figure()
         plt.semilogy(SSErhov,marker='o',linestyle='none')
         plt.xlabel('Iteration')
-        plt.ylabel('SSE')
-        f.savefig(compound+'ref_'+str(iRef)+'_SSErhov.pdf')
+        plt.ylabel(metric)
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'rhov.pdf')
         
         f = plt.figure()
         plt.semilogy(SSEU,marker='o',linestyle='none')
         plt.xlabel('Iteration')
-        plt.ylabel('SSE')
-        f.savefig(compound+'ref_'+str(iRef)+'_SSEU.pdf')
+        plt.ylabel(metric)
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'U.pdf')
         
         f = plt.figure()
         plt.semilogy(SSEP,marker='o',linestyle='none')
         plt.xlabel('Iteration')
-        plt.ylabel('SSE')
-        f.savefig(compound+'ref_'+str(iRef)+'_SSEP.pdf')
+        plt.ylabel(metric)
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'P.pdf')
         
         f = plt.figure()
         plt.semilogy(SSEZ,marker='o',linestyle='none')
         plt.xlabel('Iteration')
-        plt.ylabel('SSE')
-        f.savefig(compound+'ref_'+str(iRef)+'_SSEZ.pdf')
+        plt.ylabel(metric)
+        f.savefig(compound+'ref_'+str(iRef)+'_'+metric+'Z.pdf')
         
-        SSErhoL = np.log10(SSErhoL)
-        SSEPsat = np.log10(SSEPsat)
-        SSErhov = np.log10(SSErhov)
-        SSEU = np.log10(SSEU)
-        SSEP = np.log10(SSEP)
-        SSEZ = np.log10(SSEZ)
-        F_ITIC = np.log10(F_ITIC)
+        if metric == 'SSE':        
+            SSErhoL = np.log10(SSErhoL)
+            SSEPsat = np.log10(SSEPsat)
+            SSErhov = np.log10(SSErhov)
+            SSEU = np.log10(SSEU)
+            SSEP = np.log10(SSEP)
+            SSEZ = np.log10(SSEZ)
+            F_ITIC = np.log10(F_ITIC)
         
         f = plt.figure()
         ax = f.add_subplot(111,projection='3d')
@@ -695,13 +705,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points','SLSQP'],help="choose which type of optimizer to use")
     parser.add_argument("-PCFR","--PCFR",help="Use pair correlation function rescaling",action="store_true")
+    parser.add_argument("-met","--metric",choices=['SSE','RMS'],help="Specify which metric will be used to quantify goodness of fit.")
     args = parser.parse_args()
     if args.PCFR: #Compile PCFs if using PCFR
         use_PCFR = True
     else:
         use_PCFR = False
     if args.optimizer:
-        print_figures(args.optimizer,use_PCFR)
+        print_figures(args.optimizer,use_PCFR,args.metric)
     else:
         print('Please specify an optimizer type')
 

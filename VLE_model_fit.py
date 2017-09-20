@@ -30,6 +30,9 @@ class ITIC_VLE(object):
         self.invTsat = 1000./Tsat
         self.boptPsat = np.zeros(3)
         self.boptrhol = np.zeros(4)
+        self.boptrhov = np.zeros(4)
+        self.boptRectScale = np.zeros(4)
+        self.beta = 0.326
         
     def SSE(self,data,model):
         SE = (data - model)**2
@@ -69,9 +72,23 @@ class ITIC_VLE(object):
         return PsatHat
     
     def rholRectScale(self,b,T):
-        beta = 0.326
+        beta = self.beta
         rhol = b[0] + b[1]*(b[2] - T) + b[3]*(b[2] - T)**beta
         return rhol
+    
+    def rhovRectScale(self,b,T):
+        beta = self.beta
+        rhov = b[0] + b[1]*(b[2] - T) - b[3]*(b[2] - T)**beta
+        return rhov
+    
+    def rhor(self,b,T):
+        rhor = b[0] + b[1]*(b[2]-T)
+        return rhor
+    
+    def rhos(self,b,T):
+        beta = self.beta
+        rhos = b[3]*(b[2]-T)**beta
+        return rhos
     
     def guessRectScale(self):
         rhor = (self.rhol + self.rhov)/2.
@@ -87,12 +104,32 @@ class ITIC_VLE(object):
         guess = np.array([rhocGuess,bopt[0],TcGuess,bopt[1]])
         return guess
     
+    def fitRectScale(self):
+        Tfit = self.Tsat
+        rhorfit = (self.rhol + self.rhov)/2.
+        rhosfit = (self.rhol - self.rhov)/2.
+        SSErhor = lambda b: self.SSE(rhorfit,self.rhor(b,Tfit))
+        SSErhos = lambda b: self.SSE(rhosfit,self.rhos(b,Tfit))
+        SSERectScale = lambda b: SSErhor(b) + SSErhos(b)
+        guess = self.guessRectScale()
+        if len(Tfit) >= 2:
+            bnd = ((0,np.min(self.rhol)),(0,None),(np.max(Tfit),None),(0,None))
+            bopt = minimize(SSERectScale,guess,bounds=bnd).x
+        else:
+            bopt = guess
+        self.rhoc = bopt[0]
+        self.Tc = bopt[2]
+        self.boptRectScale = bopt
+        return bopt
+    
     def fitrhol(self):
         Tfit, rholfit = self.Tsat, self.rhol
         SSErhol = lambda b: self.SSE(rholfit,self.rholRectScale(b,Tfit))
-        guess = self.guessRectScale()
+        if np.all(self.boptRectScale == np.zeros(4)):
+            self.fitRectScale()
+        guess = self.boptRectScale
         #print(SSErhol(guess))
-        if len(Tfit) >= 4:
+        if len(Tfit) >= 4: #rhol can get a better fit, although it extrapolates poorly
             bnd = ((0,np.min(rholfit)),(0,None),(np.max(Tfit),None),(0,None))
             bopt = minimize(SSErhol,guess,bounds=bnd).x
         else:
@@ -107,6 +144,34 @@ class ITIC_VLE(object):
         bopt = self.boptrhol
         rholHat = self.rholRectScale(bopt,T)
         return rholHat
+    
+    def fitrhov(self):
+        Tfit, rhovfit = self.Tsat, self.rhov
+        SSErhov = lambda b: self.SSE(rhovfit,self.rhovRectScale(b,Tfit))
+        if np.all(self.boptRectScale == np.zeros(4)):
+            self.fitRectScale()
+        guess = self.boptRectScale
+        #print(guess)
+        #print(SSErhol(guess))
+        if len(Tfit) >= 6: #rhov has problems fitting the data, better to just use from Rect Scale
+            bnd = ((0,np.min(rhovfit)),(0,None),(np.max(Tfit),None),(0,None))
+            bopt = minimize(SSErhov,guess,bounds=bnd).x
+        else:
+            bopt = guess
+        self.boptrhov = bopt
+        #bopt = guess #If the optimization is not converging, this is a better option
+        return bopt
+    
+    def rhovHat(self,T):
+        if np.all(self.boptrhov == np.zeros(4)):
+            self.fitrhov()
+        bopt = self.boptrhov
+#        if np.all(self.boptrhol == np.zeros(4)):
+#            self.fitrhol()
+#        bopt = self.boptrhol
+        #print(bopt)
+        rhovHat = self.rhovRectScale(bopt,T)
+        return rhovHat
 
 def main():
     
@@ -150,20 +215,25 @@ def main():
     rhol = ITIC_fit.rhol
     rhov = ITIC_fit.rhov
     Psat = ITIC_fit.Psat
+    ITIC_fit.fitRectScale()
+    #Tc = ITIC_fit.boptRectScale[2] #Very poor Tc since only using rhol
+    Tc = ITIC_fit.Tc
     
 #    invTsat = 1000./Tsat
 #    logPsat = np.log10(Psat)
 
-    Tplot = np.linspace(min(Tsat),max(Tsat),1000)
+    Tplot = np.linspace(min(Tsat),Tc,1000)
     invTplot = 1000./Tplot
     logPsatplot = ITIC_fit.logPsatHat(Tplot)
     rholplot = ITIC_fit.rholHat(Tplot)
+    rholRSplot = ITIC_fit.rholRectScale(ITIC_fit.boptRectScale,Tplot)
     Psatplot = ITIC_fit.PsatHat(Tplot)
+    rhovplot = ITIC_fit.rhovHat(Tplot)
     Psatsmoothed = ITIC_fit.PsatHat(Tsat)
     rholsmoothed = ITIC_fit.rholHat(Tsat)
     
-    print(Psatplot)
-    print(Psatsmoothed)
+#    print(Psatplot)
+#    print(Psatsmoothed)
     
     plt.plot(invTsat,logPsat,'ro')
     plt.plot(invTplot,logPsatplot,'k')
@@ -187,7 +257,9 @@ def main():
     plt.plot(rhol,Tsat,'ro')
     plt.plot(rhov,Tsat,'ro')
     plt.plot(rholsmoothed,Tsat,'gx')
-    plt.plot(rholplot,Tplot,'k')
+    plt.plot(rholplot,Tplot,'g')
+    plt.plot(rhovplot,Tplot,'k')
+    plt.plot(rholRSplot,Tplot,'k')
     plt.xlabel('Density (kg/m3)')
     plt.ylabel('Temperature (K)')
     plt.show()
