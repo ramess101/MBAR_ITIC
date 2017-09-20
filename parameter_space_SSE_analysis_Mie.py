@@ -148,7 +148,7 @@ def analyze_ITIC(iRerun,use_PCFR,metric,smoothed=True):
                 
         ITIC_fit = ITIC_VLE(Tsat,rhoLSim,rhovSim,PsatSim)
         Tsat = ITIC_fit.Tsat #Processes the data to determine if some points are unreliable
-        #Tsat = np.linspace(137.,165,50)
+        Tsat = np.linspace(np.min(Tsat),np.max(Tsat),50)
         rhoL_fit = ITIC_fit.rholHat(Tsat)
         Psat_fit = ITIC_fit.PsatHat(Tsat)
         rhov_fit = ITIC_fit.rhovHat(Tsat) #Currently this is not really doing a good fit
