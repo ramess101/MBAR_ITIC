@@ -4,7 +4,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
-from scipy.optimize import minimize, fsolve   
+from scipy.optimize import minimize  
 
 class ITIC_results(object):
     
@@ -69,14 +69,16 @@ class ITIC_results(object):
         Tfit, rholfit = self.Tsat, self.rhol
         SSErhol = lambda b: self.SSE(rholfit,self.rholRectScale(b,Tfit))
         guess = self.guessRectScale()
-        print(guess)
-        print(SSErhol(guess))
-        #bopt = minimize(SSErhol,guess).x
-        bopt = guess #If the optimization is not converging, this is a better option
+        #print(guess)
+        #print(SSErhol(guess))
+        bnd = ((0,np.min(rholfit)),(0,None),(np.max(Tfit),None),(0,None))
+        bopt = minimize(SSErhol,guess,bounds=bnd).x
+        #bopt = guess #If the optimization is not converging, this is a better option
         return bopt
     
     def rholHat(self,T):
         bopt = self.fitrhol()
+        #print(bopt)
         rholHat = self.rholRectScale(bopt,T)
         return rholHat
 
@@ -94,7 +96,7 @@ def main():
 #    rhol = np.array([428.5761,471.4212,514.2969,557.1258,600.0072])
 #    rhov = np.array([10.07994, 7.19709, 3.250055, 0.042836, 0.002265])
 #    Psat = np.array([30.20705, 19.92031, 7.845697, 0.12644, 0.007994])
-#    
+##    
     PCFR_ITIC_Potoff = ITIC_results(Tsat,rhol,rhov,Psat)
     
     invTsat = PCFR_ITIC_Potoff.invTsat
