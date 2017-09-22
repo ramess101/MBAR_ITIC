@@ -28,11 +28,11 @@ class ITIC_VLE(object):
         self.Psat = Psat
         self.logPsat = np.log10(Psat)
         self.invTsat = 1000./Tsat
-        self.boptPsat = np.zeros(3)
-        self.boptrhol = np.zeros(4)
-        self.boptrhov = np.zeros(4)
-        self.boptRectScale = np.zeros(4)
         self.beta = 0.326
+        self.fitAntoine()
+        self.fitRectScale()
+        self.fitrhol()
+        self.fitrhov()
         
     def SSE(self,data,model):
         SE = (data - model)**2
@@ -61,8 +61,6 @@ class ITIC_VLE(object):
         return bopt
     
     def logPsatHat(self,T):
-        if np.all(self.boptPsat == np.zeros(3)):
-            self.fitAntoine()
         bopt = self.boptPsat
         logPsatHat = self.logPAntoine(bopt,T)
         return logPsatHat
@@ -95,9 +93,9 @@ class ITIC_VLE(object):
         rhocGuess = np.mean(rhor)
         TcGuess = np.max(self.Tsat)/0.85
         guess = np.array([rhocGuess,2,TcGuess,50])
-        ydata = self.rhol - rhocGuess #Modify to get decent guesses
-        xhat = lambda b: self.rholRectScale(np.array([rhocGuess,b[0],TcGuess,b[1]]),self.Tsat) - rhocGuess
-        SSEguess = lambda b: self.SSE(ydata,xhat(b))
+        ylin = self.rhol - rhocGuess #Modify to get decent guesses
+        xlin = lambda b: self.rholRectScale(np.array([rhocGuess,b[0],TcGuess,b[1]]),self.Tsat) - rhocGuess
+        SSEguess = lambda b: self.SSE(ylin,xlin(b))
         guess = np.array([2,50])
         bnd = ((0,None),(0,None))
         bopt = minimize(SSEguess,guess,bounds=bnd).x
@@ -125,8 +123,6 @@ class ITIC_VLE(object):
     def fitrhol(self):
         Tfit, rholfit = self.Tsat, self.rhol
         SSErhol = lambda b: self.SSE(rholfit,self.rholRectScale(b,Tfit))
-        if np.all(self.boptRectScale == np.zeros(4)):
-            self.fitRectScale()
         guess = self.boptRectScale
         #print(SSErhol(guess))
         if len(Tfit) >= 4: #rhol can get a better fit, although it extrapolates poorly
@@ -139,8 +135,6 @@ class ITIC_VLE(object):
         return bopt
     
     def rholHat(self,T):
-        if np.all(self.boptrhol == np.zeros(4)):
-            self.fitrhol()
         bopt = self.boptrhol
         rholHat = self.rholRectScale(bopt,T)
         return rholHat
@@ -148,8 +142,6 @@ class ITIC_VLE(object):
     def fitrhov(self):
         Tfit, rhovfit = self.Tsat, self.rhov
         SSErhov = lambda b: self.SSE(rhovfit,self.rhovRectScale(b,Tfit))
-        if np.all(self.boptRectScale == np.zeros(4)):
-            self.fitRectScale()
         guess = self.boptRectScale
         #print(guess)
         #print(SSErhol(guess))
@@ -163,12 +155,7 @@ class ITIC_VLE(object):
         return bopt
     
     def rhovHat(self,T):
-        if np.all(self.boptrhov == np.zeros(4)):
-            self.fitrhov()
         bopt = self.boptrhov
-#        if np.all(self.boptrhol == np.zeros(4)):
-#            self.fitrhol()
-#        bopt = self.boptrhol
         #print(bopt)
         rhovHat = self.rhovRectScale(bopt,T)
         return rhovHat
