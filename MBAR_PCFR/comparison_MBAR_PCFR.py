@@ -8,15 +8,17 @@ Compares the MBAR predictions with direct simulation for U and P
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
-from scipy.optimize import minimize  
+from scipy.optimize import minimize
 
-fpathroot = 'parameter_space_LJ/'
+reference = 'Potoff'  
+
+fpathroot = 'parameter_space_Mie16/'
 nReruns = 441
 nStates = 19
 
 def get_parameter_sets():
     
-    eps_sig_all = np.loadtxt(fpathroot+'eps_sig_lam12_all',skiprows=2)
+    eps_sig_all = np.loadtxt(fpathroot+'eps_sig_lam16_highEps_all',skiprows=2)
     
     eps_matrix = np.zeros([nStates,nReruns])
     sig_matrix = np.zeros([nStates,nReruns])
@@ -31,29 +33,46 @@ def get_parameter_sets():
     return eps_all, sig_all, eps_matrix, sig_matrix
 
 def compile_data(model_type):
-    U_compiled = np.zeros([nStates,nReruns])
-    dU_compiled = np.zeros([nStates,nReruns])
-    P_compiled = np.zeros([nStates,nReruns])
-    dP_compiled = np.zeros([nStates,nReruns])
-    Z_compiled = np.zeros([nStates,nReruns])
-    Neff_compiled = np.zeros([nStates,nReruns])
     
-    for iRerun in range(nReruns):
-        iRerun += 1
-        if model_type == 'Direct_simulation':
-            fpath = fpathroot+model_type+'_rr'+str(iRerun)
-            UPZ = np.loadtxt(fpath)            
-        else:
-            fpath = fpathroot+model_type+'rr'+str(iRerun)+'_lam12'
-            UPZ = np.loadtxt(fpath)
-            
-        U_compiled[:,iRerun-1] = UPZ[:,0]
-        dU_compiled[:,iRerun-1] = UPZ[:,1]
-        P_compiled[:,iRerun-1] = UPZ[:,2]
-        dP_compiled[:,iRerun-1] = UPZ[:,3]
-        Z_compiled[:,iRerun-1] = UPZ[:,4]
-        Neff_compiled[:,iRerun-1] = UPZ[:,6]
+    if reference == 'TraPPE' and fpathroot == 'parameter_space_Mie16/':
+        ending = '_lam16_highEps'
+    else:
+        ending = ''
+    
+    if model_type == 'TraPPE' or model_type == 'Potoff':
+        UPZ = np.loadtxt(model_type)
+        U_compiled = UPZ[:,0]
+        dU_compiled = UPZ[:,1]
+        P_compiled = UPZ[:,2]
+        dP_compiled = UPZ[:,3]
+        Z_compiled = UPZ[:,4]
+        Neff_compiled = UPZ[:,5]
+    else:
+        U_compiled = np.zeros([nStates,nReruns])
+        dU_compiled = np.zeros([nStates,nReruns])
+        P_compiled = np.zeros([nStates,nReruns])
+        dP_compiled = np.zeros([nStates,nReruns])
+        Z_compiled = np.zeros([nStates,nReruns])
+        Neff_compiled = np.zeros([nStates,nReruns])
         
+        for iRerun in range(nReruns):
+            iUPZ = iRerun
+            if model_type == 'Direct_simulation' or model_type == 'MBAR_ref0' or fpathroot == 'parameter_space_LJ/' or reference == 'TraPPE':
+                iRerun += 1
+            if model_type == 'Direct_simulation':
+                fpath = fpathroot+model_type+'_rr'+str(iRerun)
+                UPZ = np.loadtxt(fpath)            
+            else:
+                fpath = fpathroot+model_type+'rr'+str(iRerun)+ending
+                UPZ = np.loadtxt(fpath)
+                
+            U_compiled[:,iUPZ] = UPZ[:,0]
+            dU_compiled[:,iUPZ] = UPZ[:,1]
+            P_compiled[:,iUPZ] = UPZ[:,2]
+            dP_compiled[:,iUPZ] = UPZ[:,3]
+            Z_compiled[:,iUPZ] = UPZ[:,4]
+            Neff_compiled[:,iUPZ] = UPZ[:,6]
+            
     dZ_compiled = dP_compiled * (Z_compiled/P_compiled)
     
     return U_compiled, dU_compiled, P_compiled, dP_compiled, Z_compiled, dZ_compiled, Neff_compiled
@@ -356,32 +375,51 @@ def uncertainty_check(prop_direct, prop_MBAR,u_direct, u_MBAR,Neff_MBAR):
     
     plt.hist(Neff_rej)
     plt.show()
+    
+def PCFR_error(U_ref, P_ref,ref):
+    if ref == 'TraPPE':
+        UPZ_PCFR = np.loadtxt('parameter_space_LJ/PCFR_ref0rr221_lam12') 
+    elif ref == 'Potoff':
+        UPZ_PCFR = np.loadtxt('parameter_space_Mie16/PCFR_ref0rr221_lam12')
+        
+    U_PCFR = UPZ_PCFR[:,0]
+    P_PCFR = UPZ_PCFR[:,2]
+    
+    U_error = U_ref - U_PCFR
+    P_error = P_ref - P_PCFR
+    
+    return U_error, P_error
         
 def main():
     
     eps_all, sig_all, eps_matrix, sig_matrix = get_parameter_sets()
     
-    for model_type in ['Direct_simulation', 'MBAR_ref0', 'PCFR_ref0','Constant_']:
-        if model_type == 'Direct_simulation':
+    for model_type in [reference,'Direct_simulation', 'MBAR_ref0', 'PCFR_ref0','Constant_']:
+        if model_type == 'TraPPE' or model_type == 'Potoff':
+            U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type)
+            # Now I call a function that should calculate the error in the proper manner
+            #U_error, P_error = PCFR_error(U_ref,P_ref,model_type)
+            U_error, P_error = 0, 0
+        elif model_type == 'Direct_simulation':
             U_direct, dU_direct, P_direct, dP_direct, Z_direct, dZ_direct, Neff_direct = compile_data(model_type)
         elif model_type == 'MBAR_ref0':
             U_MBAR, dU_MBAR, P_MBAR, dP_MBAR, Z_MBAR, dZ_MBAR, Neff_MBAR = compile_data(model_type)
         elif model_type == 'PCFR_ref0':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data(model_type)
         elif model_type == 'Constant_':
-            U_W1, dU_W1, P_W1, dP_W1, Z_W1, dZ_W1, Neff_W1 = compile_data(model_type)
-        
+            #U_W1, dU_W1, P_W1, dP_W1, Z_W1, dZ_W1, Neff_W1 = compile_data(model_type)
+            U_W1, dU_W1, P_W1, dP_W1, Z_W1, dZ_W1, Neff_W1 = U_MBAR, dU_MBAR, P_MBAR, dP_MBAR, Z_MBAR, dZ_MBAR, Neff_MBAR
 #    plt.scatter(sig_matrix,Neff_MBAR)
 #    plt.show()
     
     #In my original analysis I forgot to correct for the error associated with ensembles versus integrating histograms
-        
-    U_ref = U_direct[:,220]
-    P_ref = P_direct[:,220]
+    #Should actually be 221, I believe. Depends on how the matrices are built. I know it is rr221, but is that index 220?     
+    #U_ref = U_direct[:,220]
+    #P_ref = P_direct[:,220]
     
-    U_error = U_ref - U_PCFR[:,220]
-    P_error = P_ref - P_PCFR[:,220]
-                    
+    #U_error = U_ref - U_PCFR[:,220]
+    #P_error = P_ref - P_PCFR[:,220]
+                
     U_PCFR = (U_PCFR.T + U_error).T
     Z_PCFR *= (P_PCFR.T + P_error).T/P_PCFR
     P_PCFR = (P_PCFR.T + P_error).T  
@@ -412,11 +450,11 @@ def main():
     mask = mask_none
     
     # Recommended values
-
-    U_MBAR[~mask_MBAR] = (U_PCFR[~mask_MBAR] + U_MBAR[~mask_MBAR])/2.
-    P_MBAR[~mask_MBAR] = (P_PCFR[~mask_MBAR] + P_MBAR[~mask_MBAR])/2.
-    Z_MBAR[~mask_MBAR] = (Z_PCFR[~mask_MBAR] + Z_MBAR[~mask_MBAR])/2.
-    
+#
+#    U_MBAR[~mask_MBAR] = (U_PCFR[~mask_MBAR] + U_MBAR[~mask_MBAR])/2.
+#    P_MBAR[~mask_MBAR] = (P_PCFR[~mask_MBAR] + P_MBAR[~mask_MBAR])/2.
+#    Z_MBAR[~mask_MBAR] = (Z_PCFR[~mask_MBAR] + Z_MBAR[~mask_MBAR])/2.
+#    
 #    U_MBAR[~mask_MBAR] = U_PCFR[~mask_MBAR]
 #    P_MBAR[~mask_MBAR] = P_PCFR[~mask_MBAR]
 #    Z_MBAR[~mask_MBAR] = Z_PCFR[~mask_MBAR]
