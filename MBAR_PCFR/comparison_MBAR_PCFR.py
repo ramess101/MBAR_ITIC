@@ -73,6 +73,8 @@ def parity_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop_direct
     elif prop == 'Pdep':
         units = '(bar)'
         title = 'Pressure - Ideal Gas'
+        
+    f = plt.figure()
 
     plt.plot(prop_direct,prop_hat3,'b.',label='Constant PCF',alpha=0.2)    
     plt.plot(prop_direct,prop_hat1,'r.',label='MBAR',alpha=0.2)
@@ -85,6 +87,8 @@ def parity_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop_direct
     plt.legend()
     plt.show()
     
+    f.savefig('Parity_comparison_'+prop+'.pdf')
+    
     #Error bar did not seem useful because the errors are so small
 #    plt.errorbar(prop_direct,prop_hat1,xerr=dprop_direct,yerr=dprop_hat1,fmt='ro',label='MBAR')
 #    #plt.plot(prop_direct,prop_hat2,'gx',label='PCFR')
@@ -95,8 +99,11 @@ def parity_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop_direct
 #    plt.title(title)
 #    plt.legend()
 #    plt.show()
-#       
-    p = plt.scatter(prop_direct[Neff.argsort()],prop_hat1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='cool',label='MBAR',alpha=0.5)
+#      
+
+    f = plt.figure()
+ 
+    p = plt.scatter(prop_direct[Neff.argsort()],prop_hat1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='cool',label='MBAR')
     plt.plot(parity,parity,'k',label='Parity')
     plt.xlabel('Direct Simulation '+units)
     plt.ylabel('Predicted with MBAR '+units)
@@ -105,6 +112,8 @@ def parity_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop_direct
     cb = plt.colorbar(p)
     cb.set_label('log$_{10}(N_{eff})$')
     plt.show()
+    
+    f.savefig('Parity_MBAR_'+prop+'.pdf')
     
 def residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop_direct):
     
@@ -125,7 +134,7 @@ def residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop_dire
     rel_dev_dprop3 = rel_dev_dprop(prop_hat3,prop_direct)
                
     if prop == 'U':
-        units = ''
+        units = '(kJ/mol)'
         title = 'Residual Energy'
         dev1 = rel_dev1
         dev2 = rel_dev2
@@ -152,16 +161,23 @@ def residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop_dire
         dev2 = abs_dev2
         dev3 = abs_dev3
         dev_type = 'Absolute'
+        
+    f = plt.figure()
 
     plt.plot(prop_direct,dev3,'bx',label='Constant PCF',alpha=0.2)        
     plt.plot(prop_direct,dev1,'rx',label='MBAR',alpha=0.2)
     plt.plot(prop_direct,dev2,'gx',label='PCFR',alpha=0.2)
     #plt.plot(prop_direct,dev3,'bx',label='MBAR, Neff > 10')
     plt.xlabel('Direct Simulation '+units)
-    plt.ylabel(dev_type+' Deviation '+units)
+    if dev_type == 'Percent':
+        plt.ylabel(dev_type+' Deviation ')
+    else:
+        plt.ylabel(dev_type+' Deviation '+units)
     plt.title(title)
     plt.legend()
     plt.show()
+    
+    f.savefig('Residual_comparison_'+prop+'.pdf')
     
     plt.plot(prop_direct,rel_dev_dprop3,'bx',label='Constant PCF')
     plt.plot(prop_direct,rel_dev_dprop1,'rx',label='MBAR')
@@ -173,14 +189,21 @@ def residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop_dire
     plt.legend()
     plt.show()
     
-    p = plt.scatter(prop_direct[Neff.argsort()],dev1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='cool',label='MBAR',alpha=0.5)
+    f = plt.figure()
+    
+    p = plt.scatter(prop_direct[Neff.argsort()],dev1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='cool',label='MBAR')
     plt.xlabel('Direct Simulation '+units)
-    plt.ylabel(dev_type+' Deviation '+units)
+    if dev_type == 'Percent':
+        plt.ylabel(dev_type+' Deviation ')
+    else:
+        plt.ylabel(dev_type+' Deviation '+units)
     plt.title(title)
     #plt.legend()
     cb = plt.colorbar(p)
     cb.set_label('log$_{10}(N_{eff})$')
     plt.show()
+    
+    f.savefig('Residual_MBAR_'+prop+'.pdf')
     
     p = plt.scatter(prop_direct,rel_dev_dprop1,c=np.log10(Neff),cmap='cool',label='MBAR')
     plt.xlabel('Direct Simulation '+units)
@@ -193,7 +216,10 @@ def residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop_dire
     
     plt.plot(Neff,dev1,'rx',label='MBAR')
     plt.xlabel('Number of Effective Samples')
-    plt.ylabel(dev_type+' Deviation '+units)
+    if dev_type == 'Percent':
+        plt.ylabel(dev_type+' Deviation ')
+    else:
+        plt.ylabel(dev_type+' Deviation '+units)
     plt.title(title)
     plt.legend()
     plt.show()
@@ -235,13 +261,15 @@ def contour_plot(prop,eps_all,sig_all,prop_direct,prop_hat1,prop_hat2,prop_hat3)
     elif prop == 'Z':
         units = ''
         title = 'Compressibility Factor'
-        contour_lines = [0.5, 1., 1.5, 2., 2.5,3.,3.5]
+        contour_lines = [0.1, 0.2, 0.3, 0.4, 0.5, 1., 1.5, 2., 2.5,3.,3.5]
     elif prop == 'Pdep':
         units = '(bar)'
         title = 'Pressure'
         contour_lines = [100,200,300,400,500]
-        
-    plt.figure()
+    
+   
+    f = plt.figure()
+    
     CS = plt.contour(sig_plot,eps_plot,RMS_1,contour_lines)
     plt.clabel(CS, inline=1,fontsize=10)
     plt.xlabel(r'$\sigma$ (nm)')
@@ -249,7 +277,10 @@ def contour_plot(prop,eps_all,sig_all,prop_direct,prop_hat1,prop_hat2,prop_hat3)
     plt.title('RMS '+units+' of '+prop+' for MBAR')
     plt.show()
     
-    plt.figure()
+    f.savefig('Contour_MBAR_'+prop+'.pdf')
+    
+    f = plt.figure()
+    
     CS = plt.contour(sig_plot,eps_plot,RMS_2,contour_lines)
     plt.clabel(CS, inline=1,fontsize=10)
     plt.xlabel(r'$\sigma$ (nm)')
@@ -257,13 +288,18 @@ def contour_plot(prop,eps_all,sig_all,prop_direct,prop_hat1,prop_hat2,prop_hat3)
     plt.title('RMS '+units+' of '+prop+' for PCFR')
     plt.show()
     
-    plt.figure()
+    f.savefig('Contour_PCFR_'+prop+'.pdf')
+    
+    f = plt.figure()
+    
     CS = plt.contour(sig_plot,eps_plot,RMS_3,contour_lines)
     plt.clabel(CS, inline=1,fontsize=10)
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
     plt.title('RMS '+units+' of '+prop+' for Constant PCF')
     plt.show()
+    
+    f.savefig('Contour_constant_PCF_'+prop+'.pdf')
     
 #    plt.figure()
 #    CS = plt.contour(sig_plot,eps_plot,prop_hat1[0,:])
@@ -286,6 +322,40 @@ def Pdep_calc(P,Z):
     C_rhoT = P/Z #Constant that converts Z to P
     Pdep = Zdep * C_rhoT
     return Pdep
+
+def uncertainty_check(prop_direct, prop_MBAR,u_direct, u_MBAR,Neff_MBAR):
+    
+    dev_MBAR = np.abs(prop_MBAR - prop_direct)
+    Neff_acc = []
+    Neff_rej = []
+    u_total = np.sqrt(u_direct**2 + u_MBAR**2)
+    
+    for i, dev in enumerate(dev_MBAR):
+        if dev < u_total[i]:
+            Neff_acc.append(Neff_MBAR[i])
+        else:
+            Neff_rej.append(Neff_MBAR[i])
+            
+    Neff_acc.sort()
+    Neff_rej.sort()
+    
+    plt.plot(Neff_acc,label='Accurate error estimate')
+    plt.show()
+    
+    plt.plot(Neff_rej,label='Inaccurate error estimate')
+    plt.show()
+    
+    plt.boxplot(Neff_acc)
+    plt.show()
+    
+    plt.boxplot(Neff_rej)
+    plt.show()
+    
+    plt.hist(Neff_acc)
+    plt.show()
+    
+    plt.hist(Neff_rej)
+    plt.show()
         
 def main():
     
@@ -300,14 +370,9 @@ def main():
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data(model_type)
         elif model_type == 'Constant_':
             U_W1, dU_W1, P_W1, dP_W1, Z_W1, dZ_W1, Neff_W1 = compile_data(model_type)
-     
-    # Taking an average of the PCFR and constant PCF approachs works quite well for P and Z
-    #U_PCFR = (U_PCFR + U_W1)/2.
-    P_PCFR = (P_PCFR + P_W1)/2.
-    Z_PCFR = (Z_PCFR + Z_W1)/2.
-    
-    plt.scatter(sig_matrix,Neff_MBAR)
-    plt.show()
+        
+#    plt.scatter(sig_matrix,Neff_MBAR)
+#    plt.show()
     
     #In my original analysis I forgot to correct for the error associated with ensembles versus integrating histograms
         
@@ -324,16 +389,47 @@ def main():
     U_W1 = (U_W1.T + U_error).T
     Z_W1 *= (P_W1.T + P_error).T/P_W1
     P_W1 = (P_W1.T + P_error).T  
-    
-    Neff_min = 50.
+           
+    # Taking an average of the PCFR and constant PCF approachs works quite well for P and Z
+    #U_PCFR = (U_PCFR + U_W1)/2.
+    #P_PCFR = (P_PCFR + P_W1)/2.
+    #Z_PCFR = (Z_PCFR + Z_W1)/2.
+             
+    # Just testing something out
+#    U_PCFR = (U_PCFR + U_MBAR)/2.
+#    P_PCFR = (P_PCFR + P_MBAR)/2.
+#    Z_PCFR = (Z_PCFR + Z_MBAR)/2.
+#    
+    Neff_min = 30.
     sig_min = 0.373
     sig_max = 0.378
     
     mask_MBAR = Neff_MBAR >= Neff_min
     mask_PCFR = (sig_max >= sig_matrix) & (sig_matrix >= sig_min)
     mask_none = Neff_MBAR > 0.
+    mask_poor = Neff_MBAR <= 2
     
     mask = mask_none
+    
+    # Recommended values
+
+    U_MBAR[~mask_MBAR] = (U_PCFR[~mask_MBAR] + U_MBAR[~mask_MBAR])/2.
+    P_MBAR[~mask_MBAR] = (P_PCFR[~mask_MBAR] + P_MBAR[~mask_MBAR])/2.
+    Z_MBAR[~mask_MBAR] = (Z_PCFR[~mask_MBAR] + Z_MBAR[~mask_MBAR])/2.
+    
+#    U_MBAR[~mask_MBAR] = U_PCFR[~mask_MBAR]
+#    P_MBAR[~mask_MBAR] = P_PCFR[~mask_MBAR]
+#    Z_MBAR[~mask_MBAR] = Z_PCFR[~mask_MBAR]
+#    
+
+#    U_MBAR[~mask_MBAR] = (U_PCFR[~mask_MBAR] + U_W1[~mask_MBAR])/2.
+#    P_MBAR[~mask_MBAR] = (P_PCFR[~mask_MBAR] + P_W1[~mask_MBAR])/2.
+#    Z_MBAR[~mask_MBAR] = (Z_PCFR[~mask_MBAR] + Z_W1[~mask_MBAR])/2.
+#          
+#    U_MBAR[~mask_MBAR] = (U_PCFR[~mask_MBAR]*(Neff_min-Neff_MBAR[~mask_MBAR])/Neff_min + U_MBAR[~mask_MBAR]*(Neff_MBAR[~mask_MBAR])/Neff_min)
+#    P_MBAR[~mask_MBAR] = (P_PCFR[~mask_MBAR]*(Neff_min-Neff_MBAR[~mask_MBAR])/Neff_min + P_MBAR[~mask_MBAR]*(Neff_MBAR[~mask_MBAR])/Neff_min)
+#    Z_MBAR[~mask_MBAR] = (Z_PCFR[~mask_MBAR]*(Neff_min-Neff_MBAR[~mask_MBAR])/Neff_min + Z_MBAR[~mask_MBAR]*(Neff_MBAR[~mask_MBAR])/Neff_min)
+    
     
     for prop in ['U','P','Z']:
         if prop == 'U':
@@ -375,6 +471,7 @@ def main():
         Neff = Neff_MBAR[mask]
         parity_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop_direct,dprop_MBAR)
         residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,Neff,dprop)
+        #uncertainty_check(prop_direct,prop_hat1,dprop_direct,dprop_MBAR,Neff)
         
     contour_plot('U',eps_all,sig_all,U_direct,U_MBAR,U_PCFR,U_W1)
     contour_plot('P',eps_all,sig_all,P_direct,P_MBAR,P_PCFR,P_W1)
