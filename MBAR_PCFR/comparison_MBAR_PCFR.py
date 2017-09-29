@@ -13,7 +13,7 @@ from scipy.optimize import minimize
 
 reference = 'TraPPE'  
 
-fpathroot = 'parameter_space_Mie16/'
+fpathroot = 'parameter_space_LJ/'
 nReruns = 441
 nStates = 19
 
@@ -42,6 +42,8 @@ def compile_data(model_type):
     
     if (reference == 'TraPPE' and fpathroot == 'parameter_space_Mie16/'):
         ending = '_lam16_highEps'
+    elif model_type == 'MBAR_ref1':
+        ending = ''
     elif fpathroot == 'parameter_space_LJ/':
         ending = '_lam12'    
     else:
@@ -66,6 +68,8 @@ def compile_data(model_type):
         for iRerun in range(nReruns):
             iUPZ = iRerun
             if model_type == 'Direct_simulation' or model_type == 'MBAR_ref0' or fpathroot == 'parameter_space_LJ/' or (model_type == 'PCFR_ref0' and reference == 'TraPPE'):
+                iRerun += 1
+            if model_type == 'MBAR_ref1':
                 iRerun += 1
             if model_type == 'Direct_simulation':
                 fpath = fpathroot+model_type+'_rr'+str(iRerun)
@@ -501,14 +505,14 @@ def main():
     
     eps_all, sig_all, eps_matrix, sig_matrix = get_parameter_sets()
     
-    for model_type in [reference,'Direct_simulation', 'MBAR_ref0', 'PCFR_ref0','Constant_']:
+    for model_type in [reference,'Direct_simulation', 'MBAR_ref1', 'PCFR_ref0','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
             U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type)
             # Now I call a function that should calculate the error in the proper manner
             U_error, P_error = PCFR_error(U_ref,P_ref,model_type)
         elif model_type == 'Direct_simulation':
             U_direct, dU_direct, P_direct, dP_direct, Z_direct, dZ_direct, Neff_direct = compile_data(model_type)
-        elif model_type == 'MBAR_ref0':
+        elif model_type == 'MBAR_ref0' or model_type == 'MBAR_ref1':
             U_MBAR, dU_MBAR, P_MBAR, dP_MBAR, Z_MBAR, dZ_MBAR, Neff_MBAR = compile_data(model_type)
         elif model_type == 'PCFR_ref0':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data(model_type)
@@ -518,21 +522,22 @@ def main():
 #    plt.scatter(sig_matrix,Neff_MBAR)
 #    plt.show()
 
-    CS = plt.contour(np.unique(sig_all),np.unique(eps_all),np.mean(Neff_MBAR,axis=0).reshape(21,21),[0,1,2,3,4,5,6,7,8,9,10,11,12])
+    #CS = plt.contour(np.unique(sig_all),np.unique(eps_all),np.mean(Neff_MBAR,axis=0).reshape(21,21),[0,1,2,3,4,5,6,7,8,9,10,11,12])
+    CS = plt.contour(np.unique(sig_all),np.unique(eps_all),np.mean(Neff_MBAR,axis=0).reshape(21,21))
     plt.clabel(CS, inline=1,fontsize=10)
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
     plt.title('Average N$_{eff}$')
     plt.show()
    
-#    for iState in range(nStates):
-#            
-#        CS = plt.contour(np.unique(sig_all),np.unique(eps_all),Neff_MBAR[iState,:].reshape(21,21),[1,2,5,10,20,50,100,200,500,900])
-#        plt.clabel(CS, inline=1,fontsize=10)
-#        plt.xlabel(r'$\sigma$ (nm)')
-#        plt.ylabel(r'$\epsilon$ (K)')
-#        plt.title('N$_{eff}$')
-#        plt.show()
+    for iState in range(nStates):
+            
+        CS = plt.contour(np.unique(sig_all),np.unique(eps_all),Neff_MBAR[iState,:].reshape(21,21),[1,2,5,10,20,50,100,200,500,900,1500,2000])
+        plt.clabel(CS, inline=1,fontsize=10)
+        plt.xlabel(r'$\sigma$ (nm)')
+        plt.ylabel(r'$\epsilon$ (K)')
+        plt.title('N$_{eff}$')
+        plt.show()
 
     #In my original analysis I forgot to correct for the error associated with ensembles versus integrating histograms
     #Should actually be 221, I believe. Depends on how the matrices are built. I know it is rr221, but is that index 220?     
