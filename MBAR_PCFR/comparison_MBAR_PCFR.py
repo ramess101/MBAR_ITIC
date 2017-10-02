@@ -42,7 +42,7 @@ def compile_data(model_type):
     
     if (reference == 'TraPPE' and fpathroot == 'parameter_space_Mie16/'):
         ending = '_lam16_highEps'
-    elif model_type == 'MBAR_ref1':
+    elif model_type == 'MBAR_ref1' or model_type == 'MBAR_ref8':
         ending = ''
     elif fpathroot == 'parameter_space_LJ/':
         ending = '_lam12'    
@@ -71,6 +71,8 @@ def compile_data(model_type):
                 iRerun += 1
             if model_type == 'MBAR_ref1':
                 iRerun += 1
+            if model_type == 'MBAR_ref8':
+                iRerun += 8
             if model_type == 'Direct_simulation':
                 fpath = fpathroot+model_type+'_rr'+str(iRerun)
                 UPZ = np.loadtxt(fpath)            
@@ -135,7 +137,7 @@ def parity_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dp
 
     f = plt.figure()
 
-    p = plt.scatter(prop_direct[Neff.argsort()],prop_hat1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='cool',label='MBAR') 
+    p = plt.scatter(prop_direct[Neff.argsort()],prop_hat1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='rainbow',label='MBAR') 
     #p = plt.scatter(prop_direct[Neff.argsort()],prop_hat1[Neff.argsort()],c=Neff[Neff.argsort()],cmap='cool',label='MBAR',norm=col.LogNorm())
     plt.plot(parity,parity,'k',label='Parity')
     plt.xlabel('Direct Simulation '+units)
@@ -246,7 +248,7 @@ def residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,
     
     f = plt.figure()
     
-    p = plt.scatter(prop_direct[Neff.argsort()],dev1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='cool',label='MBAR')
+    p = plt.scatter(prop_direct[Neff.argsort()],dev1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='rainbow',label='MBAR')
     plt.xlabel('Direct Simulation '+units)
     if dev_type == 'Percent':
         plt.ylabel(dev_type+' Deviation ')
@@ -323,13 +325,23 @@ def contour_plot(prop,eps_all,sig_all,prop_direct,prop_hat1,prop_hat2,prop_hat3,
         units = '(bar)'
         title = 'Pressure'
         contour_lines = [100,200,300,400,500]
-    
+        
+    if False:
+        xlabel = r'$\sigma$ (nm)'
+        x_plot = sig_plot
+    else:
+        if fpathroot == 'parameter_space_Mie16/':
+            lam = 16.
+        elif fpathroot == 'parameter_space_LJ/':
+            lam = 12.
+        xlabel = r'r$_{min}$ (nm)'
+        x_plot = calc_rmin(sig_plot,lam)
    
     f = plt.figure()
     
-    CS = plt.contour(sig_plot,eps_plot,RMS_1,contour_lines)
+    CS = plt.contour(x_plot,eps_plot,RMS_1,contour_lines)
     plt.clabel(CS, inline=1,fontsize=10)
-    plt.xlabel(r'$\sigma$ (nm)')
+    plt.xlabel(xlabel)
     plt.ylabel(r'$\epsilon$ (K)')
     plt.title('RMS '+units+' of '+prop+' for MBAR')
     plt.show()
@@ -338,9 +350,9 @@ def contour_plot(prop,eps_all,sig_all,prop_direct,prop_hat1,prop_hat2,prop_hat3,
     
     f = plt.figure()
     
-    CS = plt.contour(sig_plot,eps_plot,RMS_2,contour_lines)
+    CS = plt.contour(x_plot,eps_plot,RMS_2,contour_lines)
     plt.clabel(CS, inline=1,fontsize=10)
-    plt.xlabel(r'$\sigma$ (nm)')
+    plt.xlabel(xlabel)
     plt.ylabel(r'$\epsilon$ (K)')
     plt.title('RMS '+units+' of '+prop+' for PCFR')
     plt.show()
@@ -349,9 +361,9 @@ def contour_plot(prop,eps_all,sig_all,prop_direct,prop_hat1,prop_hat2,prop_hat3,
     
     f = plt.figure()
     
-    CS = plt.contour(sig_plot,eps_plot,RMS_3,contour_lines)
+    CS = plt.contour(x_plot,eps_plot,RMS_3,contour_lines)
     plt.clabel(CS, inline=1,fontsize=10)
-    plt.xlabel(r'$\sigma$ (nm)')
+    plt.xlabel(xlabel)
     plt.ylabel(r'$\epsilon$ (K)')
     plt.title('RMS '+units+' of '+prop+' for Constant PCF')
     plt.show()
@@ -360,9 +372,9 @@ def contour_plot(prop,eps_all,sig_all,prop_direct,prop_hat1,prop_hat2,prop_hat3,
     
     f = plt.figure()
     
-    CS = plt.contour(sig_plot,eps_plot,RMS_4,contour_lines)
+    CS = plt.contour(x_plot,eps_plot,RMS_4,contour_lines)
     plt.clabel(CS, inline=1,fontsize=10)
-    plt.xlabel(r'$\sigma$ (nm)')
+    plt.xlabel(xlabel)
     plt.ylabel(r'$\epsilon$ (K)')
     plt.title('RMS '+units+' of '+prop+' for Recommended')
     plt.show()
@@ -500,19 +512,152 @@ def box_bar_state_plots(Neff_MBAR,Neff_min,Neff_small,mask_MBAR,mask_poor):
     cb = plt.colorbar(p)
     cb.set_label('Percent N$_{eff}$<'+str(int(Neff_small)))
     plt.show()
+    
+def calc_rmin(sigma,n,m=6.):
+    """ Calculates the rmin for LJ potential """
+    rmin = (n/m*sigma**(n-m))**(1./(n-m))
+    return rmin
+
+def contours_Neff(Neff_MBAR,sig_all,eps_all):
+    
+    sig_plot = np.unique(sig_all)
+    eps_plot = np.unique(eps_all)
+    
+    if True:
+        xlabel = r'$\sigma$ (nm)'
+        x_plot = sig_plot
+    else:
+        if fpathroot == 'parameter_space_Mie16/':
+            lam = 16.
+        elif fpathroot == 'parameter_space_LJ/':
+            lam = 12.
+        xlabel = r'r$_{min}$ (nm)'
+        x_plot = calc_rmin(sig_plot,lam)
+        
+    #CS = plt.contour(x_plot,eps_plot,np.mean(Neff_MBAR,axis=0).reshape(21,21),[0,1,2,3,4,5,6,7,8,9,10,11,12])
+    CS = plt.contour(x_plot,eps_plot,np.mean(Neff_MBAR,axis=0).reshape(21,21))
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(xlabel)
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title('Average N$_{eff}$')
+    plt.show()
+   
+    for iState in range(nStates):
+            
+        CS = plt.contour(x_plot,eps_plot,Neff_MBAR[iState,:].reshape(21,21),[1,2,5,10,20,50,100,200,500,900,1500,2000])
+        plt.clabel(CS, inline=1,fontsize=10)
+        plt.xlabel(xlabel)
+        plt.ylabel(r'$\epsilon$ (K)')
+        plt.title('N$_{eff}$')
+        plt.show()
+        
+def RMS_contours(eps_all,sig_all):
+    
+    eps_plot = np.unique(eps_all)
+    sig_plot = np.unique(sig_all)
+    
+    RMSrhoL = np.loadtxt(fpathroot+'RMS_rhoL_all').reshape(21,21)
+    RMSrhoL_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_rhoL_all').reshape(21,21)
+    RMSrhoL_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_rhoL_all').reshape(21,21)
+    RMSrhoL_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_rhoL_all').reshape(21,21)
+    RMSrhoL_MBAR_9refs = np.loadtxt(fpathroot+'MBAR_ref8rr_RMS_rhoL_all').reshape(21,21)
+    
+    contour_lines = [10,20,30,40,50,60,70,80,90,100,150,200]
+    
+    CS = plt.contour(sig_plot,eps_plot,RMSrhoL)
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $\rho_l$ with Direct Simulation')
+    plt.show()
+    
+    CS = plt.contour(sig_plot,eps_plot,RMSrhoL_MBAR,contour_lines)
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $\rho_l$ with MBAR single reference')
+    plt.show()
+    
+    CS = plt.contour(sig_plot,eps_plot,RMSrhoL_PCFR,contour_lines)
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $\rho_l$ with PCFR single reference')
+    plt.show()
+    
+    CS = plt.contour(sig_plot,eps_plot,RMSrhoL_constant,contour_lines)
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $\rho_l$ with constant PCF single reference')
+    plt.show()
+    
+    CS = plt.contour(sig_plot,eps_plot,RMSrhoL_MBAR_9refs)
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $\rho_l$ with MBAR multiple references')
+    plt.show()
+    
+    RMSPsat = np.loadtxt(fpathroot+'RMS_Psat_all').reshape(21,21)
+    RMSPsat_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_Psat_all').reshape(21,21)
+    RMSPsat_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_Psat_all').reshape(21,21)
+    RMSPsat_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_Psat_all').reshape(21,21)
+    RMSPsat_MBAR_9refs = np.loadtxt(fpathroot+'MBAR_ref8rr_RMS_Psat_all').reshape(21,21)
+    
+    contour_lines = [0.8,1.6,2.4,3.2,4,5,6,7,8,9,10,12,15,20]
+        
+    CS = plt.contour(sig_plot,eps_plot,RMSPsat)
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $P_v$ with Direct Simulation')
+    plt.show()
+    
+    CS = plt.contour(sig_plot,eps_plot,RMSPsat_MBAR,contour_lines)
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $P_v$ with MBAR single reference')
+    plt.show()
+    
+    CS = plt.contour(sig_plot,eps_plot,RMSPsat_PCFR,contour_lines)
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $P_v$ with PCFR single reference')
+    plt.show()
+    
+    CS = plt.contour(sig_plot,eps_plot,RMSPsat_constant,contour_lines)
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $P_v$ with constant PCF single reference')
+    plt.show()
+    
+    CS = plt.contour(sig_plot,eps_plot,RMSPsat_MBAR_9refs)
+    plt.clabel(CS, inline=1,fontsize=10)
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $P_v$ with MBAR multiple references')
+    plt.show()
         
 def main():
     
     eps_all, sig_all, eps_matrix, sig_matrix = get_parameter_sets()
     
-    for model_type in [reference,'Direct_simulation', 'MBAR_ref1', 'PCFR_ref0','Constant_']:
+    RMS_contours(eps_all,sig_all)
+    
+    return
+    
+    for model_type in [reference,'Direct_simulation', 'MBAR_ref8', 'PCFR_ref0','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
             U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type)
             # Now I call a function that should calculate the error in the proper manner
             U_error, P_error = PCFR_error(U_ref,P_ref,model_type)
         elif model_type == 'Direct_simulation':
             U_direct, dU_direct, P_direct, dP_direct, Z_direct, dZ_direct, Neff_direct = compile_data(model_type)
-        elif model_type == 'MBAR_ref0' or model_type == 'MBAR_ref1':
+        elif model_type == 'MBAR_ref0' or model_type == 'MBAR_ref1' or model_type == 'MBAR_ref8':
             U_MBAR, dU_MBAR, P_MBAR, dP_MBAR, Z_MBAR, dZ_MBAR, Neff_MBAR = compile_data(model_type)
         elif model_type == 'PCFR_ref0':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data(model_type)
@@ -521,23 +666,6 @@ def main():
 
 #    plt.scatter(sig_matrix,Neff_MBAR)
 #    plt.show()
-
-    #CS = plt.contour(np.unique(sig_all),np.unique(eps_all),np.mean(Neff_MBAR,axis=0).reshape(21,21),[0,1,2,3,4,5,6,7,8,9,10,11,12])
-    CS = plt.contour(np.unique(sig_all),np.unique(eps_all),np.mean(Neff_MBAR,axis=0).reshape(21,21))
-    plt.clabel(CS, inline=1,fontsize=10)
-    plt.xlabel(r'$\sigma$ (nm)')
-    plt.ylabel(r'$\epsilon$ (K)')
-    plt.title('Average N$_{eff}$')
-    plt.show()
-   
-    for iState in range(nStates):
-            
-        CS = plt.contour(np.unique(sig_all),np.unique(eps_all),Neff_MBAR[iState,:].reshape(21,21),[1,2,5,10,20,50,100,200,500,900,1500,2000])
-        plt.clabel(CS, inline=1,fontsize=10)
-        plt.xlabel(r'$\sigma$ (nm)')
-        plt.ylabel(r'$\epsilon$ (K)')
-        plt.title('N$_{eff}$')
-        plt.show()
 
     #In my original analysis I forgot to correct for the error associated with ensembles versus integrating histograms
     #Should actually be 221, I believe. Depends on how the matrices are built. I know it is rr221, but is that index 220?     
@@ -664,6 +792,7 @@ def main():
     #contour_plot('Pdep',eps_all,sig_all,Pdep_direct,Pdep_MBAR,Pdep_PCFR)
     
     box_bar_state_plots(Neff_MBAR,Neff_min,Neff_small,mask_MBAR,mask_poor)
+    contours_Neff(Neff_MBAR,sig_all,eps_all)
     
 if __name__ == '__main__':
     
