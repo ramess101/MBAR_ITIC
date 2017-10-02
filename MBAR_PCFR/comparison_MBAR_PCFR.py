@@ -13,11 +13,14 @@ from scipy.optimize import minimize
 
 reference = 'TraPPE'  
 
-fpathroot = 'parameter_space_LJ/'
+fpathroot = 'parameter_space_Mie16/'
 nReruns = 441
 nStates = 19
 
 T_rho = np.loadtxt('Temp_rho.txt')
+
+sig_PCFs = [0.375, 0.370, 0.3725, 0.365, 0.3675, 0.3775, 0.380, 0.3825, 0.385]
+eps_PCFs = [98]*9
 
 def get_parameter_sets():
     
@@ -38,6 +41,64 @@ def get_parameter_sets():
 
     return eps_all, sig_all, eps_matrix, sig_matrix
 
+def merge_PCFR(sig_all):
+    ending = '_lam12'
+    
+    U_compiled = np.zeros([nStates,nReruns])
+    dU_compiled = np.zeros([nStates,nReruns])
+    P_compiled = np.zeros([nStates,nReruns])
+    dP_compiled = np.zeros([nStates,nReruns])
+    Z_compiled = np.zeros([nStates,nReruns])
+    Neff_compiled = np.zeros([nStates,nReruns])
+    
+    for iRerun, sigRerun in enumerate(sig_all):
+        iUPZ = iRerun
+        #print(iRerun)
+        #print(sigRerun)
+        
+#        sig_match = str(np.argmin(np.abs(sigRerun - sig_PCFs)))
+#        model_type = 'PCFR_ref'+sig_match
+#        
+#        #print(model_type)
+#        
+#        fpath = fpathroot+model_type+'rr'+str(iRerun)+ending
+#        UPZ = np.loadtxt(fpath)
+
+        dev_sig = np.abs(sig_PCFs - sigRerun)
+
+        Wrefs = np.zeros(len(sig_PCFs))
+        
+        for iRef, devRef in enumerate(dev_sig):
+            if devRef < 0.0025:
+                Wrefs[iRef] = 0.5 
+
+        #Wrefs = np.abs(sig_PCFs - sigRerun)/(0.385-0.365)
+        
+        NConstant = np.sum(Wrefs)
+        UPZ = np.zeros([nStates,7]) #7 is the number of properties
+        
+        for iRef, Wref in enumerate(Wrefs):
+            if iRef == 0:
+                iRerun += 1
+            elif iRef == 1:
+                iRerun -= 1
+            model_type = 'PCFR_ref'+str(iRef)
+            fpath = fpathroot+model_type+'rr'+str(iRerun)+ending
+            UPZref = np.loadtxt(fpath)
+            UPZ += UPZref * Wref / NConstant
+                
+        U_compiled[:,iUPZ] = UPZ[:,0]
+        dU_compiled[:,iUPZ] = UPZ[:,1]
+        P_compiled[:,iUPZ] = UPZ[:,2]
+        dP_compiled[:,iUPZ] = UPZ[:,3]
+        Z_compiled[:,iUPZ] = UPZ[:,4]
+        Neff_compiled[:,iUPZ] = UPZ[:,6]
+            
+    dZ_compiled = dP_compiled * (Z_compiled/P_compiled)
+    
+    return U_compiled, dU_compiled, P_compiled, dP_compiled, Z_compiled, dZ_compiled, Neff_compiled
+        
+        
 def compile_data(model_type):
     
     if (reference == 'TraPPE' and fpathroot == 'parameter_space_Mie16/'):
@@ -556,19 +617,88 @@ def RMS_contours(eps_all,sig_all):
     eps_plot = np.unique(eps_all)
     sig_plot = np.unique(sig_all)
     
-    RMSrhoL = np.loadtxt(fpathroot+'RMS_rhoL_all').reshape(21,21)
+#    contour_lines = [5,10,20,30,40,50,60,70,80,90,100,150,200]
+#    
+#    RMSrhoL = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_rhoL_all').reshape(21,21)
+#    RMSrhoL_MBAR = np.loadtxt(fpathroot+'/Potoff/MBAR/MBAR_ref0rr_RMS_rhoL_all').reshape(21,21)
+#    CS1 = plt.contour(sig_plot,eps_plot,RMSrhoL,contour_lines,label='Direct Simulation',colors='r')
+#    CS2 = plt.contour(sig_plot,eps_plot,RMSrhoL_MBAR,contour_lines,label='MBAR Simulation',colors='b')
+#    plt.clabel(CS1, inline=1,fontsize=10,colors='k',fmt='%1.0f')
+#    plt.xlabel(r'$\sigma$ (nm)')
+#    plt.ylabel(r'$\epsilon$ (K)')
+#    plt.title(r'RMS of $\rho_l  \left(\frac{kg}{m^3}\right)$')
+#    plt.show()
+#    
+#    RMSPsat = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_Psat_all').reshape(21,21)
+#        
+#    contour_lines = [0.8,1.6,2.4,3.2,4,5,6,7,8,9,10,12,15,20]
+#    
+#    CS1 = plt.contour(sig_plot,eps_plot,RMSPsat,contour_lines,label='Direct Simulation',colors='r')
+#    plt.clabel(CS1, inline=0,fontsize=10,colors='k',fmt='%1.1f')
+#    plt.xlabel(r'$\sigma$ (nm)')
+#    plt.ylabel(r'$\epsilon$ (K)')
+#    plt.title(r'RMS of $P_v  \left(bar\right)$')    
+#    plt.show()
+#    
+#    RMS_Z = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_Z_all').reshape(21,21)
+#    CS1 = plt.contour(sig_plot,eps_plot,RMS_Z,label='Direct Simulation',colors='r')
+#    plt.clabel(CS1, inline=1,fontsize=10,colors='k',fmt='%1.1f')
+#    plt.xlabel(r'$\sigma$ (nm)')
+#    plt.ylabel(r'$\epsilon$ (K)')
+#    plt.title(r'RMS of Z')
+#    plt.show()
+#    
+#    RMS_U = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_U_all').reshape(21,21)
+#    CS1 = plt.contour(sig_plot,eps_plot,RMS_U,label='Direct Simulation',colors='r')
+#    plt.clabel(CS1, inline=1,fontsize=10,colors='k',fmt='%1.1f')
+#    plt.xlabel(r'$\sigma$ (nm)')
+#    plt.ylabel(r'$\epsilon$ (K)')
+#    plt.title(r'RMS of U')
+#    plt.show()
+#    
+#    return
+    
+    RMSrhoL = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_MBAR_9refs = np.loadtxt(fpathroot+'MBAR_ref8rr_RMS_rhoL_all').reshape(21,21)
     
-    contour_lines = [10,20,30,40,50,60,70,80,90,100,150,200]
+    contour_lines = [5,10,20,30,40,50,60,70,80,90,100,150,200]
+    
+    f = plt.figure(figsize=(8,6))
+    
+    CS3 = plt.contour(sig_plot,eps_plot,RMSrhoL_MBAR,[5,10],label='MBAR with single reference',colors='g')
+    CS4 = plt.contour(sig_plot,eps_plot,RMSrhoL_PCFR,[5,10],label='PCFR with single reference',colors='c')
+    CS1 = plt.contour(sig_plot,eps_plot,RMSrhoL,contour_lines,label='Direct Simulation',colors='r')
+    CS2 = plt.contour(sig_plot,eps_plot,RMSrhoL_MBAR_9refs,contour_lines,label='MBAR with multiple references',colors='b')
+    plt.clabel(CS2, inline=1,fontsize=10,colors='w',fmt='%1.0f')
+    plt.clabel(CS4, inline=1,fontsize=10,colors='c',fmt='%1.0f',manual=[(0,-10),(5,10)])
+    plt.clabel(CS3, inline=1,fontsize=10,colors='g',fmt='%1.0f')
+    plt.clabel(CS1, inline=1,fontsize=10,colors='k',fmt='%1.0f')
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $\rho_l  \left(\frac{kg}{m^3}\right)$')
+    plt.plot([],[],'r',label='Direct Simulation')
+    plt.plot([],[],'b',label='MBAR multiple references')
+    plt.plot([],[],'g',label='MBAR single reference')
+    plt.plot([],[],'c',label='PCFR single reference')
+    plt.plot(sig_PCFs,eps_PCFs,'mx',label='References')
+    plt.legend()
+    #plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+    #       ncol=2, mode="expand", borderaxespad=0.)
+    #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    plt.show()
+    
+    f.savefig('RMS_rhol_comparison.pdf')
+    
     
     CS = plt.contour(sig_plot,eps_plot,RMSrhoL)
     plt.clabel(CS, inline=1,fontsize=10)
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
     plt.title(r'RMS of $\rho_l$ with Direct Simulation')
+    plt.plot(sig_all,eps_all,'rx',label='Simulations')
     plt.show()
     
     CS = plt.contour(sig_plot,eps_plot,RMSrhoL_MBAR,contour_lines)
@@ -576,6 +706,7 @@ def RMS_contours(eps_all,sig_all):
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
     plt.title(r'RMS of $\rho_l$ with MBAR single reference')
+    plt.plot(sig_PCFs[0],eps_PCFs[0],'rx',label='References')
     plt.show()
     
     CS = plt.contour(sig_plot,eps_plot,RMSrhoL_PCFR,contour_lines)
@@ -583,6 +714,7 @@ def RMS_contours(eps_all,sig_all):
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
     plt.title(r'RMS of $\rho_l$ with PCFR single reference')
+    plt.plot(sig_PCFs[0],eps_PCFs[0],'rx',label='References')
     plt.show()
     
     CS = plt.contour(sig_plot,eps_plot,RMSrhoL_constant,contour_lines)
@@ -597,15 +729,40 @@ def RMS_contours(eps_all,sig_all):
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
     plt.title(r'RMS of $\rho_l$ with MBAR multiple references')
+    plt.plot(sig_PCFs,eps_PCFs,'rx',label='References')
+    plt.legend()
     plt.show()
     
-    RMSPsat = np.loadtxt(fpathroot+'RMS_Psat_all').reshape(21,21)
+    RMSPsat = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_Psat_all').reshape(21,21)
     RMSPsat_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_Psat_all').reshape(21,21)
     RMSPsat_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_Psat_all').reshape(21,21)
     RMSPsat_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_Psat_all').reshape(21,21)
     RMSPsat_MBAR_9refs = np.loadtxt(fpathroot+'MBAR_ref8rr_RMS_Psat_all').reshape(21,21)
     
     contour_lines = [0.8,1.6,2.4,3.2,4,5,6,7,8,9,10,12,15,20]
+    
+    f = plt.figure(figsize=(8,6))
+    
+    CS3 = plt.contour(sig_plot,eps_plot,RMSPsat_MBAR,[0.8,1.6],label='MBAR with single reference',colors='g')
+    CS4 = plt.contour(sig_plot,eps_plot,RMSPsat_PCFR,[0.8,1.6],label='PCFR with single reference',colors='c')
+    CS1 = plt.contour(sig_plot,eps_plot,RMSPsat,contour_lines,label='Direct Simulation',colors='r')
+    CS2 = plt.contour(sig_plot,eps_plot,RMSPsat_MBAR_9refs,contour_lines,label='MBAR with multiple references',colors='b')
+    #plt.clabel(CS2, inline=1,fontsize=10,colors='w',fmt='%1.1f')
+    plt.clabel(CS4, inline=1,fontsize=10,colors='c',fmt='%1.1f')
+    plt.clabel(CS3, inline=1,fontsize=10,colors='g',fmt='%1.1f')
+    plt.clabel(CS1, inline=0,fontsize=10,colors='k',fmt='%1.1f')
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of $P_v  \left(bar\right)$')
+    plt.plot([],[],'r',label='Direct Simulation')
+    plt.plot([],[],'b',label='MBAR multiple references')
+    plt.plot([],[],'g',label='MBAR single reference')
+    plt.plot([],[],'c',label='PCFR single reference')
+    plt.plot(sig_PCFs,eps_PCFs,'mx',label='References')
+    plt.legend()
+    plt.show()
+    
+    f.savefig('RMS_Psat_comparison.pdf')
         
     CS = plt.contour(sig_plot,eps_plot,RMSPsat)
     plt.clabel(CS, inline=1,fontsize=10)
@@ -650,7 +807,7 @@ def main():
     
     return
     
-    for model_type in [reference,'Direct_simulation', 'MBAR_ref8', 'PCFR_ref0','Constant_']:
+    for model_type in [reference,'Direct_simulation', 'MBAR_ref8', 'PCFR_mult_ref','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
             U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type)
             # Now I call a function that should calculate the error in the proper manner
@@ -661,6 +818,8 @@ def main():
             U_MBAR, dU_MBAR, P_MBAR, dP_MBAR, Z_MBAR, dZ_MBAR, Neff_MBAR = compile_data(model_type)
         elif model_type == 'PCFR_ref0':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data(model_type)
+        elif model_type == 'PCFR_mult_ref':
+            U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = merge_PCFR(sig_all)
         elif model_type == 'Constant_':
             U_W1, dU_W1, P_W1, dP_W1, Z_W1, dZ_W1, Neff_W1 = compile_data(model_type)
 
@@ -791,8 +950,8 @@ def main():
     contour_plot('Z',eps_all,sig_all,Z_direct,Z_MBAR,Z_PCFR,Z_W1,Z_rec)
     #contour_plot('Pdep',eps_all,sig_all,Pdep_direct,Pdep_MBAR,Pdep_PCFR)
     
-    box_bar_state_plots(Neff_MBAR,Neff_min,Neff_small,mask_MBAR,mask_poor)
-    contours_Neff(Neff_MBAR,sig_all,eps_all)
+    #box_bar_state_plots(Neff_MBAR,Neff_min,Neff_small,mask_MBAR,mask_poor)
+    #contours_Neff(Neff_MBAR,sig_all,eps_all)
     
 if __name__ == '__main__':
     

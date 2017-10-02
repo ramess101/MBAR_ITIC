@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 import CoolProp.CoolProp as CP
 import time
 import scipy.integrate as integrate
+from scipy.optimize import minimize
 
-fpathroot = 'parameter_space_LJ/'
+fpathroot = 'parameter_space_Mie16/Potoff/MBAR/'
 nReruns = 441
 nStates = 19
 
@@ -102,9 +103,8 @@ for run_type in ITIC:
 assert nStates == len(fpath_all), 'Number of states does not match number of file paths'
 
 #print(fpath_all)
-
 print(os.getcwd())
-time.sleep(2)
+time.sleep(2)  
 
 ###
 
@@ -309,24 +309,32 @@ def calc_objective(fpathroot,model_type,ending):
             iRerun += 1
         if model_type == 'MBAR_ref8rr':
             iRerun += 8
-        
+                    
         UPZ = np.loadtxt(fpathroot+model_type+str(iRerun)+ending)
-    
+           
         USim = UPZ[:,0]
         PSim = UPZ[:,2]
         ZSim = UPZ[:,4]
-        
+                
         VLE = np.loadtxt(fpathroot+'ITIC_'+model_type+str(iRerun)+ending,skiprows=1)
         
         Tsat, rhoLSim, PsatSim, rhovSim = VLE[:,0], VLE[:,1], VLE[:,2], VLE[:,3]
         
-        RP_rhoL = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',0,'REFPROP::'+compound) #[kg/m3]   
-        RP_rhov = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound) #[kg/m3]
-        RP_Psat = CP.PropsSI('P','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound)/100000. #[bar]
-    
-        devrhoL = rhoLSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhoL #In case Tsat is greater than RP_TC
-        devPsat = PsatSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_Psat
-        devrhov = rhovSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhov
+        if np.any(Tsat[Tsat<RP_TC]>RP_Tmin):
+        
+            RP_rhoL = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',0,'REFPROP::'+compound) #[kg/m3]   
+            RP_rhov = CP.PropsSI('D','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound) #[kg/m3]
+            RP_Psat = CP.PropsSI('P','T',Tsat[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)],'Q',1,'REFPROP::'+compound)/100000. #[bar]
+        
+            devrhoL = rhoLSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhoL #In case Tsat is greater than RP_TC
+            devPsat = PsatSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_Psat
+            devrhov = rhovSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhov
+                              
+        else:
+            
+            devrhoL = np.array([1e8])
+            devPsat = np.array([1e8])
+            devrhov = np.array([1e8])
                          
         devU = USim - RP_U_depN
         devP = PSim - RP_P
@@ -392,7 +400,7 @@ def calc_objective(fpathroot,model_type,ending):
         
         f = open(fpathroot+model_type+'_RMS_Z_all','a')
         f.write('\n'+str(RMSZ))
-        f.close()          
+        f.close()     
                 
 def main():
     
@@ -403,9 +411,9 @@ def main():
     
     ending = ''
     
-    for model_type in ['MBAR_ref8rr']: #['MBAR_ref0rr', 'PCFR_ref0rr','Constant_rr']:
+    for model_type in ['MBAR_ref0rr']: #['Direct_simulation_rr']: #['MBAR_ref8rr']: #['MBAR_ref0rr', 'PCFR_ref0rr','Constant_rr']:
     
-        run_analysis(fpathroot,model_type,ending)
+        #run_analysis(fpathroot,model_type,ending)
         calc_objective(fpathroot,model_type,ending)
 
 if __name__ == '__main__':
