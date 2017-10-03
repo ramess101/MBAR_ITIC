@@ -36,6 +36,7 @@ class BasePCFR(object):
     
     def __init__(self, r, RDF, rho, Nmol, Temp, ref,devU,devP):
         self.r = r
+        self.r_scaled = None
         self.RDF = RDF
         self.rho = rho
         self.Nmol = Nmol
@@ -136,6 +137,7 @@ class BasePCFR(object):
         just in the distance direction (yet to be coded). Otherwise the RDF is 
         left constant."""
         RDF_hat = self.RDF.copy()
+        self.r_scaled = self.r.copy()
         if PCFR_type == 'PMF':
             for iTemp, Temp_i in enumerate(self.Temp):
                 rescale = np.exp(-self.get_deltaUnb()/Temp_i)
@@ -149,12 +151,18 @@ class BasePCFR(object):
     #            plt.legend()
     #            plt.show()
         elif PCFR_type == 'sigma':
-            pass
+            self.r_scaled *= self.sigma / self.ref.sigma
+        elif PCFR_type == 'rmin':
+            self.r_scaled *= self.calc_rmin() / self.ref.calc_rmin()
+        self.r_c_plus = np.max(self.r_scaled)
+        dr = r[1] - r[0]
+        self.r_scaled -= dr/2.
         return RDF_hat
        
     def calc_Uint(self,RDF_pair):
         """ The integral portion of the internal energy calculation"""
-        Uint = (self.get_Unb()*RDF_pair*self.r**2*dr).sum() # [K*nm^3]
+        dr = self.r_scaled[1] - self.r_scaled[0]
+        Uint = (self.get_Unb()*RDF_pair*self.r_scaled**2*dr).sum() # [K*nm^3]
         return Uint
     
     def calc_Utotal(self,RDF_pair):
@@ -198,7 +206,8 @@ class BasePCFR(object):
         
     def calc_Pint(self,RDF_pair):
         """ Returns the integral portion up to the cutoff for pressure."""
-        Pint = (self.get_dUnb()*RDF_pair*self.r**3*dr).sum() # [K*nm^3]
+        dr = self.r_scaled[1] - self.r_scaled[0]
+        Pint = (self.get_dUnb()*RDF_pair*self.r_scaled**3*dr).sum() # [K*nm^3]
         return Pint
         
     def calc_Ptotal(self,RDF_pair):
@@ -365,9 +374,13 @@ def main():
     Uhat = lambda eps,sig,lam: LJhat(eps,sig,lam).calc_Ureal()
     
     LJTraPPE = Mie(r,RDFs_highP,rhoL_highP, Nmol,T_highP,98.,0.375,12., ref=LJref,devU=Udev,devP=Pdev)
-    UTraPPE = LJTraPPE.calc_Ureal('CS')
+    UTraPPE = LJTraPPE.calc_Ureal('PMF')
     LJPotoff = Mie(r,RDFs_highP, rhoL_highP, Nmol, T_highP, 121.25, 0.3783, 16., ref=LJref,devU=Udev,devP=Pdev)
-    UPotoff = LJPotoff.calc_Ureal('CS')
+    UPotoff = LJPotoff.calc_Ureal('PMF')
+    
+    print(LJPotoff.get_Pcorr())
+    print(LJPotoff.r_c_plus)
+    print(LJPotoff.r_scaled[1]-LJPotoff.r_scaled[0])
     
     plt.plot(T_highP,U_L_highP_ens,label='Ref')
     plt.plot(T_highP,UPotoff,label='Potoff')
@@ -378,8 +391,12 @@ def main():
     plt.show()  
     
     Zref = LJref.calc_Z('')
-    ZTraPPE = LJTraPPE.calc_Z('CS')
-    ZPotoff = LJPotoff.calc_Z('CS')
+    ZTraPPE = LJTraPPE.calc_Z('rmin')
+    ZPotoff = LJPotoff.calc_Z('rmin')
+    
+    print(LJPotoff.get_Pcorr())
+    print(LJPotoff.r_c_plus)
+    print(LJPotoff.r_scaled[1]-LJPotoff.r_scaled[0])
     
     Zref_ens = Pref_ens / rhoL_highP / T_highP / k_B / kPa_to_bar
     
@@ -389,11 +406,19 @@ def main():
     invT_REFPROP = np.array([7.407407407,6.666666667,5,4,3.333333333,2.857142857,2.5,2.222222222,2,1.818181818,1.666666667])
     Z_REFPROP = np.array([0.000100675,1.187527847,3.614046302,4.832284851,5.50639937,5.903366448,6.145583131,6.295335384,6.386973899,6.440663168,6.46883802])
     
+    ZPotoff_ens = np.array([1.200585304,3.991514583,6.286786085,7.142921365,7.464562923,7.652489927])
+    invT_Potoff = np.array([6.700077721,5.024620641,3.343665259,2.512550188,2.008161167,1.673491724])
+    
+    ZTraPPE_ens = np.array([0.923009586,3.0895728,4.89748587,5.515736714,5.791783268,5.858015065])
+    invT_TraPPE = np.array([6.666666667,5,3.333333333,2.5,2,1.666666667])
+    
     plt.plot(1000./T_highP,Zref,label='Ref')
     plt.plot(1000./T_highP,ZPotoff,label='Potoff')
     plt.plot(1000./T_highP,ZTraPPE,label='TraPPE')
     plt.plot(invT_REFPROP,Z_REFPROP,label='REFPROP')
     plt.scatter(1000./T_highP,Zref_ens,label='Ref Ens')
+    plt.scatter(invT_Potoff,ZPotoff_ens,label='Potoff Ens')
+    plt.scatter(invT_TraPPE,ZTraPPE_ens,label='TraPPE Ens')
     plt.legend()
     plt.show()
 
