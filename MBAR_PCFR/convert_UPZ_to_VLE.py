@@ -7,7 +7,7 @@ import time
 import scipy.integrate as integrate
 from scipy.optimize import minimize
 
-fpathroot = 'parameter_space_Mie16/Potoff/MBAR/'
+fpathroot = 'parameter_space_Mie16/'
 nReruns = 441
 nStates = 19
 
@@ -409,9 +409,9 @@ def main():
     parser.add_argument("-prop","--properties",type=str,nargs='+',choices=['rhoL','Psat','rhov','P','U','Z'],help="choose one or more properties to use in optimization" )
     args = parser.parse_args()
     
-    ending = ''
+    ending = '_lam16_highEps'
     
-    for model_type in ['MBAR_ref0rr']: #['Direct_simulation_rr']: #['MBAR_ref8rr']: #['MBAR_ref0rr', 'PCFR_ref0rr','Constant_rr']:
+    for model_type in ['MBAR_ref8rr']: #['Direct_simulation_rr']: #['MBAR_ref8rr']: #['MBAR_ref0rr', 'PCFR_ref0rr','Constant_rr']:
     
         #run_analysis(fpathroot,model_type,ending)
         calc_objective(fpathroot,model_type,ending)
