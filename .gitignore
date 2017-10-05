@@ -1,2 +1,8 @@
 *.tar.gz
 *.txt
+MBAR_PCFR/parameter_space_Mie16/*
+MBAR_PCFR/parameter_space_LJ/*
+MBAR_PCFR/*.pdf
+*.xlsx
+*.pyc
+MBAR_PCFR/REFPROP_UPZ

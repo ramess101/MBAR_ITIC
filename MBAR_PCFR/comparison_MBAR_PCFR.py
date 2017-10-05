@@ -128,7 +128,7 @@ def compile_data(model_type,fpathroot):
         
         for iRerun in range(nReruns):
             iUPZ = iRerun
-            if model_type == 'Direct_simulation' or model_type == 'MBAR_ref0' or fpathroot == 'parameter_space_LJ/' or (model_type == 'PCFR_ref0' and reference == 'TraPPE'):
+            if model_type == 'Direct_simulation' or model_type == 'MBAR_ref0' or fpathroot == 'parameter_space_LJ/' or (model_type == 'PCFR_ref0' and reference == 'TraPPE') or model_type == 'Lam15/MBAR_ref0':
                 iRerun += 1
             if model_type == 'MBAR_ref1':
                 iRerun += 1
@@ -1407,7 +1407,7 @@ def multi_ref_LJ_Mie_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mie,Z_direct
             
 def main():
     
-    fpathroot = 'parameter_space_LJ/'
+    fpathroot = 'parameter_space_Mie16/'
     
     eps_all, sig_all, eps_matrix, sig_matrix = get_parameter_sets(fpathroot)
     
@@ -1416,7 +1416,7 @@ def main():
 #    
 #    return
     
-    for model_type in [reference,'Direct_simulation', 'MBAR_ref8', 'PCFR_ref0','Constant_']:
+    for model_type in [reference,'Direct_simulation', 'Lam15/MBAR_ref0', 'PCFR_ref0','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
             U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type,fpathroot)
             # Now I call a function that should calculate the error in the proper manner
@@ -1424,9 +1424,9 @@ def main():
         elif model_type == 'Direct_simulation':
             U_direct, dU_direct, P_direct, dP_direct, Z_direct, dZ_direct, Neff_direct = compile_data(model_type,fpathroot)
             U_direct_Mie, dU_direct_Mie, P_direct_Mie, dP_direct_Mie, Z_direct_Mie, dZ_direct_Mie, Neff_direct_Mie = compile_data(model_type,'parameter_space_Mie16/')
-        elif model_type == 'MBAR_ref0' or model_type == 'MBAR_ref1' or model_type == 'MBAR_ref8':
+        elif model_type == 'MBAR_ref0' or model_type == 'MBAR_ref1' or model_type == 'MBAR_ref8' or model_type == 'Lam15/MBAR_ref0':
             U_MBAR, dU_MBAR, P_MBAR, dP_MBAR, Z_MBAR, dZ_MBAR, Neff_MBAR = compile_data(model_type,fpathroot)
-            U_MBAR_Mie, dU_MBAR_Mie, P_MBAR_Mie, dP_MBAR_Mie, Z_MBAR_Mie, dZ_MBAR_Mie, Neff_MBAR_Mie = compile_data(model_type,'parameter_space_Mie16/')
+            #U_MBAR_Mie, dU_MBAR_Mie, P_MBAR_Mie, dP_MBAR_Mie, Z_MBAR_Mie, dZ_MBAR_Mie, Neff_MBAR_Mie = compile_data(model_type,'parameter_space_Mie16/')
         elif model_type == 'PCFR_ref0':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data(model_type,fpathroot)
         elif model_type == 'PCFR_mult_ref':
@@ -1552,7 +1552,7 @@ def main():
         dprop = np.sqrt(dprop_direct**2. + dprop_MBAR ** 2.) # I need to verify how MBAR reports uncertainties. Are these standard errors? Standard deviations?
 
         Neff = Neff_MBAR[mask]
-        #embed_parity_residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop_direct,dprop_MBAR,dprop)
+        embed_parity_residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop_direct,dprop_MBAR,dprop)
         #parity_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop_direct,dprop_MBAR)
         #residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop)
         #uncertainty_check(prop_direct,prop_hat1,dprop_direct,dprop_MBAR,Neff)
@@ -1566,7 +1566,7 @@ def main():
     
     #multi_prop_multi_ref_plot(U_direct[mask],U_MBAR[mask],Z_direct[mask],Z_MBAR[mask],Neff,fpathroot)
     
-    multi_ref_LJ_Mie_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask])
+    #multi_ref_LJ_Mie_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask])
     
     #box_bar_state_plots(Neff_MBAR,Neff_min,Neff_small,mask_MBAR,mask_poor)
     #contours_Neff(Neff_MBAR,sig_all,eps_all)
