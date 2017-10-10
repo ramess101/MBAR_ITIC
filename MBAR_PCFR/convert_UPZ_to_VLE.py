@@ -404,11 +404,6 @@ def calc_objective(fpathroot,model_type,ending):
                 
 def main():
     
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-opt","--optimizer",type=str,choices=['fsolve','steep','LBFGSB','leapfrog','scan','points','SLSQP'],help="choose which type of optimizer to use")
-    parser.add_argument("-prop","--properties",type=str,nargs='+',choices=['rhoL','Psat','rhov','P','U','Z'],help="choose one or more properties to use in optimization" )
-    args = parser.parse_args()
-    
     ending = '_lam16_highEps'
     
     for model_type in ['MBAR_ref8rr']: #['Direct_simulation_rr']: #['MBAR_ref8rr']: #['MBAR_ref0rr', 'PCFR_ref0rr','Constant_rr']:
@@ -418,9 +413,8 @@ def main():
 
 if __name__ == '__main__':
     '''
-    python optimization_Mie_ITIC_multiple_refs.py --optimizer XX --properties XX --lam XX
-  
-    "--iRerun is required to specify which rerun we are currently on"
+    Converts the UPZ output from MBAR to VLE using ITIC
+    Also calculates the objective function relative to REFPROP
     '''
 
     main()

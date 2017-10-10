@@ -12,6 +12,7 @@ from scipy import stats
 from scipy.optimize import minimize
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.colors as mpl
+import matplotlib.mlab as mlab
 
 reference = 'TraPPE'  
 
@@ -20,8 +21,11 @@ nStates = 19
 
 T_rho = np.loadtxt('Temp_rho.txt')
 
-sig_PCFs = [0.375, 0.370, 0.3725, 0.365, 0.3675, 0.3775, 0.380, 0.3825, 0.385]
-eps_PCFs = [98]*9
+#sig_PCFs = [0.375, 0.370, 0.3725, 0.365, 0.3675, 0.3775, 0.380, 0.3825, 0.385]
+#eps_PCFs = [98]*9
+           
+sig_PCFs = [0.375, 0.370, 0.3725, 0.3775, 0.380, 0.3825, 0.385, 0.3875, 0.390]
+eps_PCFs = [118]*9
 
 def get_parameter_sets(fpathroot):
     
@@ -129,11 +133,11 @@ def compile_data(model_type,fpathroot):
         
         for iRerun in range(nReruns):
             iUPZ = iRerun
-            if model_type == 'Direct_simulation' or model_type == 'MBAR_ref0' or fpathroot == 'parameter_space_LJ/' or (model_type == 'PCFR_ref0' and reference == 'TraPPE') or model_type == 'Lam15/MBAR_ref0' or model_type == 'Lam17/MBAR_ref0' or model_type == 'Lam14/MBAR_ref0' or model_type == 'Lam18/MBAR_ref0' or model_type == 'Lam13/MBAR_ref0':
+            if model_type == 'Direct_simulation' or model_type == 'MBAR_ref0' or fpathroot == 'parameter_space_LJ/' or (model_type == 'PCFR_ref0' and reference == 'TraPPE') or model_type == 'Lam15/MBAR_ref0' or model_type == 'Lam17/MBAR_ref0' or model_type == 'Lam14/MBAR_ref0' or model_type == 'Lam18/MBAR_ref0' or model_type == 'Lam13/MBAR_ref0' or model_type == 'Lam12/MBAR_ref0' or model_type == 'Lam12/MBAR_ref8':
                 iRerun += 1
             if model_type == 'MBAR_ref1':
                 iRerun += 1
-            if model_type == 'MBAR_ref8':
+            if model_type == 'MBAR_ref8' or model_type == 'Lam12/MBAR_ref8':
                 iRerun += 8
             if (model_type == 'MBAR_ref8' and fpathroot == 'parameter_space_Mie16/'):
                 iRerun += 1
@@ -555,6 +559,67 @@ def uncertainty_check(prop_direct, prop_MBAR,u_direct, u_MBAR,Neff_MBAR):
     Neff_rej = []
     u_total = np.sqrt(u_direct**2 + u_MBAR**2)
     
+    cov_factor = dev_MBAR / u_total
+    sign_cov_factor = (prop_MBAR - prop_direct)/u_total
+    
+    plt.plot(Neff_MBAR,cov_factor)
+    plt.show()
+    
+    Neff_min = 50.
+    data_plot = sign_cov_factor[Neff_MBAR>Neff_min]
+    mean = np.mean(data_plot)
+    var = np.var(data_plot)
+    sigma = np.sqrt(var)
+    
+    result = plt.hist(data_plot,bins=30,normed=True)
+  
+    x = np.linspace(min(result[1]),max(result[1]),1000)
+    dx = result[1][1] - result[1][0]
+    scale = len(result[1])*dx
+    
+    plt.plot(x,mlab.normpdf(x,mean,sigma)*scale)
+        
+    plt.xlabel('Coverage Factor')
+    plt.ylabel('Density')
+    plt.title(r'Minimum N$_{eff}$ = '+str(Neff_min))
+    plt.show()
+    
+    Nmin_array = np.linspace(1,1001.,1001)
+    zscores = []
+    skews = []
+    ptest = []
+    
+    for iN, Nmin in enumerate(Nmin_array):
+    
+        sample = sign_cov_factor[Neff_MBAR>=Nmin]
+        z, p = stats.skewtest(sample)[0], stats.skewtest(sample)[1]
+        sk = stats.skew(sample)
+        zscores = np.append(zscores,z)
+        skews = np.append(skews,sk)
+        ptest = np.append(ptest,p)
+        
+    plt.plot(Nmin_array,zscores)
+    plt.xlabel('Minimum Neff')
+    plt.ylabel('Z-score for normal')
+    plt.ylim([-1,1])
+    plt.show()
+    print(zscores)    
+    
+    plt.plot(Nmin_array,ptest)
+    plt.xlabel('Minimum Neff')
+    plt.ylabel('P-test for normal')
+    plt.plot([0,1000.],[0.05,0.05])
+    plt.show()
+    print(ptest)
+    
+    plt.plot(Nmin_array,skews)
+    plt.xlabel('Minimum Neff')
+    plt.ylabel('Skew')
+    plt.show()
+    print(skews)
+
+    return
+    
     for i, dev in enumerate(dev_MBAR):
         if dev < u_total[i]:
             Neff_acc.append(Neff_MBAR[i])
@@ -731,16 +796,18 @@ def RMS_contours(eps_all,sig_all,fpathroot):
 #    plt.ylabel(r'$\epsilon$ (K)')
 #    plt.title(r'RMS of Z')
 #    plt.show()
-#    
-#    RMS_U = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_U_all').reshape(21,21)
-#    CS1 = plt.contour(sig_plot,eps_plot,RMS_U,label='Direct Simulation',colors='r')
-#    plt.clabel(CS1, inline=1,fontsize=10,colors='k',fmt='%1.1f')
-#    plt.xlabel(r'$\sigma$ (nm)')
-#    plt.ylabel(r'$\epsilon$ (K)')
-#    plt.title(r'RMS of U')
-#    plt.show()
-#    
-#    return
+#   
+    contour_lines = [50,100,200,400,800]
+ 
+    RMS_U = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_U_all').reshape(21,21)
+    CS1 = plt.contour(sig_plot,eps_plot,RMS_U,contour_lines,label='Direct Simulation',colors='r')
+    plt.clabel(CS1, inline=1,fontsize=10,colors='k',fmt='%1.1f')
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.title(r'RMS of U')
+    plt.show()
+    
+    return
     
     RMSrhoL = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_rhoL_all').reshape(21,21)
@@ -888,7 +955,7 @@ def RMS_contours_combined(eps_all,sig_all,fpathroot):
     eps_plot = np.unique(eps_all)
     sig_plot = np.unique(sig_all)
     
-    RMSrhoL = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_rhoL_all').reshape(21,21)
+    RMSrhoL = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_U_all').reshape(21,21)
     RMSrhoL_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_rhoL_all').reshape(21,21)
@@ -1334,8 +1401,8 @@ def multi_prop_multi_ref_plot(U_direct,U_MBAR,Z_direct,Z_MBAR,Neff,fpathroot):
 
     elif fpathroot == 'parameter_space_Mie16/':
 
-        plt.text(-30,63,'a)') 
-        plt.text(-30,20,'b)')                            
+        plt.text(-29,7.5,'a)') 
+        plt.text(-5.5,7.5,'b)')                            
                                              
     for prop in ['U','Z']:
         
@@ -1511,9 +1578,11 @@ def multi_ref_LJ_Mie_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mie,Z_direct
     
 def lambda_comparison(eps_all,sig_all,fpathroot):
     
-    for model_type in ['Direct_simulation','Lam13/MBAR_ref0','Lam14/MBAR_ref0','Lam15/MBAR_ref0','Lam17/MBAR_ref0','Lam18/MBAR_ref0']:
+    for model_type in ['Direct_simulation','Lam12/MBAR_ref0','Lam13/MBAR_ref0','Lam14/MBAR_ref0','Lam15/MBAR_ref0','Lam17/MBAR_ref0','Lam18/MBAR_ref0']:
         if model_type == 'Direct_simulation':
             U_direct, dU_direct, P_direct, dP_direct, Z_direct, dZ_direct, Neff_direct = compile_data(model_type,fpathroot)
+        elif model_type == 'Lam12/MBAR_ref0':
+            U_12, dU_12, P_12, dP_12, Z_12, dZ_12, Neff_12 = compile_data(model_type,fpathroot)
         elif model_type == 'Lam13/MBAR_ref0':
             U_13, dU_13, P_13, dP_13, Z_13, dZ_13, Neff_13 = compile_data(model_type,fpathroot)
         elif model_type == 'Lam14/MBAR_ref0':
@@ -1525,24 +1594,28 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
         elif model_type == 'Lam18/MBAR_ref0':
             U_18, dU_18, P_18, dP_18, Z_18, dZ_18, Neff_18 = compile_data(model_type,fpathroot)
     
+    SSE_U12 = np.sum((U_direct-U_12)**2,axis=0).reshape(21,21)
     SSE_U13 = np.sum((U_direct-U_13)**2,axis=0).reshape(21,21)        
     SSE_U14 = np.sum((U_direct-U_14)**2,axis=0).reshape(21,21)
     SSE_U15 = np.sum((U_direct-U_15)**2,axis=0).reshape(21,21)
     SSE_U17 = np.sum((U_direct-U_17)**2,axis=0).reshape(21,21)
     SSE_U18 = np.sum((U_direct-U_18)**2,axis=0).reshape(21,21)
     
+    RMS_U12 = np.sqrt(SSE_U12/len(U_direct))
     RMS_U13 = np.sqrt(SSE_U13/len(U_direct))
     RMS_U14 = np.sqrt(SSE_U14/len(U_direct))
     RMS_U15 = np.sqrt(SSE_U15/len(U_direct))
     RMS_U17 = np.sqrt(SSE_U17/len(U_direct))
     RMS_U18 = np.sqrt(SSE_U18/len(U_direct))
     
+    SSE_Z12 = np.sum((Z_direct-Z_12)**2,axis=0).reshape(21,21)
     SSE_Z13 = np.sum((Z_direct-Z_13)**2,axis=0).reshape(21,21)
     SSE_Z14 = np.sum((Z_direct-Z_14)**2,axis=0).reshape(21,21)
     SSE_Z15 = np.sum((Z_direct-Z_15)**2,axis=0).reshape(21,21)
     SSE_Z17 = np.sum((Z_direct-Z_17)**2,axis=0).reshape(21,21)
     SSE_Z18 = np.sum((Z_direct-Z_18)**2,axis=0).reshape(21,21)
     
+    RMS_Z12 = np.sqrt(SSE_Z12/len(Z_direct))
     RMS_Z13 = np.sqrt(SSE_Z13/len(Z_direct))
     RMS_Z14 = np.sqrt(SSE_Z14/len(Z_direct))
     RMS_Z15 = np.sqrt(SSE_Z15/len(Z_direct))
@@ -1556,13 +1629,16 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
     subplot_1 = my_figure.add_subplot(2,1,1)
     
     contour_lines = [0.15,0.30]
+    contour_lines = [0.15]
     fmt_prop = '%1.2f'
     
+    CS12 = subplot_1.contour(sig_plot,eps_plot,RMS_U12,contour_lines,colors='y')
     CS13 = subplot_1.contour(sig_plot,eps_plot,RMS_U13,contour_lines,colors='m')
     CS14 = subplot_1.contour(sig_plot,eps_plot,RMS_U14,contour_lines,colors='r')
     CS15 = subplot_1.contour(sig_plot,eps_plot,RMS_U15,contour_lines,colors='g')
     CS16 = subplot_1.contour(sig_plot,eps_plot,RMS_U17,contour_lines,colors='b')
     CS17 = subplot_1.contour(sig_plot,eps_plot,RMS_U18,contour_lines,colors='c')
+    plt.clabel(CS12, inline=1,fontsize=10,colors='y',fmt=fmt_prop)
     plt.clabel(CS13, inline=1,fontsize=10,colors='m',fmt=fmt_prop)
     plt.clabel(CS14, inline=1,fontsize=10,colors='r',fmt=fmt_prop)
     plt.clabel(CS15, inline=1,fontsize=10,colors='g',fmt=fmt_prop)
@@ -1570,24 +1646,29 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
     plt.clabel(CS17, inline=1,fontsize=10,colors='c',fmt=fmt_prop)
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
+    plt.plot([],[],'y',label=r'$\lambda = 12$')
     plt.plot([],[],'m',label=r'$\lambda = 13$')
     plt.plot([],[],'r',label=r'$\lambda = 14$')
     plt.plot([],[],'g',label=r'$\lambda = 15$')
     plt.plot([],[],'b',label=r'$\lambda = 17$')
     plt.plot([],[],'c',label=r'$\lambda = 18$')
+    plt.plot(0.375,118,'kx',label='Reference')
     plt.title('RMS (kJ/mol) of $U_{dep}$')
     plt.legend()
     
     subplot_2 = my_figure.add_subplot(2,1,2)
     
     contour_lines = [0.5, 1., 2., 4.,8.]
+    contour_lines=[1.]
     fmt_prop = '%1.1f'
     
+    CS12 = subplot_2.contour(sig_plot,eps_plot,RMS_Z12,contour_lines,colors='y')
     CS13 = subplot_2.contour(sig_plot,eps_plot,RMS_Z13,contour_lines,colors='m')
     CS14 = subplot_2.contour(sig_plot,eps_plot,RMS_Z14,contour_lines,colors='r')
     CS15 = subplot_2.contour(sig_plot,eps_plot,RMS_Z15,contour_lines,colors='g')
     CS16 = subplot_2.contour(sig_plot,eps_plot,RMS_Z17,contour_lines,colors='b')
     CS17 = subplot_2.contour(sig_plot,eps_plot,RMS_Z18,contour_lines,colors='c')
+    plt.clabel(CS12, inline=1,fontsize=10,colors='y',fmt=fmt_prop)
     plt.clabel(CS13, inline=1,fontsize=10,colors='m',fmt=fmt_prop)
     plt.clabel(CS14, inline=1,fontsize=10,colors='r',fmt=fmt_prop)
     plt.clabel(CS15, inline=1,fontsize=10,colors='g',fmt=fmt_prop)
@@ -1595,18 +1676,20 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
     plt.clabel(CS17, inline=1,fontsize=10,colors='c',fmt=fmt_prop)
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
+    plt.plot([],[],'y',label=r'$\lambda = 12$')
     plt.plot([],[],'m',label=r'$\lambda = 13$')
     plt.plot([],[],'r',label=r'$\lambda = 14$')
     plt.plot([],[],'g',label=r'$\lambda = 15$')
     plt.plot([],[],'b',label=r'$\lambda = 17$')
     plt.plot([],[],'c',label=r'$\lambda = 18$')
-    plt.title('RMS (kJ/mol) of $Z$')
+    plt.plot(0.375,118,'kx',label='Reference')
+    plt.title('RMS of $Z$')
     plt.legend()
 
     plt.tight_layout(pad=0.2,rect=[0,0,1,1])
     
-    subplot_1.text(0.363, 107, 'a)')
-    subplot_2.text(0.363, 107, 'b)')  
+    subplot_1.text(0.363, 127, 'a)')
+    subplot_2.text(0.363, 127, 'b)')  
     
     plt.show()
     
@@ -1623,34 +1706,49 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
 #    print(np.mean(RMS_Z17))
 #    print(np.mean(RMS_Z18))
       
-    parity = np.array([np.min(np.array([np.min(U_direct),np.min(U_13),np.min(U_18)])),np.max(np.array([np.max(U_direct),np.max(U_13),np.max(U_18)]))])
+    parity = np.array([np.min(np.array([np.min(U_direct),np.min(U_12),np.min(U_18)])),np.max(np.array([np.max(U_direct),np.max(U_12),np.max(U_18)]))])
     
+    plt.plot(U_direct,U_12,'y.',label='$\lambda=12$',alpha=0.2)  
     plt.plot(U_direct,U_13,'b.',label='$\lambda=13$',alpha=0.2)  
     plt.plot(U_direct,U_14,'r.',label='$\lambda=14$',alpha=0.2)
     plt.plot(U_direct,U_15,'g.',label='$\lambda=15$',alpha=0.2)
     plt.plot(U_direct,U_17,'c.',label='$\lambda=17$',alpha=0.2)
     plt.plot(U_direct,U_18,'m.',label='$\lambda=18$',alpha=0.2)
     plt.plot(parity,parity,'k',label='Parity')
-    plt.xlabel('U (kJ/mol) Direct Simulation')
-    plt.ylabel('U (kJ/mol) Predicted')
+    plt.xlabel('U (kJ/mol), Direct Simulation')
+    plt.ylabel('U (kJ/mol), Predicted')
+#    plt.legend()
+    plt.show()
+    
+    parity = np.array([np.min(np.array([np.min(Z_direct),np.min(Z_12),np.min(Z_18)])),np.max(np.array([np.max(Z_direct),np.max(Z_12),np.max(Z_18)]))])
+    
+    plt.plot(Z_direct,Z_12,'y.',label='$\lambda=12$',alpha=0.2)  
+    plt.plot(Z_direct,Z_13,'b.',label='$\lambda=13$',alpha=0.2)  
+    plt.plot(Z_direct,Z_14,'r.',label='$\lambda=14$',alpha=0.2)
+    plt.plot(Z_direct,Z_15,'g.',label='$\lambda=15$',alpha=0.2)
+    plt.plot(Z_direct,Z_17,'c.',label='$\lambda=17$',alpha=0.2)
+    plt.plot(Z_direct,Z_18,'m.',label='$\lambda=18$',alpha=0.2)
+    plt.plot(parity,parity,'k',label='Parity')
+    plt.xlabel('Z, Direct Simulation')
+    plt.ylabel('Z, Predicted')
 #    plt.legend()
     plt.show()
  
 def main():
     
-    fpathroot = 'parameter_space_Mie16/'
+    fpathroot = 'parameter_space_LJ/'
     
     eps_all, sig_all, eps_matrix, sig_matrix = get_parameter_sets(fpathroot)
     
 #    RMS_contours(eps_all,sig_all,fpathroot)
 #    RMS_contours_combined(eps_all,sig_all,fpathroot)
-#    
-#
-    lambda_comparison(eps_all,sig_all,fpathroot)
+    
 
-    return
-#    
-    for model_type in [reference,'Direct_simulation', 'Lam13/MBAR_ref0', 'PCFR_ref0','Constant_']:
+#    lambda_comparison(eps_all,sig_all,fpathroot)
+
+#    return
+    
+    for model_type in [reference,'Direct_simulation', 'MBAR_ref0', 'PCFR_ref0','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
             U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type,fpathroot)
             # Now I call a function that should calculate the error in the proper manner
@@ -1658,7 +1756,7 @@ def main():
         elif model_type == 'Direct_simulation':
             U_direct, dU_direct, P_direct, dP_direct, Z_direct, dZ_direct, Neff_direct = compile_data(model_type,fpathroot)
             U_direct_Mie, dU_direct_Mie, P_direct_Mie, dP_direct_Mie, Z_direct_Mie, dZ_direct_Mie, Neff_direct_Mie = compile_data(model_type,'parameter_space_Mie16/')
-        elif model_type == 'MBAR_ref0' or model_type == 'MBAR_ref1' or model_type == 'MBAR_ref8' or model_type == 'Lam15/MBAR_ref0' or model_type == 'Lam17/MBAR_ref0' or model_type == 'Lam14/MBAR_ref0' or model_type == 'Lam18/MBAR_ref0' or model_type == 'Lam13/MBAR_ref0':
+        elif model_type == 'MBAR_ref0' or model_type == 'MBAR_ref1' or model_type == 'MBAR_ref8' or model_type == 'Lam15/MBAR_ref0' or model_type == 'Lam17/MBAR_ref0' or model_type == 'Lam14/MBAR_ref0' or model_type == 'Lam18/MBAR_ref0' or model_type == 'Lam13/MBAR_ref0' or model_type == 'Lam12/MBAR_ref0' or model_type == 'Lam12/MBAR_ref8':
             U_MBAR, dU_MBAR, P_MBAR, dP_MBAR, Z_MBAR, dZ_MBAR, Neff_MBAR = compile_data(model_type,fpathroot)
             U_MBAR_Mie, dU_MBAR_Mie, P_MBAR_Mie, dP_MBAR_Mie, Z_MBAR_Mie, dZ_MBAR_Mie, Neff_MBAR_Mie = compile_data(model_type,'parameter_space_Mie16/')
         elif model_type == 'PCFR_ref0':
@@ -1745,7 +1843,7 @@ def main():
 #    Z_MBAR[~mask_MBAR] = (Z_PCFR[~mask_MBAR]*(Neff_min-Neff_MBAR[~mask_MBAR])/Neff_min + Z_MBAR[~mask_MBAR]*(Neff_MBAR[~mask_MBAR])/Neff_min)
     
     
-    for prop in ['U','P','Z']:
+    for prop in ['U','Z']:
         if prop == 'U':
             prop_direct = U_direct[mask]
             prop_hat1 = U_MBAR[mask]
@@ -1789,7 +1887,7 @@ def main():
         #embed_parity_residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop_direct,dprop_MBAR,dprop)
         #parity_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop_direct,dprop_MBAR)
         #residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop)
-        #uncertainty_check(prop_direct,prop_hat1,dprop_direct,dprop_MBAR,Neff)
+        uncertainty_check(prop_direct,prop_hat1,dprop_direct,dprop_MBAR,Neff)
         
 #    contour_plot('U',eps_all,sig_all,U_direct,U_MBAR,U_PCFR,U_W1,U_rec)
 #    contour_plot('P',eps_all,sig_all,P_direct,P_MBAR,P_PCFR,P_W1,P_rec)
@@ -1803,10 +1901,12 @@ def main():
     #multi_ref_LJ_Mie_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask])
     
     #box_bar_state_plots(Neff_MBAR,Neff_min,Neff_small,mask_MBAR,mask_poor)
-    contours_Neff(Neff_MBAR,sig_all,eps_all,fpathroot)
+    #contours_Neff(Neff_MBAR,sig_all,eps_all,fpathroot)
     
     #contour_combined_plot(eps_all,sig_all,U_direct,Z_direct,U_MBAR,Z_MBAR,U_PCFR,Z_PCFR)
     
 if __name__ == '__main__':
-    
+    '''
+    Provides various plots to be considered in publication.
+    '''
     main()
