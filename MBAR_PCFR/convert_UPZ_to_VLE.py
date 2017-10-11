@@ -7,7 +7,7 @@ import time
 import scipy.integrate as integrate
 from scipy.optimize import minimize
 
-fpathroot = 'parameter_space_Mie16/'
+fpathroot = 'parameter_space_Mie16/Lam12/'
 nReruns = 441
 nStates = 19
 
@@ -408,7 +408,7 @@ def main():
     
     for model_type in ['MBAR_ref8rr']: #['Direct_simulation_rr']: #['MBAR_ref8rr']: #['MBAR_ref0rr', 'PCFR_ref0rr','Constant_rr']:
     
-        #run_analysis(fpathroot,model_type,ending)
+        run_analysis(fpathroot,model_type,ending)
         calc_objective(fpathroot,model_type,ending)
 
 if __name__ == '__main__':

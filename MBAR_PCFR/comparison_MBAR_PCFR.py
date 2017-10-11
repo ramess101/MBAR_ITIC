@@ -506,7 +506,8 @@ def contour_combined_plot(eps_all,sig_all,U_direct,Z_direct,U_MBAR,Z_MBAR,U_PCFR
     subplot_1 = my_figure.add_subplot(2,1,1)
     
     contour_lines = [25,50,75,100,125,150,200,250,300,400,500,600,700,800]
-    fmt_prop = '%1.0f'
+    contour_lines = [0.05,0.1,0.2,0.5,1,2]
+    fmt_prop = '%1.1f'
     
     CS1 = subplot_1.contour(sig_plot,eps_plot,RMS_1,contour_lines,colors='r')
     CS2 = subplot_1.contour(sig_plot,eps_plot,RMS_2,contour_lines,colors='g')
@@ -1736,7 +1737,7 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
  
 def main():
     
-    fpathroot = 'parameter_space_LJ/'
+    fpathroot = 'parameter_space_Mie16/'
     
     eps_all, sig_all, eps_matrix, sig_matrix = get_parameter_sets(fpathroot)
     
@@ -1748,7 +1749,7 @@ def main():
 
 #    return
     
-    for model_type in [reference,'Direct_simulation', 'MBAR_ref0', 'PCFR_ref0','Constant_']:
+    for model_type in [reference,'Direct_simulation', 'Lam12/MBAR_ref8', 'PCFR_ref0','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
             U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type,fpathroot)
             # Now I call a function that should calculate the error in the proper manner
@@ -1887,7 +1888,7 @@ def main():
         #embed_parity_residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop_direct,dprop_MBAR,dprop)
         #parity_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop_direct,dprop_MBAR)
         #residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop)
-        uncertainty_check(prop_direct,prop_hat1,dprop_direct,dprop_MBAR,Neff)
+        #uncertainty_check(prop_direct,prop_hat1,dprop_direct,dprop_MBAR,Neff)
         
 #    contour_plot('U',eps_all,sig_all,U_direct,U_MBAR,U_PCFR,U_W1,U_rec)
 #    contour_plot('P',eps_all,sig_all,P_direct,P_MBAR,P_PCFR,P_W1,P_rec)
@@ -1903,7 +1904,7 @@ def main():
     #box_bar_state_plots(Neff_MBAR,Neff_min,Neff_small,mask_MBAR,mask_poor)
     #contours_Neff(Neff_MBAR,sig_all,eps_all,fpathroot)
     
-    #contour_combined_plot(eps_all,sig_all,U_direct,Z_direct,U_MBAR,Z_MBAR,U_PCFR,Z_PCFR)
+    contour_combined_plot(eps_all,sig_all,U_direct,Z_direct,U_MBAR,Z_MBAR,U_PCFR,Z_PCFR)
     
 if __name__ == '__main__':
     '''
