@@ -15,8 +15,9 @@ import matplotlib.colors as mpl
 import matplotlib.mlab as mlab
 import VLE_model_fit
 
-fpathroot = 'MBAR_PCFR/parameter_space_LJ/'
+fpathroot = 'MBAR_PCFR/parameter_space_Mie16/'
 model_type = 'MBAR_ref8rr_'
+model_type = 'Direct_simulation_rr_'
 RMS_all = np.zeros([441,6])
 
 RMS_all[:,0] = np.loadtxt(fpathroot+model_type+'RMS_rhoL_all')
@@ -47,10 +48,10 @@ eps_sorted = eps_all[np.argsort(RMS_all[:,0])[::-1]]
 sig_sorted = sig_all[np.argsort(RMS_all[:,0])[::-1]]
 
 for iPareto in range(len(Pareto_optimal)):
-    RMS_test = RMS_sorted[iPareto,1:6]
+    RMS_test = RMS_sorted[iPareto,1:4]
     for iRerun in range(len(RMS_sorted)-iPareto):
         iRerun += iPareto
-        RMS_other = RMS_sorted[iRerun,1:6]
+        RMS_other = RMS_sorted[iRerun,1:4]
         if np.all(RMS_other < RMS_test):
             Pareto_optimal[iPareto] = False
             break
