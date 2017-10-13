@@ -506,8 +506,8 @@ def contour_combined_plot(eps_all,sig_all,U_direct,Z_direct,U_MBAR,Z_MBAR,U_PCFR
     subplot_1 = my_figure.add_subplot(2,1,1)
     
     contour_lines = [25,50,75,100,125,150,200,250,300,400,500,600,700,800]
-    contour_lines = [0.05,0.1,0.2,0.5,1,2]
-    fmt_prop = '%1.1f'
+    contour_lines = [0.05,0.10,0.15,0.20,0.25,0.30,0.40,0.50,0.60,0.70,0.80,0.90,1.00]
+    fmt_prop = '%1.2f'
     
     CS1 = subplot_1.contour(sig_plot,eps_plot,RMS_1,contour_lines,colors='r')
     CS2 = subplot_1.contour(sig_plot,eps_plot,RMS_2,contour_lines,colors='g')
@@ -515,10 +515,12 @@ def contour_combined_plot(eps_all,sig_all,U_direct,Z_direct,U_MBAR,Z_MBAR,U_PCFR
     plt.clabel(CS2, inline=1,fontsize=10,colors='g',fmt=fmt_prop)
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
+    plt.xticks([0.365,0.370,0.375,0.380,0.385])
+    plt.yticks([88,93,98,103,108])
     plt.plot([],[],'r',label='MBAR')
     plt.plot([],[],'g',label='PCFR')
-    plt.plot(sig_PCFs[0],eps_PCFs[0],'mx',label='References')
-    plt.title('RMS (kJ/mol) of $U_{dep}$')
+    plt.plot(0.375,98,'mx',label='Reference')
+    plt.title('RMS of $U_{dep}$ (kJ/mol)')
     plt.legend()
     
     subplot_2 = my_figure.add_subplot(2,1,2)
@@ -532,10 +534,12 @@ def contour_combined_plot(eps_all,sig_all,U_direct,Z_direct,U_MBAR,Z_MBAR,U_PCFR
     plt.clabel(CS4, inline=1,fontsize=10,colors='g',fmt=fmt_prop)
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
+    plt.xticks([0.365,0.370,0.375,0.380,0.385])
+    plt.yticks([88,93,98,103,108])
     plt.plot([],[],'r',label='MBAR')
     plt.plot([],[],'g',label='PCFR')
-    plt.plot(sig_PCFs[0],eps_PCFs[0],'mx',label='References')
-    plt.title('RMS (kJ/mol) of $Z$')
+    plt.plot(0.375,98,'mx',label='Reference')
+    plt.title('RMS of $Z$')
     plt.legend()
 
     plt.tight_layout(pad=0.2,rect=[0,0,1,1])
@@ -654,7 +658,7 @@ def PCFR_error(U_ref, P_ref,ref):
     elif ref == 'Potoff':
         UPZ_PCFR = np.loadtxt('parameter_space_Mie16/PCFR_ref0rr286')
         
-    U_PCFR = UPZ_PCFR[:,0]
+    U_PCFR = UPZ_PCFR[:,0]/400.
     P_PCFR = UPZ_PCFR[:,2]
     
     U_error = U_ref - U_PCFR
@@ -1217,20 +1221,27 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
     plt.tight_layout(pad=2,rect=[0.02,0.01,0.965,0.99])
     
     normalize = mpl.Normalize(vmin=0, vmax=3)
-
+    
+    font = {'size' : '14'}
+    plt.rc('font',**font)
+    
     if fpathroot == 'parameter_space_LJ/':
 
-        plt.text(-19.2,33,'a)') 
-        plt.text(-19.2,11,'b)')
-        plt.text(-3.8,33,'c)')
-        plt.text(-3.8,11,'d)') 
+        plt.text(-19.8,34,r'a)') 
+        plt.text(-19.8,11,r'b)')
+        plt.text(-3.8,34,r'c)')
+        plt.text(-3.8,11,r'd)')
+        plt.text(-13,35.5,r'Constant Model: LJ 12-6, $88\leq\epsilon/K\leq108, 0.365\leq\sigma/nm\leq0.385$')
+        plt.text(-19.8,35.5,r'$\theta_{ref} = \theta_{TraPPE-UA}$')
 
     elif fpathroot == 'parameter_space_Mie16/':
 
-        plt.text(-21.5,58,'a)') 
-        plt.text(-21.5,20,'b)')
-        plt.text(-3.8,58,'c)')
-        plt.text(-3.8,20,'d)')                                
+        plt.text(-22,59.5,r'a)') 
+        plt.text(-22,20,r'b)')
+        plt.text(-3.8,59.5,r'c)')
+        plt.text(-3.8,20,r'd)') 
+        plt.text(-13,62,r'Perturbed Model: Mie 16-6, $108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.385$')  
+        plt.text(-22,62,r'$\theta_{ref} = \theta_{TraPPE-UA}$')                              
                                              
     for prop in ['U','Z']:
         
@@ -1317,8 +1328,8 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         axarr[ifig,jfig].plot(prop_direct,prop_hat2,'g.',alpha=0.2)
         axarr[ifig,jfig].plot(prop_direct,prop_hat4,'c.',alpha=0.2)
         axarr[ifig,jfig].plot(parity,parity,'k',label='Parity')
-        axarr[ifig,jfig].set_xlabel(xlabel)
-        axarr[ifig,jfig].set_ylabel(ylabel)
+        axarr[ifig,jfig].set_xlabel(xlabel,fontdict=font)
+        axarr[ifig,jfig].set_ylabel(ylabel,fontdict=font)
         axarr[ifig,jfig].set_xlim([xmin,xmax])
         axarr[ifig,jfig].set_ylim([ymin,ymax])
         
@@ -1327,7 +1338,7 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         #axarr[ifig,jfig].set_title(title)
         #axarr[ifig,jfig].text(2,0.65,panels[ifig,jfig])
         if ifig == 0 and jfig == 0:
-            axarr[ifig,jfig].legend(['Constant PCF','MBAR','PCFR','Recommended','Parity'],loc='upper center')
+            axarr[ifig,jfig].legend(['Constant PCF','MBAR','PCFR','Recommended','Parity'],loc='upper center',frameon=False)
             a = inset_axes(axarr[ifig,jfig],width=2.5,height=2.5,loc=4)
         elif ifig == 0 and jfig == 1:
             a = inset_axes(axarr[ifig,jfig],width=2.3,height=2.3,loc=4)
@@ -1336,19 +1347,22 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         a.plot(prop_direct,dev2,'g.',label='PCFR',alpha=0.2)
         a.plot(prop_direct,dev4,'c.',label='Recommended',alpha=0.2)
         a.plot(parity,[0,0],'k--')
-        a.set_xticks([])
+        a.xaxis.tick_top()
+        #a.set_xticks([])
         #plt.xlabel('Direct Simulation '+units)
         if dev_type == 'Percent':
-            a.set_ylabel(dev_type+' Deviation')
+            a.set_ylabel(dev_type+' Deviation',labelpad=-5)
         else:
-            a.set_ylabel(dev_type+' Deviation '+units)
+            a.set_ylabel('Deviation '+units,labelpad=-5)
+#            a.set_xlabel(xlabel,labelpad=-5)
+#            a.xaxis.set_label_position('top')
             
         ifig += 1
             
         p = axarr[ifig,jfig].scatter(prop_direct[Neff.argsort()],prop_hat1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='rainbow',label='MBAR',norm=normalize)    
         axarr[ifig,jfig].plot(parity,parity,'k',label='Parity')
-        axarr[ifig,jfig].set_xlabel(xlabel)
-        axarr[ifig,jfig].set_ylabel(ylabel+' with MBAR')
+        axarr[ifig,jfig].set_xlabel(xlabel,fontdict=font)
+        axarr[ifig,jfig].set_ylabel(ylabel+' with MBAR',fontdict=font)
         axarr[ifig,jfig].set_xlim([xmin,xmax])
         axarr[ifig,jfig].set_ylim([ymin,ymax])
         #axarr[1].set_title(title)
@@ -1357,7 +1371,7 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
             axarr[ifig,jfig].set_yticks([-8,-4,0,4,8,12])
         
         if jfig == 1:
-            cbaxes = f.add_axes([0.95,0.053,0.01,0.43])
+            cbaxes = f.add_axes([0.94,0.065,0.01,0.412])
             cb = plt.colorbar(p,ax=axarr[ifig,jfig],cax=cbaxes,format='%.1f')
 #            cb = plt.colorbar(p,ax=axarr[ifig,jfig],pad=0.02)
             cb.set_label('log$_{10}(N_{eff})$')
@@ -1365,7 +1379,8 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         #cax.set_position([0.5,0.5,0.5,0.5])
         a = inset_axes(axarr[ifig,jfig],width=2.5,height=2.5,loc=4)
         a.scatter(prop_direct[Neff.argsort()],dev1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='rainbow',label='MBAR',norm=normalize)   
-        a.set_xticks([])
+        a.xaxis.tick_top()
+#        a.set_xticks([])
         a.plot(parity,[0,0],'k--')
         #plt.xlabel('Direct Simulation '+units)
         #a.set_ylim([np.floor(np.min(dev1)),np.ceil(np.max(dev1))])
@@ -1376,9 +1391,9 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
             a.set_yticks([-3,0,3,6,9,12,15])
         
         if dev_type == 'Percent':
-            a.set_ylabel(dev_type+' Deviation')
+            a.set_ylabel(dev_type+' Deviation',labelpad=-5)
         else:
-            a.set_ylabel(dev_type+' Deviation '+units)
+            a.set_ylabel('Deviation '+units,labelpad=-5)
             
         jfig += 1
         
@@ -1502,6 +1517,9 @@ def multi_ref_LJ_Mie_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mie,Z_direct
     subplot_1 = my_figure.add_subplot(2,2,1)
     plt.tight_layout(pad=4,rect=[0.02,0.01,0.965,0.99])
     
+#    font = {'size' : '14'}
+#    plt.rc('font',**font)
+    
     subplot_1.scatter(U_direct_LJ[Neff_LJ.argsort()],U_MBAR_LJ[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
     subplot_1.plot(parity_1,parity_1,'k',label='Parity')
     subplot_1.set_xlabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation')
@@ -1566,16 +1584,160 @@ def multi_ref_LJ_Mie_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mie,Z_direct
 #    cb = plt.colorbar(p,ax=subplot_4,pad=0.02)
 #    cb.set_label('log$_{10}(N_{eff})$')
     
-    subplot_1.text(-6800, -800, 'a)')
-    subplot_2.text(-3.8, 7.5, 'c)')
-    subplot_3.text(-6800, -800, 'b)')
-    subplot_4.text(-3.8, 13, 'd)')
+    subplot_1.text(-6800/400., -800/400., r'a) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$.'+'\n'+r'Constant Model: LJ 12-6,'+'\n'+r'$88\leq\epsilon/K\leq108, 0.365\leq\sigma/nm\leq0.385$')
+    subplot_2.text(-3.8, 7.5, r'c) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$.'+'\n'+r'Constant Model: LJ 12-6,'+'\n'+r'$88\leq\epsilon/K\leq108, 0.365\leq\sigma/nm\leq0.385$')
+    subplot_3.text(-6800/400., -800/400., r'b) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$.'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.385$')
+    subplot_4.text(-3.8, 13, r'd) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$.'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.385$')
             
     cbaxes = my_figure.add_axes([0.94,0.055,0.02,0.885])
     cb = plt.colorbar(p,ax=subplot_4,cax=cbaxes,format='%.1f')
     cb.set_label('log$_{10}(N_{eff})$')
         
     my_figure.savefig('MBAR_multi_ref_LJ_Mie.pdf')
+    
+def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mie,U_MBAR_LJhighEps,Z_direct_LJ,Z_MBAR_LJ,Z_direct_Mie,Z_MBAR_Mie,Z_MBAR_LJhighEps,Neff_LJ,Neff_Mie,Neff_LJhighEps):
+
+    abs_dev = lambda hat, direct: (hat - direct)
+    rel_dev = lambda hat, direct: abs_dev(hat,direct)/direct * 100.
+    
+    dev1 = rel_dev(U_MBAR_LJ,U_direct_LJ)
+    dev2 = abs_dev(Z_MBAR_LJ,Z_direct_LJ)
+    dev3 = rel_dev(U_MBAR_Mie,U_direct_Mie)
+    dev4 = abs_dev(Z_MBAR_Mie,Z_direct_Mie)
+    dev5 = rel_dev(U_MBAR_LJhighEps,U_direct_Mie)  
+    dev6 = abs_dev(Z_MBAR_LJhighEps,Z_direct_Mie)                                  
+                                         
+    parity_1 = np.array([np.min(np.array([np.min(U_direct_LJ),np.min(U_MBAR_LJ)])),np.max(np.array([np.max(U_direct_LJ),np.max(U_MBAR_LJ)]))])
+    parity_2 = np.array([np.min(np.array([np.min(Z_direct_LJ),np.min(Z_MBAR_LJ)])),np.max(np.array([np.max(Z_direct_LJ),np.max(Z_MBAR_LJ)]))])
+    parity_3 = np.array([np.min(np.array([np.min(U_direct_Mie),np.min(U_MBAR_Mie)])),np.max(np.array([np.max(U_direct_Mie),np.max(U_MBAR_Mie)]))])
+    parity_4 = np.array([np.min(np.array([np.min(Z_direct_Mie),np.min(Z_MBAR_Mie)])),np.max(np.array([np.max(Z_direct_Mie),np.max(Z_MBAR_Mie)]))])      
+    parity_5 = np.array([np.min(np.array([np.min(U_direct_Mie),np.min(U_MBAR_LJhighEps)])),np.max(np.array([np.max(U_direct_Mie),np.max(U_MBAR_LJhighEps)]))])
+    parity_6 = np.array([np.min(np.array([np.min(Z_direct_Mie),np.min(Z_MBAR_LJhighEps)])),np.max(np.array([np.max(Z_direct_Mie),np.max(Z_MBAR_LJhighEps)]))])      
+    
+    parity_4 = np.array([np.min(Z_direct_Mie),np.max(Z_direct_Mie)]) #This is really what I want in my plots
+    parity_6 = np.array([np.min(Z_direct_Mie),np.max(Z_direct_Mie)]) #This is really what I want in my plots
+    
+    normalize = mpl.Normalize(vmin=0, vmax=np.log10(np.max(Neff_LJ)))
+    normalize = mpl.Normalize(vmin=0, vmax=3)
+    
+    my_figure = plt.figure(figsize=(16,18))
+    subplot_1 = my_figure.add_subplot(3,2,1)
+    plt.tight_layout(pad=2.5,rect=[0.02,0.01,0.965,0.99])
+    
+#    font = {'size' : '14'}
+#    plt.rc('font',**font)
+    
+    subplot_1.scatter(U_direct_LJ[Neff_LJ.argsort()],U_MBAR_LJ[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
+    subplot_1.plot(parity_1,parity_1,'k',label='Parity')
+    subplot_1.set_xlabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation',labelpad=-2)
+    subplot_1.set_ylabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Predicted with MBAR',labelpad=-4)
+    subplot_1.set_xlim([-7000/400.,-500/400.])
+    subplot_1.set_ylim([-7000/400.,-500/400.])
+    
+    a = inset_axes(subplot_1,width=2.6,height=2.6,loc=4)          
+    a.scatter(U_direct_LJ[Neff_LJ.argsort()],dev1[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+    a.plot(parity_1,[0,0],'k--')
+    a.xaxis.tick_top()
+#    a.set_xticks([])
+    a.set_yticks([-1,0,1])
+    a.set_ylabel('Percent Deviation',labelpad=-4)
+    
+    subplot_2 = my_figure.add_subplot(3,2,2)
+    p = subplot_2.scatter(Z_direct_LJ[Neff_LJ.argsort()],Z_MBAR_LJ[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
+    subplot_2.plot(parity_2,parity_2,'k',label='Parity')
+    subplot_2.set_xlabel('$Z$, Direct Simulation',labelpad=-2)
+    subplot_2.set_ylabel('$Z$, Predicted with MBAR',labelpad=-7)
+    subplot_2.set_xlim([-4,8])
+    subplot_2.set_ylim([-4,8])
+    
+    a = inset_axes(subplot_2,width=2.5,height=2.5,loc=4)          
+    a.scatter(Z_direct_LJ[Neff_LJ.argsort()],dev2[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+    a.plot(parity_2,[0,0],'k--')
+    a.set_yticks([-0.2,-0.1,0,0.1,0.2])
+    a.xaxis.tick_top()
+#    a.set_xticks([])
+    a.set_ylabel('Deviation',labelpad=-4)
+    
+#    cb = plt.colorbar(p,ax=subplot_2,pad=0.02)
+#    cb.set_label('log$_{10}(N_{eff})$')
+    
+    subplot_3 = my_figure.add_subplot(3,2,3)
+    subplot_3.scatter(U_direct_Mie[Neff_Mie.argsort()],U_MBAR_Mie[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
+    subplot_3.plot(parity_3,parity_3,'k',label='Parity')
+    subplot_3.set_xlabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation',labelpad=-2)
+    subplot_3.set_ylabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Predicted with MBAR',labelpad=-4)
+    subplot_3.set_xlim([-7000/400.,-500/400.])
+    subplot_3.set_ylim([-7000/400.,-500/400.])
+    
+    a = inset_axes(subplot_3,width=2.65,height=2.65,loc=4)          
+    a.scatter(U_direct_Mie[Neff_Mie.argsort()],dev3[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+    a.plot(parity_3,[0,0],'k--')
+    a.xaxis.tick_top()
+#    a.set_xticks([])
+    a.set_yticks([-16,-12,-8,-4,-2,0,2])
+    a.set_ylabel('Percent Deviation',labelpad=-4)
+    
+    subplot_4 = my_figure.add_subplot(3,2,4)
+    p = subplot_4.scatter(Z_direct_Mie[Neff_Mie.argsort()],Z_MBAR_Mie[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
+    subplot_4.plot(parity_4,parity_4,'k',label='Parity')
+    subplot_4.set_xlabel('$Z$, Direct Simulation',labelpad=-2)
+    subplot_4.set_ylabel('$Z$, Predicted with MBAR',labelpad=-15)
+    subplot_4.set_xlim([-4,10])
+    subplot_4.set_ylim([-10,14])
+    
+    a = inset_axes(subplot_4,width=2.5,height=2.5,loc=4)          
+    a.scatter(Z_direct_Mie[Neff_Mie.argsort()],dev4[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+    a.plot(parity_4,[0,0],'k--')
+    a.xaxis.tick_top()
+#    a.set_xticks([])
+    a.set_ylabel('Deviation',labelpad=0)
+    
+#    cb = plt.colorbar(p,ax=subplot_4,pad=0.02)
+#    cb.set_label('log$_{10}(N_{eff})$')
+
+    subplot_5 = my_figure.add_subplot(3,2,5)
+    subplot_5.scatter(U_direct_Mie[Neff_LJhighEps.argsort()],U_MBAR_LJhighEps[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
+    subplot_5.plot(parity_5,parity_5,'k',label='Parity')
+    subplot_5.set_xlabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation',labelpad=-2)
+    subplot_5.set_ylabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Predicted with MBAR',labelpad=-4)
+    subplot_5.set_xlim([-7000/400.,-500/400.])
+    subplot_5.set_ylim([-7000/400.,-500/400.])
+    
+    a = inset_axes(subplot_5,width=2.65,height=2.65,loc=4)          
+    a.scatter(U_direct_Mie[Neff_LJhighEps.argsort()],dev5[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+    a.plot(parity_5,[0,0],'k--')
+    a.xaxis.tick_top()
+#    a.set_xticks([])
+    a.set_yticks([-2,0,2])
+    a.set_ylabel('Percent Deviation',labelpad=-4)
+    
+    subplot_6 = my_figure.add_subplot(3,2,6)
+    p = subplot_6.scatter(Z_direct_Mie[Neff_LJhighEps.argsort()],Z_MBAR_LJhighEps[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
+    subplot_6.plot(parity_6,parity_6,'k',label='Parity')
+    subplot_6.set_xlabel('$Z$, Direct Simulation',labelpad=-2)
+    subplot_6.set_ylabel('$Z$, Predicted with MBAR',labelpad=-5)
+    subplot_6.set_xlim([-4,10])
+    subplot_6.set_ylim([-6,10])
+    
+    a = inset_axes(subplot_6,width=2.5,height=2.5,loc=4)          
+    a.scatter(Z_direct_Mie[Neff_LJhighEps.argsort()],dev6[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+    a.plot(parity_6,[0,0],'k--')
+    a.xaxis.tick_top()
+#    a.set_xticks([])
+    a.set_ylabel('Deviation',labelpad=-2)
+    
+    subplot_1.text(-17., -4., r'a) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$'+'\n'+r'Constant Model: LJ 12-6,'+'\n'+r'$88\leq\epsilon/K\leq108, 0.365\leq\sigma/nm\leq0.385$')
+    subplot_2.text(-3.8, 6, r'd) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$'+'\n'+r'Constant Model: LJ 12-6,'+'\n'+r'$88\leq\epsilon/K\leq108, 0.365\leq\sigma/nm\leq0.385$')
+    subplot_3.text(-17., -4., r'b) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.385$')
+    subplot_4.text(-3.8, 10, r'e) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.385$')
+    subplot_5.text(-17., -4., r'c) Multiple $\theta_{ref}$: $\epsilon = 118$ K,  $0.365\leq\sigma/nm\leq0.393$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.393$')
+    subplot_6.text(-3.8, 7.3, r'f) Multiple $\theta_{ref}$: $\epsilon = 118$ K,  $0.365\leq\sigma/nm\leq0.393$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.393$')
+        
+    cbaxes = my_figure.add_axes([0.945,0.035,0.01,0.925])
+    cb = plt.colorbar(p,ax=subplot_6,cax=cbaxes,format='%.1f')
+    cb.set_label('log$_{10}(N_{eff})$')
+        
+    my_figure.savefig('MBAR_multi_ref_LJ_Mie_LJhighEps.pdf')
     
 def lambda_comparison(eps_all,sig_all,fpathroot):
     
@@ -1647,6 +1809,8 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
     plt.clabel(CS17, inline=1,fontsize=10,colors='c',fmt=fmt_prop)
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
+    plt.xticks([0.365,0.370,0.375,0.380,0.385])
+    plt.yticks([108,113,118,123,128])
     plt.plot([],[],'y',label=r'$\lambda = 12$')
     plt.plot([],[],'m',label=r'$\lambda = 13$')
     plt.plot([],[],'r',label=r'$\lambda = 14$')
@@ -1654,7 +1818,7 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
     plt.plot([],[],'b',label=r'$\lambda = 17$')
     plt.plot([],[],'c',label=r'$\lambda = 18$')
     plt.plot(0.375,118,'kx',label='Reference')
-    plt.title('RMS (kJ/mol) of $U_{dep}$')
+    plt.title('RMS of $U_{dep}$ (kJ/mol)')
     plt.legend()
     
     subplot_2 = my_figure.add_subplot(2,1,2)
@@ -1677,6 +1841,8 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
     plt.clabel(CS17, inline=1,fontsize=10,colors='c',fmt=fmt_prop)
     plt.xlabel(r'$\sigma$ (nm)')
     plt.ylabel(r'$\epsilon$ (K)')
+    plt.xticks([0.365,0.370,0.375,0.380,0.385])
+    plt.yticks([108,113,118,123,128])
     plt.plot([],[],'y',label=r'$\lambda = 12$')
     plt.plot([],[],'m',label=r'$\lambda = 13$')
     plt.plot([],[],'r',label=r'$\lambda = 14$')
@@ -1734,6 +1900,96 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
     plt.ylabel('Z, Predicted')
 #    plt.legend()
     plt.show()
+    
+    lam_array = np.array([12.,13.,14.,15.,17.,18.])
+    eps_max = np.zeros([len(Neff_direct),len(lam_array)])
+    sig_max = np.zeros([len(Neff_direct),len(lam_array)])
+    lam_max = np.zeros([len(Neff_direct),len(lam_array)])
+    N_max = np.zeros([len(Neff_direct),len(lam_array)])
+    Neff_all = np.array([Neff_12,Neff_13,Neff_14,Neff_15,Neff_17,Neff_18])
+    RMS_Uall = np.array([RMS_U12,RMS_U13,RMS_U14,RMS_U15,RMS_U17,RMS_U18])
+    RMS_Zall = np.array([RMS_Z12,RMS_Z13,RMS_Z14,RMS_Z15,RMS_Z17,RMS_Z18])
+    
+    for ilam in range(len(lam_array)):   
+        for iState in range(len(Neff_direct)):
+            imax = np.argmax(Neff_all[ilam][iState][:])
+            #imax = np.argmin(RMS_Uall[ilam][iState][:])
+            imax = np.argmin(RMS_Zall[ilam][iState][:])
+            N_max[iState,ilam] = Neff_all[ilam][iState][imax]
+            eps_max[iState,ilam] = eps_all[imax]
+            sig_max[iState,ilam] = sig_all[imax]
+            lam_max[iState,ilam] = lam_array[ilam]
+            
+    plt.plot(sig_max[:,0],eps_max[:,0],'yo',label=r'$\lambda=12$')
+    plt.plot(sig_max[:,1],eps_max[:,1],'mo',label=r'$\lambda=13$')
+    plt.plot(sig_max[:,2],eps_max[:,2],'ro',label=r'$\lambda=14$')
+    plt.plot(sig_max[:,3],eps_max[:,3],'go',label=r'$\lambda=15$')
+    plt.plot(sig_max[:,4],eps_max[:,4],'bo',label=r'$\lambda=17$')
+    plt.plot(sig_max[:,5],eps_max[:,5],'co',label=r'$\lambda=18$')
+    plt.xlabel(r'$\sigma$ (nm)')
+    plt.ylabel(r'$\epsilon$ (K)')
+    plt.xlim([0.365,0.385])
+    plt.ylim([108,128])
+    plt.xticks([0.365,0.370,0.375,0.380,0.385])
+    plt.yticks([108,113,118,123,128])
+    plt.legend()
+    plt.show()
+    
+    plt.plot(lam_max[:,0],sig_max[:,0],'yo',label=r'$\lambda=12$')
+    plt.plot(lam_max[:,1],sig_max[:,1],'mo',label=r'$\lambda=13$')
+    plt.plot(lam_max[:,2],sig_max[:,2],'ro',label=r'$\lambda=14$')
+    plt.plot(lam_max[:,3],sig_max[:,3],'go',label=r'$\lambda=15$')
+    plt.plot(lam_max[:,4],sig_max[:,4],'bo',label=r'$\lambda=17$')
+    plt.plot(lam_max[:,5],sig_max[:,5],'co',label=r'$\lambda=18$')
+    plt.xlabel(r'$\lambda$')
+    plt.ylabel(r'$\sigma$ (nm)')
+    plt.xlim([11,19])
+    plt.ylim([0.365,0.385])
+    plt.xticks([12,13,14,15,17,18])
+    plt.yticks([0.365,0.370,0.375,0.380,0.385])
+    plt.legend()
+    plt.show()
+    
+    sig_avg = np.array([np.mean(sig_max[:,0]),np.mean(sig_max[:,1]),np.mean(sig_max[:,2]),np.mean(sig_max[:,3]),np.mean(sig_max[:,4]),np.mean(sig_max[:,5])])    
+    
+    plt.plot(lam_array,sig_avg)
+    plt.xlabel(r'$\lambda$')
+    plt.ylabel(r'$\sigma$ (nm)')
+    plt.xlim([11,19])
+    plt.ylim([0.365,0.385])
+    plt.xticks([12,13,14,15,16,17,18])
+    plt.yticks([0.365,0.370,0.375,0.380,0.385])
+    plt.show()
+    
+    for iplot in range(len(sig_max)):
+        plt.plot(lam_array,sig_max[iplot,:])
+    plt.xlabel(r'$\lambda$')
+    plt.ylabel(r'$\sigma$ (nm)')
+    plt.xlim([11,19])
+    plt.ylim([0.365,0.385])
+    plt.xticks([12,13,14,15,16,17,18])
+    plt.yticks([0.365,0.370,0.375,0.380,0.385])
+    plt.show()
+    
+    
+    plt.plot(lam_array[0],np.mean(sig_max[:,0]),'yo',label=r'$\lambda=12$')
+    plt.plot(lam_array[1],np.mean(sig_max[:,1]),'mo',label=r'$\lambda=13$')
+    plt.plot(lam_array[2],np.mean(sig_max[:,2]),'ro',label=r'$\lambda=14$')
+    plt.plot(lam_array[3],np.mean(sig_max[:,3]),'go',label=r'$\lambda=15$')
+    plt.plot(lam_array[4],np.mean(sig_max[:,4]),'bo',label=r'$\lambda=17$')
+    plt.plot(lam_array[5],np.mean(sig_max[:,5]),'co',label=r'$\lambda=18$')
+    plt.xlabel(r'$\lambda$')
+    plt.ylabel(r'$\sigma$ (nm)')
+    plt.xlim([11,19])
+    plt.ylim([0.365,0.385])
+    plt.xticks([12,13,14,15,17,18])
+    plt.yticks([0.365,0.370,0.375,0.380,0.385])
+    plt.legend()
+    plt.show()
+        
+    return
+    
+    
  
 def main():
     
@@ -1745,11 +2001,11 @@ def main():
 #    RMS_contours_combined(eps_all,sig_all,fpathroot)
     
 
-#    lambda_comparison(eps_all,sig_all,fpathroot)
+    lambda_comparison(eps_all,sig_all,fpathroot)
 
-#    return
+    return
     
-    for model_type in [reference,'Direct_simulation', 'Lam12/MBAR_ref8', 'PCFR_ref0','Constant_']:
+    for model_type in [reference,'Direct_simulation', 'MBAR_ref0', 'PCFR_ref0','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
             U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type,fpathroot)
             # Now I call a function that should calculate the error in the proper manner
@@ -1760,6 +2016,7 @@ def main():
         elif model_type == 'MBAR_ref0' or model_type == 'MBAR_ref1' or model_type == 'MBAR_ref8' or model_type == 'Lam15/MBAR_ref0' or model_type == 'Lam17/MBAR_ref0' or model_type == 'Lam14/MBAR_ref0' or model_type == 'Lam18/MBAR_ref0' or model_type == 'Lam13/MBAR_ref0' or model_type == 'Lam12/MBAR_ref0' or model_type == 'Lam12/MBAR_ref8':
             U_MBAR, dU_MBAR, P_MBAR, dP_MBAR, Z_MBAR, dZ_MBAR, Neff_MBAR = compile_data(model_type,fpathroot)
             U_MBAR_Mie, dU_MBAR_Mie, P_MBAR_Mie, dP_MBAR_Mie, Z_MBAR_Mie, dZ_MBAR_Mie, Neff_MBAR_Mie = compile_data(model_type,'parameter_space_Mie16/')
+            U_MBAR_LJhighEps, dU_MBAR_LJhighEps, P_MBAR_LJhighEps, dP_MBAR_LJhighEps, Z_MBAR_LJhighEps, dZ_MBAR_LJhighEps, Neff_MBAR_LJhighEps = compile_data('Lam12/MBAR_ref8','parameter_space_Mie16/')
         elif model_type == 'PCFR_ref0':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data(model_type,fpathroot)
         elif model_type == 'PCFR_mult_ref':
@@ -1899,12 +2156,14 @@ def main():
     
     #multi_prop_multi_ref_plot(U_direct[mask],U_MBAR[mask],Z_direct[mask],Z_MBAR[mask],Neff,fpathroot)
     
-    #multi_ref_LJ_Mie_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask])
+#    multi_ref_LJ_Mie_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask])
+    
+    #multi_ref_LJ_Mie_LJhighEps_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],U_MBAR_LJhighEps[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Z_MBAR_LJhighEps[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask],Neff_MBAR_LJhighEps[mask])
     
     #box_bar_state_plots(Neff_MBAR,Neff_min,Neff_small,mask_MBAR,mask_poor)
     #contours_Neff(Neff_MBAR,sig_all,eps_all,fpathroot)
     
-    contour_combined_plot(eps_all,sig_all,U_direct,Z_direct,U_MBAR,Z_MBAR,U_PCFR,Z_PCFR)
+    #contour_combined_plot(eps_all,sig_all,U_direct,Z_direct,U_MBAR,Z_MBAR,U_PCFR,Z_PCFR)
     
 if __name__ == '__main__':
     '''
