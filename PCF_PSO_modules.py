@@ -152,9 +152,10 @@ class BasePCFR(object):
     #            plt.show()
         elif PCFR_type == 'sigma':
             self.r_scaled *= self.sigma / self.ref.sigma
+            self.r_c_plus = np.max(self.r_scaled) / self.sigma
         elif PCFR_type == 'rmin':
             self.r_scaled *= self.calc_rmin() / self.ref.calc_rmin()
-        self.r_c_plus = np.max(self.r_scaled)
+            self.r_c_plus = np.max(self.r_scaled) / self.sigma
         dr = r[1] - r[0]
         self.r_scaled -= dr/2.
         return RDF_hat
