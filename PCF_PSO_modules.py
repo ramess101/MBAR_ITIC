@@ -156,6 +156,9 @@ class BasePCFR(object):
         elif PCFR_type == 'rmin':
             self.r_scaled *= self.calc_rmin() / self.ref.calc_rmin()
             self.r_c_plus = np.max(self.r_scaled) / self.sigma
+        elif PCFR_type =='zeroth':
+            self.get_RDF0()
+            RDF_hat = self.RDF0
         dr = r[1] - r[0]
         self.r_scaled -= dr/2.
         return RDF_hat
@@ -376,8 +379,10 @@ def main():
     
     LJTraPPE = Mie(r,RDFs_highP,rhoL_highP, Nmol,T_highP,98.,0.375,12., ref=LJref,devU=Udev,devP=Pdev)
     UTraPPE = LJTraPPE.calc_Ureal('PMF')
+#    UTraPPE = LJTraPPE.ref.calc_Ureal('') + LJTraPPE.calc_Ureal('zeroth') - LJTraPPE.ref.calc_Ureal('zeroth')
     LJPotoff = Mie(r,RDFs_highP, rhoL_highP, Nmol, T_highP, 121.25, 0.3783, 16., ref=LJref,devU=Udev,devP=Pdev)
     UPotoff = LJPotoff.calc_Ureal('PMF')
+#    UPotoff = LJPotoff.ref.calc_Ureal('') + LJPotoff.calc_Ureal('zeroth') - LJPotoff.ref.calc_Ureal('zeroth')
     
     print(LJPotoff.get_Pcorr())
     print(LJPotoff.r_c_plus)
@@ -391,13 +396,20 @@ def main():
     plt.legend()
     plt.show()  
     
+    #Different attempts to predict the pressure
     Zref = LJref.calc_Z('')
-    ZTraPPE = LJTraPPE.calc_Z('rmin')
-    ZPotoff = LJPotoff.calc_Z('rmin')
+    ZTraPPE = LJTraPPE.calc_Z('PMF')
+    ZPotoff = LJPotoff.calc_Z('PMF')
+    ZTraPPE = LJTraPPE.ref.calc_Z('') + LJTraPPE.calc_Z('zeroth') - LJTraPPE.ref.calc_Z('zeroth')
+    ZPotoff = LJPotoff.ref.calc_Z('') + LJPotoff.calc_Z('zeroth') - LJPotoff.ref.calc_Z('zeroth')
+#    ZTraPPE = Zref + LJTraPPE.calc_Z('PMF') - LJref.calc_Z('PMF')
+#    ZPotoff = Zref + LJPotoff.calc_Z('PMF') - LJref.calc_Z('PMF')
     
     print(LJPotoff.get_Pcorr())
     print(LJPotoff.r_c_plus)
     print(LJPotoff.r_scaled[1]-LJPotoff.r_scaled[0])
+    LJPotoff.get_RDF0()
+    print(LJPotoff.RDF0.shape)
     
     Zref_ens = Pref_ens / rhoL_highP / T_highP / k_B / kPa_to_bar
     

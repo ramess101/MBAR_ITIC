@@ -981,11 +981,11 @@ def RMS_contours_combined(eps_all,sig_all,fpathroot):
     plt.text(0.3627,107,'b)')
     
     CS3 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL_MBAR,[5,10],label='MBAR with single reference',colors='g')
-    CS4 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL_PCFR,[5,10],label='PCFR with single reference',colors='c')
+#    CS4 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL_PCFR,[5,10],label='PCFR with single reference',colors='c')
     CS1 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL,contour_lines,label='Direct Simulation',colors='r')
     CS2 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL_MBAR_9refs,contour_lines,label='MBAR with multiple references',colors='b')
     axarr[0].clabel(CS2, inline=1,fontsize=10,colors='w',fmt='%1.0f')
-    axarr[0].clabel(CS4, inline=1,fontsize=10,colors='c',fmt='%1.0f',manual=[(0,-10),(5,10)])
+#    axarr[0].clabel(CS4, inline=1,fontsize=10,colors='c',fmt='%1.0f',manual=[(0,-10),(5,10)])
     axarr[0].clabel(CS3, inline=1,fontsize=10,colors='g',fmt='%1.0f')
     axarr[0].clabel(CS1, inline=1,fontsize=10,colors='k',fmt='%1.0f')
     axarr[0].set_xlabel(r'$\sigma$ (nm)')
@@ -996,7 +996,7 @@ def RMS_contours_combined(eps_all,sig_all,fpathroot):
     axarr[0].plot([],[],'r',label='Direct Simulation')
     axarr[0].plot([],[],'b',label='MBAR multiple references')
     axarr[0].plot([],[],'g',label='MBAR single reference')
-    axarr[0].plot([],[],'c',label='PCFR single reference')
+#    axarr[0].plot([],[],'c',label='PCFR single reference')
     axarr[0].plot(sig_PCFs,eps_PCFs,'mx',label='References')
     axarr[0].legend()
     #plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,

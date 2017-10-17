@@ -28,6 +28,11 @@ def create_tab(nrep,natt=6.,ncoul=1.):
             F2 = -natt * ri ** -(natt + 1.)
             U3 = ri**-nrep
             F3 = nrep * ri ** -(nrep + 1.)
+
+        if U3 > 1e30:
+            U3 = 1e30
+        if F3 > 1e30:
+            F3 = 1e30
             
         f.write(str(ri)+'\t'+str(U1)+'\t'+str(F1)+'\t'+str(U2)+'\t'+str(F2)+'\t'+str(U3)+'\t'+str(F3)+'\n')
     f.close()
