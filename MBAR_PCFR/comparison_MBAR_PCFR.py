@@ -146,13 +146,15 @@ def compile_data(model_type,fpathroot):
                 iRerun += 1
             if model_type == 'Lam12/MBAR_ref11':
                 iRerun += 11
+            if (model_type == 'Zeroth_re' and fpathroot == 'parameter_space_LJ/'):
+                iRerun -= 1
             if model_type == 'Direct_simulation':
                 fpath = fpathroot+model_type+'_rr'+str(iRerun)
                 UPZ = np.loadtxt(fpath)            
             else:
                 fpath = fpathroot+model_type+'rr'+str(iRerun)+ending
                 UPZ = np.loadtxt(fpath)
-                
+            
             U_compiled[:,iUPZ] = UPZ[:,0]
             dU_compiled[:,iUPZ] = UPZ[:,1]
             P_compiled[:,iUPZ] = UPZ[:,2]
@@ -2075,19 +2077,19 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
  
 def main():
     
-    fpathroot = 'parameter_space_LJ/'
+    fpathroot = 'parameter_space_Mie16/'
     
     eps_all, sig_all, eps_matrix, sig_matrix = get_parameter_sets(fpathroot)
     
 #    RMS_contours(eps_all,sig_all,fpathroot)
-    RMS_contours_combined(eps_all,sig_all,fpathroot)
+#    RMS_contours_combined(eps_all,sig_all,fpathroot)
     
 
 #    lambda_comparison(eps_all,sig_all,fpathroot)
 #
-    return
+#    return
     
-    for model_type in [reference,'Direct_simulation', 'Lam12/MBAR_ref11', 'PCFR_ref0','Constant_']:
+    for model_type in [reference,'Direct_simulation', 'MBAR_ref0', 'Zeroth_re','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
             U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type,fpathroot)
             # Now I call a function that should calculate the error in the proper manner
@@ -2099,7 +2101,7 @@ def main():
             U_MBAR, dU_MBAR, P_MBAR, dP_MBAR, Z_MBAR, dZ_MBAR, Neff_MBAR = compile_data(model_type,fpathroot)
             U_MBAR_Mie, dU_MBAR_Mie, P_MBAR_Mie, dP_MBAR_Mie, Z_MBAR_Mie, dZ_MBAR_Mie, Neff_MBAR_Mie = compile_data(model_type,'parameter_space_Mie16/')
             U_MBAR_LJhighEps, dU_MBAR_LJhighEps, P_MBAR_LJhighEps, dP_MBAR_LJhighEps, Z_MBAR_LJhighEps, dZ_MBAR_LJhighEps, Neff_MBAR_LJhighEps = compile_data('Lam12/MBAR_ref11','parameter_space_Mie16/')
-        elif model_type == 'PCFR_ref0':
+        elif model_type == 'PCFR_ref0' or model_type == 'Zeroth_re':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data(model_type,fpathroot)
         elif model_type == 'PCFR_mult_ref':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = merge_PCFR(sig_all,fpathroot)
@@ -2234,7 +2236,7 @@ def main():
 #    contour_plot('Z',eps_all,sig_all,Z_direct,Z_MBAR,Z_PCFR,Z_W1,Z_rec)
     #contour_plot('Pdep',eps_all,sig_all,Pdep_direct,Pdep_MBAR,Pdep_PCFR)
     
-    #multi_prop_plot(U_direct[mask],U_MBAR[mask],U_PCFR[mask],U_W1[mask],U_rec[mask],Z_direct[mask],Z_MBAR[mask],Z_PCFR[mask],Z_W1[mask],Z_rec[mask],Neff,fpathroot)
+    multi_prop_plot(U_direct[mask],U_MBAR[mask],U_PCFR[mask],U_W1[mask],U_rec[mask],Z_direct[mask],Z_MBAR[mask],Z_PCFR[mask],Z_W1[mask],Z_rec[mask],Neff,fpathroot)
     
 #    multi_prop_multi_ref_plot(U_direct[mask],U_MBAR[mask],Z_direct[mask],Z_MBAR[mask],Neff,fpathroot)
     
