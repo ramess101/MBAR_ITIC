@@ -379,15 +379,18 @@ def main():
     
     LJTraPPE = Mie(r,RDFs_highP,rhoL_highP, Nmol,T_highP,98.,0.375,12., ref=LJref,devU=Udev,devP=Pdev)
     UTraPPE = LJTraPPE.calc_Ureal('PMF')
+#    UTraPPE = (LJTraPPE.calc_Ureal('PMF')+LJTraPPE.calc_Ureal(''))/2.
+#    UTraPPE = LJTraPPE.ref.calc_Ureal('') + (LJTraPPE.calc_Ureal('PMF') - LJTraPPE.ref.calc_Ureal('PMF'))/2.
 #    UTraPPE = LJTraPPE.ref.calc_Ureal('') + LJTraPPE.calc_Ureal('zeroth') - LJTraPPE.ref.calc_Ureal('zeroth')
     LJPotoff = Mie(r,RDFs_highP, rhoL_highP, Nmol, T_highP, 121.25, 0.3783, 16., ref=LJref,devU=Udev,devP=Pdev)
     UPotoff = LJPotoff.calc_Ureal('PMF')
+#    UPotoff = (LJPotoff.calc_Ureal('PMF') + LJPotoff.calc_Ureal(''))/2.
 #    UPotoff = LJPotoff.ref.calc_Ureal('') + LJPotoff.calc_Ureal('zeroth') - LJPotoff.ref.calc_Ureal('zeroth')
     
-    print(LJPotoff.get_Pcorr())
-    print(LJPotoff.r_c_plus)
-    print(LJPotoff.r_scaled[1]-LJPotoff.r_scaled[0])
-    
+#    print(LJPotoff.get_Pcorr())
+#    print(LJPotoff.r_c_plus)
+#    print(LJPotoff.r_scaled[1]-LJPotoff.r_scaled[0])
+#    
     plt.plot(T_highP,U_L_highP_ens,label='Ref')
     plt.plot(T_highP,UPotoff,label='Potoff')
     plt.plot(T_highP,UTraPPE,label='TraPPE')  
