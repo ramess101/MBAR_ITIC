@@ -1523,12 +1523,12 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         axarr[ifig,jfig].plot([],[],'bo',label='Constant PCF')
         axarr[ifig,jfig].plot([],[],'ro',label='MBAR')
         axarr[ifig,jfig].plot([],[],'go',label='PCFR')
-        axarr[ifig,jfig].plot([],[],'co',label='Recommended')
+#        axarr[ifig,jfig].plot([],[],'co',label='Recommended')
         axarr[ifig,jfig].plot(parity,parity,'k',label='Parity')
         axarr[ifig,jfig].plot(prop_direct,prop_hat3,'b.',alpha=0.2)    
         axarr[ifig,jfig].plot(prop_direct,prop_hat1,'r.',alpha=0.2)
         axarr[ifig,jfig].plot(prop_direct,prop_hat2,'g.',alpha=0.2)
-        axarr[ifig,jfig].plot(prop_direct,prop_hat4,'c.',alpha=0.2)
+#        axarr[ifig,jfig].plot(prop_direct,prop_hat4,'c.',alpha=0.2)
         axarr[ifig,jfig].plot(parity,parity,'k',label='Parity')
         axarr[ifig,jfig].set_xlabel(xlabel,fontdict=font)
         axarr[ifig,jfig].set_ylabel(ylabel,fontdict=font)
@@ -1540,14 +1540,15 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         #axarr[ifig,jfig].set_title(title)
         #axarr[ifig,jfig].text(2,0.65,panels[ifig,jfig])
         if ifig == 0 and jfig == 0:
-            axarr[ifig,jfig].legend(['Constant PCF','MBAR','PCFR','Recommended','Parity'],loc='upper center',frameon=False)
+#            axarr[ifig,jfig].legend(['Constant PCF','MBAR','PCFR','Recommended','Parity'],loc='upper center',frameon=False)
+            axarr[ifig,jfig].legend(['Constant PCF','MBAR','PCFR','Parity'],loc='upper center',frameon=False)
             a = inset_axes(axarr[ifig,jfig],width=2.5,height=2.5,loc=4)
         elif ifig == 0 and jfig == 1:
             a = inset_axes(axarr[ifig,jfig],width=2.3,height=2.3,loc=4)
         a.plot(prop_direct,dev3,'b.',label='Constant PCF',alpha=0.2)   
         a.plot(prop_direct,dev1,'r.',label='MBAR',alpha=0.2)
         a.plot(prop_direct,dev2,'g.',label='PCFR',alpha=0.2)
-        a.plot(prop_direct,dev4,'c.',label='Recommended',alpha=0.2)
+#        a.plot(prop_direct,dev4,'c.',label='Recommended',alpha=0.2)
         a.plot(parity,[0,0],'k--')
         a.xaxis.tick_top()
         #a.set_xticks([])
@@ -2195,17 +2196,17 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
  
 def main():
     
-    fpathroot = 'parameter_space_LJ/'
+    fpathroot = 'parameter_space_Mie16/'
     
     eps_all, sig_all, eps_matrix, sig_matrix = get_parameter_sets(fpathroot)
     
 #    RMS_contours(eps_all,sig_all,fpathroot)
-    RMS_contours_combined(eps_all,sig_all,fpathroot)
-    
-
-#    lambda_comparison(eps_all,sig_all,fpathroot)
+#    RMS_contours_combined(eps_all,sig_all,fpathroot)
+#    
 #
-    return
+##    lambda_comparison(eps_all,sig_all,fpathroot)
+##
+#    return
     
     for model_type in [reference,'Direct_simulation', 'MBAR_ref0', 'Zeroth_re','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
@@ -2221,6 +2222,7 @@ def main():
             U_MBAR_LJhighEps, dU_MBAR_LJhighEps, P_MBAR_LJhighEps, dP_MBAR_LJhighEps, Z_MBAR_LJhighEps, dZ_MBAR_LJhighEps, Neff_MBAR_LJhighEps = compile_data('Lam12/MBAR_ref11','parameter_space_Mie16/')
         elif model_type == 'PCFR_ref0' or model_type == 'Zeroth_re':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data(model_type,fpathroot)
+#            U_PCFR, dU_PCFR, P_PCFR_alt, dP_PCFR_alt, Z_PCFR_alt, dZ_PCFR_alt, Neff_PCFR = compile_data(model_type,fpathroot)
         elif model_type == 'PCFR_mult_ref':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = merge_PCFR(sig_all,fpathroot)
         elif model_type == 'Constant_':
