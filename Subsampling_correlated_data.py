@@ -10,6 +10,7 @@ import numpy as np
 import os, sys, argparse, shutil
 from pymbar import MBAR, timeseries
 import matplotlib.pyplot as plt
+import pymbar
 
 #Read in the simulation specifications
 
@@ -51,7 +52,7 @@ Pave = np.zeros(len(fpath_all))
 for ipath, fpath in enumerate(fpath_all):
     
     en_p = open(fpath).readlines()[28:]
-    
+#    en_p = en_p[::2]
     nSnapsRef = len(en_p)
     t=np.zeros([nSnapsRef])
     LJsr=np.zeros([nSnapsRef])

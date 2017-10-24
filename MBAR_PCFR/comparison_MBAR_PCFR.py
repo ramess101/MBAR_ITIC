@@ -30,6 +30,8 @@ eps_PCFs = [98]*9
 font = {'size' : '14'}
 plt.rc('font',**font)
 
+Neff_ratio = np.array([0.6,0.65,0.6,0.9,0.95,0.99,0.98,0.85,0.9,0.75,0.65,0.8,0.75,0.7,0.9,0.9,0.99,0.7,0.95])
+
 def get_parameter_sets(fpathroot):
     
     if fpathroot == 'parameter_space_LJ/':
@@ -163,7 +165,9 @@ def compile_data(model_type,fpathroot):
             Neff_compiled[:,iUPZ] = UPZ[:,6]
             
     dZ_compiled = dP_compiled * (Z_compiled/P_compiled)
-    
+    Neff_compiled -= 1.
+    Neff_compiled = np.multiply(Neff_ratio,Neff_compiled.T).T
+    Neff_compiled += 1.
     return U_compiled/400., dU_compiled/400., P_compiled, dP_compiled, Z_compiled, dZ_compiled, Neff_compiled
 
 def parity_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop_direct,dprop_hat1):
@@ -1552,7 +1556,8 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         a.plot(parity,[0,0],'k--')
         a.xaxis.tick_top()
         #a.set_xticks([])
-        #plt.xlabel('Direct Simulation '+units)
+        a.xaxis.set_label_position('top')
+        a.set_xlabel('Direct Simulation')
         if dev_type == 'Percent':
             a.set_ylabel(dev_type+' Deviation',labelpad=-5)
         else:
@@ -1581,10 +1586,20 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         #cax = cb.ax
         #cax.set_position([0.5,0.5,0.5,0.5])
         a = inset_axes(axarr[ifig,jfig],width=2.5,height=2.5,loc=4)
-        a.scatter(prop_direct[Neff.argsort()],dev1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='rainbow',label='MBAR',norm=normalize)   
+#        a.scatter(prop_direct[Neff.argsort()],dev1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='rainbow',label='MBAR',norm=normalize)   
+        a.scatter(Neff[Neff.argsort()],dev1[Neff.argsort()],c=np.log10(Neff[Neff.argsort()]),cmap='rainbow',label='MBAR',norm=normalize)   
         a.xaxis.tick_top()
-#        a.set_xticks([])
-        a.plot(parity,[0,0],'k--')
+        
+        if fpathroot == 'parameter_space_LJ/':
+            a.set_xticks([50,500,950])
+            a.plot([0,1000],[0,0],'k--')
+            a.set_xlabel(r'$N_{eff}$')
+        elif fpathroot == 'parameter_space_Mie16/':
+            a.set_xticks([10,50])
+            a.plot([0,55],[0,0],'k--')
+            a.set_xlabel(r'$N_{eff}$',labelpad=-5)
+        a.xaxis.set_label_position('top')
+#        a.plot(parity,[0,0],'k--')
         #plt.xlabel('Direct Simulation '+units)
         #a.set_ylim([np.floor(np.min(dev1)),np.ceil(np.max(dev1))])
         
@@ -1838,12 +1853,19 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     subplot_1.set_ylim([-7000/400.,-500/400.])
     
     a = inset_axes(subplot_1,width=2.6,height=2.6,loc=4)          
-    a.scatter(U_direct_LJ[Neff_LJ.argsort()],dev1[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
-    a.plot(parity_1,[0,0],'k--')
+#    a.scatter(U_direct_LJ[Neff_LJ.argsort()],dev1[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
+    a.scatter(Neff_LJ[Neff_LJ.argsort()],dev1[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
+#    a.plot(parity_1,[0,0],'k--')
     a.xaxis.tick_top()
 #    a.set_xticks([])
     a.set_yticks([-1,0,1])
     a.set_ylabel('Percent Deviation',labelpad=-4)
+    
+    a.set_xticks([50,1000,2000,3000])
+    a.set_xlim([-200,3200])
+    a.plot([0,np.max(Neff_LJ)],[0,0],'k--')
+    a.set_xlabel(r'$N_{eff}$')
+    a.xaxis.set_label_position('top')
     
     subplot_2 = my_figure.add_subplot(3,2,2)
     p = subplot_2.scatter(Z_direct_LJ[Neff_LJ.argsort()],Z_MBAR_LJ[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
@@ -1854,12 +1876,19 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     subplot_2.set_ylim([-4,8])
     
     a = inset_axes(subplot_2,width=2.5,height=2.5,loc=4)          
-    a.scatter(Z_direct_LJ[Neff_LJ.argsort()],dev2[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
-    a.plot(parity_2,[0,0],'k--')
+#    a.scatter(Z_direct_LJ[Neff_LJ.argsort()],dev2[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+    a.scatter(Neff_LJ[Neff_LJ.argsort()],dev2[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+#    a.plot(parity_2,[0,0],'k--')
     a.set_yticks([-0.2,-0.1,0,0.1,0.2])
     a.xaxis.tick_top()
 #    a.set_xticks([])
     a.set_ylabel('Deviation',labelpad=-4)
+    
+    a.set_xticks([50,1000,2000,3000])
+    a.set_xlim([-200,3200])
+    a.plot([0,np.max(Neff_LJ)],[0,0],'k--')
+    a.set_xlabel(r'$N_{eff}$')
+    a.xaxis.set_label_position('top')
     
 #    cb = plt.colorbar(p,ax=subplot_2,pad=0.02)
 #    cb.set_label('log$_{10}(N_{eff})$')
@@ -1873,12 +1902,19 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     subplot_3.set_ylim([-7000/400.,-500/400.])
     
     a = inset_axes(subplot_3,width=2.65,height=2.65,loc=4)          
-    a.scatter(U_direct_Mie[Neff_Mie.argsort()],dev3[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
-    a.plot(parity_3,[0,0],'k--')
+#    a.scatter(U_direct_Mie[Neff_Mie.argsort()],dev3[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+    a.scatter(Neff_Mie[Neff_Mie.argsort()],dev3[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+#    a.plot(parity_3,[0,0],'k--')
     a.xaxis.tick_top()
 #    a.set_xticks([])
     a.set_yticks([-16,-12,-8,-4,-2,0,2])
     a.set_ylabel('Percent Deviation',labelpad=-4)
+    
+    a.set_xticks([0,50,250])
+    a.set_xlim([-50,350])
+    a.plot([0,np.max(Neff_Mie)],[0,0],'k--')
+    a.set_xlabel(r'$N_{eff}$')
+    a.xaxis.set_label_position('top')
     
     subplot_4 = my_figure.add_subplot(3,2,4)
     p = subplot_4.scatter(Z_direct_Mie[Neff_Mie.argsort()],Z_MBAR_Mie[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
@@ -1889,11 +1925,18 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     subplot_4.set_ylim([-10,14])
     
     a = inset_axes(subplot_4,width=2.5,height=2.5,loc=4)          
-    a.scatter(Z_direct_Mie[Neff_Mie.argsort()],dev4[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
-    a.plot(parity_4,[0,0],'k--')
+#    a.scatter(Z_direct_Mie[Neff_Mie.argsort()],dev4[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR') 
+    a.scatter(Neff_Mie[Neff_Mie.argsort()],dev4[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR') 
+#    a.plot(parity_4,[0,0],'k--')
     a.xaxis.tick_top()
 #    a.set_xticks([])
     a.set_ylabel('Deviation',labelpad=0)
+    
+    a.set_xticks([0,50,250])
+    a.set_xlim([-50,350])
+    a.plot([0,np.max(Neff_Mie)],[0,0],'k--')
+    a.set_xlabel(r'$N_{eff}$')
+    a.xaxis.set_label_position('top')
     
 #    cb = plt.colorbar(p,ax=subplot_4,pad=0.02)
 #    cb.set_label('log$_{10}(N_{eff})$')
@@ -1907,12 +1950,19 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     subplot_5.set_ylim([-7000/400.,-500/400.])
     
     a = inset_axes(subplot_5,width=2.65,height=2.65,loc=4)          
-    a.scatter(U_direct_Mie[Neff_LJhighEps.argsort()],dev5[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
-    a.plot(parity_5,[0,0],'k--')
+#    a.scatter(U_direct_Mie[Neff_LJhighEps.argsort()],dev5[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+    a.scatter(Neff_LJhighEps[Neff_LJhighEps.argsort()],dev5[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
+#    a.plot(parity_5,[0,0],'k--')
     a.xaxis.tick_top()
 #    a.set_xticks([])
     a.set_yticks([-2,0,2])
     a.set_ylabel('Percent Deviation',labelpad=-4)
+    
+    a.set_xticks([0,50,150])
+    a.set_xlim([-20,200])
+    a.plot([0,np.max(Neff_LJhighEps)],[0,0],'k--')
+    a.set_xlabel(r'$N_{eff}$')
+    a.xaxis.set_label_position('top')
     
     subplot_6 = my_figure.add_subplot(3,2,6)
     p = subplot_6.scatter(Z_direct_Mie[Neff_LJhighEps.argsort()],Z_MBAR_LJhighEps[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
@@ -1923,11 +1973,18 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     subplot_6.set_ylim([-6,10])
     
     a = inset_axes(subplot_6,width=2.5,height=2.5,loc=4)          
-    a.scatter(Z_direct_Mie[Neff_LJhighEps.argsort()],dev6[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')   
-    a.plot(parity_6,[0,0],'k--')
+#    a.scatter(Z_direct_Mie[Neff_LJhighEps.argsort()],dev6[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR') 
+    a.scatter(Neff_LJhighEps[Neff_LJhighEps.argsort()],dev6[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR') 
+#    a.plot(parity_6,[0,0],'k--')
     a.xaxis.tick_top()
 #    a.set_xticks([])
     a.set_ylabel('Deviation',labelpad=-2)
+    
+    a.set_xticks([0,50,150])
+    a.set_xlim([-20,200])
+    a.plot([0,np.max(Neff_LJhighEps)],[0,0],'k--')
+    a.set_xlabel(r'$N_{eff}$')
+    a.xaxis.set_label_position('top')
     
     subplot_1.text(-17., -4., r'a) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$'+'\n'+r'Constant Model: LJ 12-6,'+'\n'+r'$88\leq\epsilon/K\leq108, 0.365\leq\sigma/nm\leq0.385$')
     subplot_2.text(-3.8, 6, r'd) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$'+'\n'+r'Constant Model: LJ 12-6,'+'\n'+r'$88\leq\epsilon/K\leq108, 0.365\leq\sigma/nm\leq0.385$')
@@ -2196,7 +2253,7 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
  
 def main():
     
-    fpathroot = 'parameter_space_Mie16/'
+    fpathroot = 'parameter_space_LJ/'
     
     eps_all, sig_all, eps_matrix, sig_matrix = get_parameter_sets(fpathroot)
     
@@ -2208,7 +2265,7 @@ def main():
 ##
 #    return
     
-    for model_type in [reference,'Direct_simulation', 'MBAR_ref0', 'Zeroth_re','Constant_']:
+    for model_type in [reference,'Direct_simulation', 'MBAR_ref8', 'PCFR_ref0','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
             U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type,fpathroot)
             # Now I call a function that should calculate the error in the proper manner
@@ -2220,9 +2277,11 @@ def main():
             U_MBAR, dU_MBAR, P_MBAR, dP_MBAR, Z_MBAR, dZ_MBAR, Neff_MBAR = compile_data(model_type,fpathroot)
             U_MBAR_Mie, dU_MBAR_Mie, P_MBAR_Mie, dP_MBAR_Mie, Z_MBAR_Mie, dZ_MBAR_Mie, Neff_MBAR_Mie = compile_data(model_type,'parameter_space_Mie16/')
             U_MBAR_LJhighEps, dU_MBAR_LJhighEps, P_MBAR_LJhighEps, dP_MBAR_LJhighEps, Z_MBAR_LJhighEps, dZ_MBAR_LJhighEps, Neff_MBAR_LJhighEps = compile_data('Lam12/MBAR_ref11','parameter_space_Mie16/')
-        elif model_type == 'PCFR_ref0' or model_type == 'Zeroth_re':
+        elif model_type == 'PCFR_ref0':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data(model_type,fpathroot)
-#            U_PCFR, dU_PCFR, P_PCFR_alt, dP_PCFR_alt, Z_PCFR_alt, dZ_PCFR_alt, Neff_PCFR = compile_data(model_type,fpathroot)
+        elif model_type == 'Zeroth_re':
+            U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = compile_data('PCFR_ref0',fpathroot)
+            U_PCFR, dU_PCFR, P_PCFR_alt, dP_PCFR_alt, Z_PCFR_alt, dZ_PCFR_alt, Neff_PCFR = compile_data('Zeroth_re',fpathroot)
         elif model_type == 'PCFR_mult_ref':
             U_PCFR, dU_PCFR, P_PCFR, dP_PCFR, Z_PCFR, dZ_PCFR, Neff_PCFR = merge_PCFR(sig_all,fpathroot)
         elif model_type == 'Constant_':
@@ -2356,13 +2415,13 @@ def main():
 #    contour_plot('Z',eps_all,sig_all,Z_direct,Z_MBAR,Z_PCFR,Z_W1,Z_rec)
     #contour_plot('Pdep',eps_all,sig_all,Pdep_direct,Pdep_MBAR,Pdep_PCFR)
     
-    multi_prop_plot(U_direct[mask],U_MBAR[mask],U_PCFR[mask],U_W1[mask],U_rec[mask],Z_direct[mask],Z_MBAR[mask],Z_PCFR[mask],Z_W1[mask],Z_rec[mask],Neff,fpathroot)
+#    multi_prop_plot(U_direct[mask],U_MBAR[mask],U_PCFR[mask],U_W1[mask],U_rec[mask],Z_direct[mask],Z_MBAR[mask],Z_PCFR[mask],Z_W1[mask],Z_rec[mask],Neff,fpathroot)
     
 #    multi_prop_multi_ref_plot(U_direct[mask],U_MBAR[mask],Z_direct[mask],Z_MBAR[mask],Neff,fpathroot)
     
 #    multi_ref_LJ_Mie_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask])
     
-#    multi_ref_LJ_Mie_LJhighEps_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],U_MBAR_LJhighEps[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Z_MBAR_LJhighEps[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask],Neff_MBAR_LJhighEps[mask])
+    multi_ref_LJ_Mie_LJhighEps_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],U_MBAR_LJhighEps[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Z_MBAR_LJhighEps[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask],Neff_MBAR_LJhighEps[mask])
     
     #box_bar_state_plots(Neff_MBAR,Neff_min,Neff_small,mask_MBAR,mask_poor)
     #contours_Neff(Neff_MBAR,sig_all,eps_all,fpathroot)
