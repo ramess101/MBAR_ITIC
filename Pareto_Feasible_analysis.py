@@ -18,14 +18,23 @@ import VLE_model_fit
 fpathroot = 'MBAR_PCFR/parameter_space_Mie16/'
 model_type = 'MBAR_ref8rr_'
 model_type = 'Direct_simulation_rr_'
+model_type = 'PCFR_sample_refined_'
 RMS_all = np.zeros([441,6])
 
-RMS_all[:,0] = np.loadtxt(fpathroot+model_type+'RMS_rhoL_all')
-RMS_all[:,1] = np.loadtxt(fpathroot+model_type+'RMS_Psat_all')
-RMS_all[:,2] = np.loadtxt(fpathroot+model_type+'RMS_rhov_all')
-RMS_all[:,3] = np.loadtxt(fpathroot+model_type+'RMS_U_all')/400.
-RMS_all[:,4] = np.loadtxt(fpathroot+model_type+'RMS_P_all')/100.
-RMS_all[:,5] = np.loadtxt(fpathroot+model_type+'RMS_Z_all')
+if model_type == 'PCFR_sample_refined_':
+    
+    RMS_all = np.loadtxt(fpathroot+model_type+'RMS_all',skiprows=5)
+    RMS_all[:,3] = RMS_all[:,3]/400.
+    RMS_all[:,4] = RMS_all[:,4]/100.     
+    
+else:
+
+    RMS_all[:,0] = np.loadtxt(fpathroot+model_type+'RMS_rhoL_all')
+    RMS_all[:,1] = np.loadtxt(fpathroot+model_type+'RMS_Psat_all')
+    RMS_all[:,2] = np.loadtxt(fpathroot+model_type+'RMS_rhov_all')
+    RMS_all[:,3] = np.loadtxt(fpathroot+model_type+'RMS_U_all')/400.
+    RMS_all[:,4] = np.loadtxt(fpathroot+model_type+'RMS_P_all')/100.
+    RMS_all[:,5] = np.loadtxt(fpathroot+model_type+'RMS_Z_all')
 
 if fpathroot == 'MBAR_PCFR/parameter_space_Mie16/':
 
@@ -34,6 +43,10 @@ if fpathroot == 'MBAR_PCFR/parameter_space_Mie16/':
 elif fpathroot == 'MBAR_PCFR/parameter_space_LJ/':
 
     eps_sig_all = np.loadtxt(fpathroot+'eps_sig_lam12_all',skiprows=2)
+    
+if model_type == 'PCFR_sample_refined_':
+    
+    eps_sig_all = np.loadtxt(fpathroot+'eps_sig_lam16_refined',skiprows=5)
 
 eps_all = eps_sig_all[:,0]
 sig_all = eps_sig_all[:,1]
