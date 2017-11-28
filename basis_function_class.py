@@ -308,6 +308,13 @@ class basis_function():
                     #print(N_k)
                     #print(nSnaps)
                     
+                    if iState == 0:
+                        KE_state = np.zeros([nStates,nSnaps])
+                        Vir_novdw_state = np.zeros([nStates,nSnaps])
+                        sumr6lam_state = np.zeros([nStates,nSets,nSnaps])
+                        sumrdr6lam_vdw_state = np.zeros([nStates,nSets,nSnaps])
+                        sumrdr6lam_LINCS_state = np.zeros([nStates,nSets,nSnaps])
+                        
                     t = np.zeros([nSets,nSnaps])
                     LJsr = np.zeros([nSets,nSnaps])
                     LJdc = np.zeros([nSets,nSnaps])
@@ -393,6 +400,12 @@ class basis_function():
                     f3.close()
                     f4.close()
                     
+                    KE_state[iState,:] = KE[0,:]
+                    Vir_novdw_state[iState,:] = Vir_2[0,:]
+                    sumr6lam_state[iState,:,:] = sumr6lam
+                    sumrdr6lam_vdw_state[iState,:,:] = sumrdr6lam_vdw
+                    sumrdr6lam_LINCS_state[iState,:,:] = sumrdr6lam_LINCS
+                    
                     self.check_basis_functions_U(LJsr,sumr6lam,Cmatrix)
                     Vir_vdw_hat, Vir_LINCS_hat, Vir_total_hat = self.check_basis_functions_Vir(Vir_0,Vir_1,Vir_2,sumrdr6lam_vdw,sumrdr6lam_LINCS,Cmatrix)
                     pcheck = self.convert_VirialtoP(KE,Vir_0,iState)
@@ -402,6 +415,8 @@ class basis_function():
                     #self.sumr6lam[iState], self.sumrdr6lam_vdw[iState], self.sumrdr6lam_LINCS[iState] = sumr6lam, sumrdr6lam_vdw, sumrdr6lam_LINCS
                         
                     iState += 1   
+                    
+        self.KE_state, self.Vir_novdw_state, self.sumr6lam_state, self.sumrdr6lam_vdw_state, self.sumrdr6lam_LINCS_state = KE_state, Vir_novdw_state, sumr6lam_state, sumrdr6lam_vdw_state, sumrdr6lam_LINCS_state
                     
     def convert_PtoVirial(self,KE,press,iState):
         """ Calculate the virial
@@ -490,15 +505,19 @@ class basis_function():
         '''
         
         iRef = self.iRef
-        fpath = fpath_all[iState]
         rho_state = rho_sim[iState]
         Nstate = Nmol_sim[iState]        
         
-        sumr6lam = np.loadtxt('../ref'+str(iRef)+'/'+fpath+'basis_functions_U')
-        sumrdr6lam_vdw = np.loadtxt('../ref'+str(iRef)+'/'+fpath+'basis_functions_vir_LINCS')
-        sumrdr6lam_LINCS = np.loadtxt('../ref'+str(iRef)+'/'+fpath+'basis_functions_vir_vdw')
-        KE = np.loadtxt('../ref'+str(iRef)+'/'+fpath+'kinetic_energy')
-        Vir_novdw = np.loadtxt('../ref'+str(iRef)+'/'+fpath+'virial_novdw')
+        #sumr6lam = np.loadtxt('../ref'+str(iRef)+'/'+fpath+'basis_functions_U')
+        #sumrdr6lam_vdw = np.loadtxt('../ref'+str(iRef)+'/'+fpath+'basis_functions_vir_LINCS')
+        #sumrdr6lam_LINCS = np.loadtxt('../ref'+str(iRef)+'/'+fpath+'basis_functions_vir_vdw')
+#        KE = np.loadtxt('../ref'+str(iRef)+'/'+fpath+'kinetic_energy')
+#        Vir_novdw = np.loadtxt('../ref'+str(iRef)+'/'+fpath+'virial_novdw')
+        sumr6lam = self.sumr6lam_state[iState,:,:].transpose()
+        sumrdr6lam_vdw = self.sumrdr6lam_vdw_state[iState,:,:].transpose()
+        sumrdr6lam_LINCS = self.sumrdr6lam_LINCS_state[iState,:,:].transpose()
+        KE = self.KE_state[iState,:]
+        Vir_novdw = self.Vir_novdw_state[iState,:]
         
         Carray = self.create_Carray(eps_sig_lam)
         C6 = Carray[0]
@@ -510,9 +529,24 @@ class basis_function():
         Vir_total = Vir_vdw + Vir_LINCS + Vir_novdw
         
         press = self.convert_VirialtoP(KE,Vir_total,iState)
-        #print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
         #print('The initial LJ energy is '+str(LJ_SR[0]))
         return LJ_SR, LJ_dc, press
+    
+    def UP_basis_states(self,eps_sig_lam):
+        
+        for iState in range(nStates):
+            LJsr_basis, LJdc_basis, press_basis = self.UP_basis_functions(iState,eps_sig_lam)
+            
+            if iState == 0:
+                nSnaps = len(LJsr_basis)
+                LJ_total_basis_rr_state = np.zeros([nStates,nSnaps])
+                press_basis_rr_state = np.zeros([nStates,nSnaps])
+                
+            LJ_total_basis_rr_state[iState,:] = LJsr_basis + LJdc_basis
+            press_basis_rr_state[iState,:] = press_basis
+                             
+#        self.LJ_total_basis_rr_state, self.press_basis_rr_state = LJ_total_basis_rr_state, press_basis_rr_state
+        return LJ_total_basis_rr_state, press_basis_rr_state
     
     def validate_ref(self):
         iRef, eps_sig_lam_ref = self.iRef, self.eps_sig_lam_ref
@@ -523,10 +557,18 @@ class basis_function():
         
         APD_U = np.zeros(nStates)
         APD_P = np.zeros(nStates)
+
+        LJ_total_basis_ref_state, press_basis_ref_state = self.UP_basis_states(eps_sig_lam_ref)
+        
+#        self.UP_basis_states(eps_sig_lam_ref)
+        
+#        LJ_total_basis_ref_state = self.LJ_total_basis_rr_state 
+#        press_basis_ref_state = self.press_basis_rr_state
         
         for iState in range(nStates):
-            LJsr_basis, LJdc_basis, press_basis = self.UP_basis_functions(iState,eps_sig_lam_ref)
-            LJ_total_basis = LJsr_basis + LJdc_basis
+            
+            LJ_total_basis_ref = LJ_total_basis_ref_state[iState]
+            press_basis_ref = press_basis_ref_state[iState]
             
             fpath = fpath_all[iState]
             
@@ -542,8 +584,8 @@ class basis_function():
                 LJ_total_ref[frame] = float(en_p[frame].split()[g_en])
                 press_ref[frame] = float(en_p[frame].split()[g_p])
             
-            LJ_dev = (LJ_total_basis - LJ_total_ref)/LJ_total_ref*100.
-            press_dev = (press_basis - press_ref)/np.mean(press_ref)*100.
+            LJ_dev = (LJ_total_basis_ref - LJ_total_ref)/LJ_total_ref*100.
+            press_dev = (press_basis_ref - press_ref)/np.mean(press_ref)*100.
             
 #            for LJ, press in zip(LJ_dev,press_dev):
 #                print(LJ,press)
@@ -579,7 +621,8 @@ def main():
         
         for iRef in args.iRef:
         
-            basis.append(basis_function(Temp_sim,rho_sim,iRef,78.,118.,0.365,0.385,12.,12.)) 
+#            basis.append(basis_function(Temp_sim,rho_sim,iRef,88.,108.,0.365,0.385,12.,12.,False)) 
+            basis.append(basis_function(Temp_sim,rho_sim,iRef,88.,108.,0.365,0.385,12.,18.)) 
             basis[0].validate_ref()
             
     # Testing how much of a difference the points for basis functions make
