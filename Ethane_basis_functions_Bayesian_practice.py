@@ -139,13 +139,14 @@ lam_high = np.loadtxt('lam_high')
 ###
 
 iRef = int(np.loadtxt('iRef'))
+iRefmin = int(np.loadtxt('iRefmin'))
 
 mult_refs = True
 
 if mult_refs: #Trying to make this backwards comptabile so that it can work when only a single reference
 
-    nRefs = iRef + 1 #Plus 1 because we need one more for the zeroth state
-    iRefs = range(nRefs)  
+    nRefs = iRef - iRefmin + 1 #Plus 1 because we need one more for the zeroth state
+    iRefs = range(iRefmin,iRef+1)  
 
 else:
     
@@ -156,11 +157,11 @@ iRerun = 0
 
 eps_sig_lam_refs = np.empty([nRefs,3])
     
-for iiRef in iRefs: #We want to perform a rerun with each reference
+for iiiRef, iiRef in enumerate(iRefs): #We want to perform a rerun with each reference
 
     fpathRef = "../ref"+str(iiRef)+"/"
     eps_sig_lam_ref = np.loadtxt(fpathRef+'eps_sig_lam_ref')
-    eps_sig_lam_refs[iiRef,:] = eps_sig_lam_ref
+    eps_sig_lam_refs[iiiRef,:] = eps_sig_lam_ref
                     
 #print(eps_sig_lam_refs)
 
@@ -519,7 +520,7 @@ def calc_Deltaf(eps_sig_lam,iRerun,basis_fun):
     
     iSets = [int(iRerun)]*(nRefs + 1) #Plus 1 because we need one more for the rerun  
     
-    for iiRef in iRefs: #We want to perform a rerun with each reference
+    for iiiRef, iiRef in enumerate(iRefs): #We want to perform a rerun with each reference
     
         fpathRef = "../ref"+str(iiRef)+"/"
         #print(fpathRef)
@@ -540,7 +541,7 @@ def calc_Deltaf(eps_sig_lam,iRerun,basis_fun):
         f.write(str(iRerun))
         f.close()
         
-        iSets[iiRef] = iiRef
+        iSets[iiiRef] = iiRef
              
     print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
 
@@ -550,20 +551,20 @@ def calc_Deltaf(eps_sig_lam,iRerun,basis_fun):
     f.write(str(eps_sig_lam[2])+'\n')
     f.close()
                               
-    LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis_fun,nRefs)
+    LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis_fun)
         
-    for iiRef in iRefs:
+    for iiiRef, iiRef in enumerate(iRefs):
         
-        LJ_temp, U_temp, press_temp = basis_fun[iiRef].UP_basis_states(eps_sig_lam)
+        LJ_temp, U_temp, press_temp = basis_fun[iiiRef].UP_basis_states(eps_sig_lam)
         
-        if iiRef == 0:
+        if iiiRef == 0:
         
             nSnaps = LJ_temp.shape[1]
             LJ_total_eps_sig_lam = np.zeros([nRefs,nStates,nSnaps])
             U_total_eps_sig_lam = np.zeros([nRefs,nStates,nSnaps])
             press_eps_sig_lam = np.zeros([nRefs,nStates,nSnaps])
             
-        LJ_total_eps_sig_lam[iiRef], U_total_eps_sig_lam[iiRef], press_eps_sig_lam[iiRef] = LJ_temp, U_temp, press_temp         
+        LJ_total_eps_sig_lam[iiiRef], U_total_eps_sig_lam[iiiRef], press_eps_sig_lam[iiiRef] = LJ_temp, U_temp, press_temp         
              
     nSets = len(iSets)
     
@@ -587,12 +588,12 @@ def calc_Deltaf(eps_sig_lam,iRerun,basis_fun):
 #        Nstate = Nmol_sim[iState]
 #        fpath = fpath_all[iState]
                                     
-        for iiRef in iRefs: # To initialize arrays we must know how many snapshots come from each reference
+        for iiiRef, iiRef in enumerate(iRefs): # To initialize arrays we must know how many snapshots come from each reference
             
-            nSnapsRef = len(LJ_total_basis_refs[iiRef,0,iState,:])#Number of snapshots
+            nSnapsRef = len(LJ_total_basis_refs[iiiRef,0,iState,:])#Number of snapshots
             #print(nSnapsRef)
             
-            N_k[iiRef] = nSnapsRef # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
+            N_k[iiiRef] = nSnapsRef # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
            
         nSnaps = np.sum(N_k)
         #print(N_k)
@@ -607,16 +608,16 @@ def calc_Deltaf(eps_sig_lam,iRerun,basis_fun):
 #            print(enum)
             frame_shift = 0
             
-            for iiRef in iRefs:
-#                print(iiRef)
+            for iiiRef, iiRef in enumerate(iRefs):
+#                print(iiiRef,iiRef)
                 if enum > (nRefs-1):
-                    LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_eps_sig_lam[iiRef,iState], U_total_eps_sig_lam[iiRef,iState], press_eps_sig_lam[iiRef,iState]
+                    LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_eps_sig_lam[iiiRef,iState], U_total_eps_sig_lam[iiiRef,iState], press_eps_sig_lam[iiiRef,iState]
                 else:    
-                    LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_basis_refs[iiRef,enum,iState], U_total_basis_refs[iiRef,enum,iState], press_basis_refs[iiRef,enum,iState]
+                    LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_basis_refs[iiiRef,enum,iState], U_total_basis_refs[iiiRef,enum,iState], press_basis_refs[iiiRef,enum,iState]
                 
 #                print(LJ_total_basis_rr.shape)         
                 
-                nSnapsRef = N_k[iiRef]
+                nSnapsRef = N_k[iiiRef]
                 #print(nSnapsRef)
                 assert nSnapsRef == LJ_total_basis_rr.shape[0], 'The value of N_k does not match the length of the energy file for iState='+str(iState)+', iSet='+str(iSet)+', and iiRef='+str(iiRef)
                 
@@ -657,7 +658,7 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun,f_ki_loaded):
     
     iSets = [int(iRerun)]*(nRefs + 1) #Plus 1 because we need one more for the rerun  
     
-    for iiRef in iRefs: #We want to perform a rerun with each reference
+    for iiiRef, iiRef in enumerate(iRefs): #We want to perform a rerun with each reference
     
         fpathRef = "../ref"+str(iiRef)+"/"
         #print(fpathRef)
@@ -678,7 +679,7 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun,f_ki_loaded):
         f.write(str(iRerun))
         f.close()
         
-        iSets[iiRef] = iiRef
+        iSets[iiiRef] = iiRef
              
     print('Calculating for epsilon = '+str(eps_sig_lam[0])+' sigma = '+str(eps_sig_lam[1])+' lambda = '+str(eps_sig_lam[2]))
 
@@ -692,20 +693,20 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun,f_ki_loaded):
 #    print('iSets='+str(iSets))
 #    print('nRefs='+str(nRefs))
                  
-    LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis_fun,nRefs)
+    LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis_fun)
         
-    for iiRef in iRefs:
+    for iiiRef, iiRef in enumerate(iRefs):
         
-        LJ_temp, U_temp, press_temp = basis_fun[iiRef].UP_basis_states(eps_sig_lam)
+        LJ_temp, U_temp, press_temp = basis_fun[iiiRef].UP_basis_states(eps_sig_lam)
         
-        if iiRef == 0:
+        if iiiRef == 0:
         
             nSnaps = LJ_temp.shape[1]
             LJ_total_eps_sig_lam = np.zeros([nRefs,nStates,nSnaps])
             U_total_eps_sig_lam = np.zeros([nRefs,nStates,nSnaps])
             press_eps_sig_lam = np.zeros([nRefs,nStates,nSnaps])
             
-        LJ_total_eps_sig_lam[iiRef], U_total_eps_sig_lam[iiRef], press_eps_sig_lam[iiRef] = LJ_temp, U_temp, press_temp         
+        LJ_total_eps_sig_lam[iiiRef], U_total_eps_sig_lam[iiiRef], press_eps_sig_lam[iiiRef] = LJ_temp, U_temp, press_temp         
              
     nSets = len(iSets)
     
@@ -728,12 +729,12 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun,f_ki_loaded):
 #        Nstate = Nmol_sim[iState]
 #        fpath = fpath_all[iState]
                                     
-        for iiRef in iRefs: # To initialize arrays we must know how many snapshots come from each reference
+        for iiiRef, iiRef in enumerate(iRefs): # To initialize arrays we must know how many snapshots come from each reference
             
-            nSnapsRef = len(LJ_total_basis_refs[iiRef,0,iState,:])#Number of snapshots
+            nSnapsRef = len(LJ_total_basis_refs[iiiRef,0,iState,:])#Number of snapshots
             #print(nSnapsRef)
             
-            N_k[iiRef] = nSnapsRef # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
+            N_k[iiiRef] = nSnapsRef # Previously this was N_k[iter] because the first iSet was set as 0 no matter what. Now we use 'Ref' so we want to use iSet here and iter for identifying
            
         nSnaps = np.sum(N_k)
         #print(N_k)
@@ -748,16 +749,16 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun,f_ki_loaded):
 #            print(enum)
             frame_shift = 0
             
-            for iiRef in iRefs:
-#                print(iiRef)
+            for iiiRef, iiRef in enumerate(iRefs):
+#                print(iiiRef,iiRef)
                 if enum > (nRefs-1):
-                    LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_eps_sig_lam[iiRef,iState], U_total_eps_sig_lam[iiRef,iState], press_eps_sig_lam[iiRef,iState]
+                    LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_eps_sig_lam[iiiRef,iState], U_total_eps_sig_lam[iiiRef,iState], press_eps_sig_lam[iiiRef,iState]
                 else:    
-                    LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_basis_refs[iiRef,enum,iState], U_total_basis_refs[iiRef,enum,iState], press_basis_refs[iiRef,enum,iState]
+                    LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_basis_refs[iiiRef,enum,iState], U_total_basis_refs[iiiRef,enum,iState], press_basis_refs[iiiRef,enum,iState]
                 
 #                print(LJ_total_basis_rr.shape)         
                 
-                nSnapsRef = N_k[iiRef]
+                nSnapsRef = N_k[iiiRef]
                 #print(nSnapsRef)
                 assert nSnapsRef == LJ_total_basis_rr.shape[0], 'The value of N_k does not match the length of the energy file for iState='+str(iState)+', iSet='+str(iSet)+', and iiRef='+str(iiRef)
                 
@@ -1143,13 +1144,14 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,cons_lam=True,basis_fu
         eps_opt = eps_guess
         sig_opt = sig_guess
         lam_opt = lam_guess
+        
+        f_ki_loaded = calc_Deltaf(eps_sig_lam_guess,1,basis_fun)
 
-#        objective(eps_sig_lam_guess)        
+        objective = lambda eps, sig: calc_posterior(eps,sig,basis_fun,f_ki_loaded,verbose=True)      
          
-        for iEps, eps_sim in enumerate(np.linspace(108,128,21)):
-            for iSig, sig_sim in enumerate(np.linspace(0.365,0.385,21)):
-                eps_sig_lam_sim = np.array([eps_sim,sig_sim,16.])
-                f_sim = objective(eps_sig_lam_sim)
+        for iEps, eps_sim in enumerate(np.linspace(115,125,51)):
+            for iSig, sig_sim in enumerate(np.linspace(0.375,0.380,51)):
+                f_sim = objective(eps_sim,sig_sim)
                 
                 if f_sim < f_opt:
                     f_opt = f_sim
@@ -1208,16 +1210,16 @@ def main():
 #                objective_ITIC(eps_sig_lam,args.properties,args.basis,PCFR_hat_Mie) #Call objective for each of the references
             if args.basis: #Perform the reruns for the basis functions
                 basis = []   
-                for iRef in range(nRefs):
-                    basis.append(basis_function(Temp_sim,rho_sim,iRef,nRefs,eps_low,eps_high,sig_low,sig_high,lam_low,lam_high,False))
-                    basis[iRef].validate_ref()    
+                for iiiRef, iiRef in enumerate(iRefs):
+                    basis.append(basis_function(Temp_sim,rho_sim,iiRef,iRefs,eps_low,eps_high,sig_low,sig_high,lam_low,lam_high,False))
+                    basis[iiiRef].validate_ref()    
 
-                LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis,nRefs)           
+                LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis)           
 #                basis.append(basis_function(Temp_sim,rho_sim,iRef,1,eps_low,eps_high,sig_low,sig_high,12.,12.,False)) 
 #    #            basis.append(basis_function(Temp_sim,rho_sim,iRef,eps_low,eps_high,sig_low,sig_high,12.,18.)) 
 #                basis[0].validate_ref()
 #                
-#                LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis,1)
+#                LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis)
                 #for eps_sig_lam in eps_sig_lam_refs:
                 #    objective_ITIC(eps_sig_lam,args.properties,basis_fun=basis,PCFR_hat=PCFR_hat_Mie)
                 

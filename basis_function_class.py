@@ -111,11 +111,12 @@ for run_type in ITIC:
 assert nStates == len(fpath_all), 'Number of states does not match number of file paths'
 
 class basis_function():
-    def __init__(self,Temp_sim,rho_sim,iRef,nRefs,eps_low,eps_high,sig_low,sig_high,lam_low,lam_high,rerun_flag=True):
+    def __init__(self,Temp_sim,rho_sim,iRef,iRefs,eps_low,eps_high,sig_low,sig_high,lam_low,lam_high,rerun_flag=True):
         self.Temp_sim = Temp_sim
         self.rho_sim = rho_sim
         self.iRef = iRef
-        self.nRefs = nRefs
+        self.iRefs = iRefs
+        self.nRefs = len(iRefs)
         
         self.eps_high = eps_high
         self.eps_low = eps_low
@@ -139,13 +140,13 @@ class basis_function():
         
     def compile_refs(self):
         
-        nRefs = self.nRefs
-        
+        iRef,nRefs,iRefs = self.iRef,self.nRefs,self.iRefs
+     
         eps_sig_lam_refs = np.zeros([nRefs,3])
         
-        for iiRef in range(nRefs):
+        for iiiRef, iiRef in enumerate(iRefs):
             
-            eps_sig_lam_refs[iiRef,:] = np.loadtxt('../ref'+str(iiRef)+'/eps_sig_lam_ref')
+            eps_sig_lam_refs[iiiRef,:] = np.loadtxt('../ref'+str(iiRef)+'/eps_sig_lam_ref')
             
         return eps_sig_lam_refs
         
@@ -157,7 +158,7 @@ class basis_function():
     # And solve linear system of equations. 
     #    print(lam_low)
     #    print(lam_high)
-        nBasis = len(range(int(lam_low),int(lam_high)+1))+1 #The 2 is necessary
+        nBasis = len(range(int(lam_low),int(lam_high)+1))+1 #The 2 is necessary if only using LJ 12-6
         
         eps_basis = np.ones(nBasis)*eps_low
         sig_basis = np.ones(nBasis)*sig_low 
@@ -600,9 +601,13 @@ class basis_function():
         self.LJ_total_basis_refs_state, self.U_total_basis_refs_state, self.press_basis_refs_state =  LJ_total_basis_refs_state, U_total_basis_refs_state, press_basis_refs_state                        
     
     def validate_ref(self):
-        iRef = self.iRef
+        iRef, iRefs = self.iRef, self.iRefs
 
-        LJ_total_basis_ref_state, U_total_basis_ref_state, press_basis_ref_state = self.LJ_total_basis_refs_state[iRef], self.U_total_basis_refs_state[iRef], self.press_basis_refs_state[iRef]
+        for iiiRef, iiRef in enumerate(iRefs):
+
+            if iRef == iiRef:
+
+                LJ_total_basis_ref_state, U_total_basis_ref_state, press_basis_ref_state = self.LJ_total_basis_refs_state[iiiRef], self.U_total_basis_refs_state[iiiRef], self.press_basis_refs_state[iiiRef]
         
         g_start = 28 #Row where data starts in g_energy output
         g_en = 3 #Column where the potential energy is located
@@ -657,11 +662,11 @@ class basis_function():
 
     def validate_refs(self):
         
-        iRef = self.iRef
+        iRef,iRefs = self.iRef,self.iRefs
         
-        for iiRef in range(self.nRefs):
+        for iiiRef, iiRef in enumerate(iRefs):
     
-            LJ_total_basis_ref_state, U_total_basis_ref_state, press_basis_ref_state = self.LJ_total_basis_refs_state[iiRef], self.U_total_basis_refs_state[iiRef], self.press_basis_refs_state[iiRef]
+            LJ_total_basis_ref_state, U_total_basis_ref_state, press_basis_ref_state = self.LJ_total_basis_refs_state[iiiRef], self.U_total_basis_refs_state[iiiRef], self.press_basis_refs_state[iiiRef]
             
             g_start = 28 #Row where data starts in g_energy output
             g_en = 3 #Column where the potential energy is located
@@ -715,7 +720,9 @@ class basis_function():
             print('Average percent deviation in internal energy from basis functions compared to reference simulations: '+str(np.mean(APD_U)))
             print('Average percent deviation in pressure from basis functions compared to reference simulations: '+str(np.mean(APD_P)))
 
-def UP_basis_mult_refs(basis, nRefs):
+def UP_basis_mult_refs(basis):
+    
+    nRefs = len(basis) #Rather than providing nRefs as a variable we will just determine it from the size of basis
     
     for iiRef in range(nRefs): 
             
@@ -759,18 +766,18 @@ def main():
 #   
     if args.nRefs:
 
-        for iRef in range(args.nRefs):
-            basis.append(basis_function(Temp_sim,rho_sim,iRef,args.nRefs,88.,108.,0.365,0.385,12.,14.,False))
-            basis[iRef].validate_refs()
+        for iiRef in range(args.nRefs):
+            basis.append(basis_function(Temp_sim,rho_sim,iiRef,args.nRefs,88.,108.,0.365,0.385,12.,14.,False))
+            basis[iiRef].validate_refs()
             
         LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis,args.nRefs)
             
     if args.iRef:
         
-        for iRef in args.iRef:
+        for iiRef in args.iRef:
         
-            basis.append(basis_function(Temp_sim,rho_sim,iRef,1,88.,108.,0.365,0.385,12.,12.,True)) 
-#            basis.append(basis_function(Temp_sim,rho_sim,iRef,88.,108.,0.365,0.385,12.,18.)) 
+            basis.append(basis_function(Temp_sim,rho_sim,iiRef,1,88.,108.,0.365,0.385,12.,12.,True)) 
+#            basis.append(basis_function(Temp_sim,rho_sim,iiRef,88.,108.,0.365,0.385,12.,18.)) 
             basis[0].validate_ref()
 #            print(np.mean(basis[0].U_novdw_state))
 #            print(np.max(np.abs(basis[0].U_novdw_state)))
@@ -787,7 +794,7 @@ if __name__ == '__main__':
     '''
     python basis_function_class.py --nRefs XX
   
-    "--nRefs XX" or "--iRef XX" flag is requiered, sets the integer value for nRefs or iRef
+    "--nRefs XX" or "--iRef XX" flag is required, sets the integer value for nRefs or iRef
     '''
 
     main()
