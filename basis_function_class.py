@@ -137,6 +137,7 @@ class basis_function():
         self.rerun_basis_functions()        
         self.generate_basis_functions()
         self.calc_refs_basis()
+        self.validate_refs()
         
     def compile_refs(self):
         
@@ -262,7 +263,7 @@ class basis_function():
         for eps_rerun, sig_rerun, lam_rerun in zip(eps_basis, sig_basis, lam_basis):
             
             fpathRef = "../ref"+str(iRef)+"/"
-            print(fpathRef)
+            #print(fpathRef)
         
             f = open(fpathRef+'eps_it','w')
             f.write(str(eps_rerun))
@@ -286,7 +287,7 @@ class basis_function():
     
             iRerun_basis += 1
             
-            print('iRerun is = '+str(iRerun)+', while iRerun_basis = '+str(iRerun_basis))
+            #print('iRerun is = '+str(iRerun)+', while iRerun_basis = '+str(iRerun_basis))
             
         f = open(fpathRef+'iBasis','w')
         f.write(str(iRerun_basis-1))
@@ -576,12 +577,12 @@ class basis_function():
     def calc_refs_basis(self):
         eps_sig_lam_refs, nRefs = self.eps_sig_lam_refs, self.nRefs
         
-        print(eps_sig_lam_refs)
+        #print(eps_sig_lam_refs)
         for iiRef, eps_sig_lam_ref in enumerate(eps_sig_lam_refs):
             
             #eps_sig_lam_ref = eps_sig_lam_refs[:,iiRef]
             
-            print(eps_sig_lam_ref)
+            #print(eps_sig_lam_ref)
             
             if iiRef == 0:
                 
@@ -714,11 +715,14 @@ class basis_function():
                 APD_P[iState] = np.mean(press_dev)
     #            print(np.mean(LJ_dev))
     #            print(np.mean(press_dev))
-            print('iRef= '+str(iRef))
-            print('iiRef= '+str(iiRef))
-            print('Average percent deviation in non-bonded energy from basis functions compared to reference simulations: '+str(np.mean(APD_LJ)))           
-            print('Average percent deviation in internal energy from basis functions compared to reference simulations: '+str(np.mean(APD_U)))
-            print('Average percent deviation in pressure from basis functions compared to reference simulations: '+str(np.mean(APD_P)))
+            #print('iRef= '+str(iRef))
+            #print('iiRef= '+str(iiRef))
+            #print('Average percent deviation in non-bonded energy from basis functions compared to reference simulations: '+str(np.mean(APD_LJ)))           
+            #print('Average percent deviation in internal energy from basis functions compared to reference simulations: '+str(np.mean(APD_U)))
+            #print('Average percent deviation in pressure from basis functions compared to reference simulations: '+str(np.mean(APD_P)))
+            assert np.abs(np.mean(APD_LJ)) < 1e-3, 'Basis function non-bonded energy error too large: '+str(np.mean(APD_LJ))+' for: iRef= '+str(iRef)+' iiRef= '+str(iiRef)
+            assert np.abs(np.mean(APD_U)) < 1e-3, 'Basis function internal energy error too large: '+str(np.mean(APD_U))+' for: iRef= '+str(iRef)+' iiRef= '+str(iiRef)
+            assert np.abs(np.mean(APD_P)) < 1e-1, 'Basis function pressure error too large: '+str(np.mean(APD_P))+' for: iRef= '+str(iRef)+' iiRef= '+str(iiRef)
 
 def UP_basis_mult_refs(basis):
     

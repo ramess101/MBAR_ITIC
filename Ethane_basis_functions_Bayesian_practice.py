@@ -19,6 +19,7 @@ from TDE_Ethane import *
 from basis_function_class import basis_function, UP_basis_mult_refs
 from Metropolis_Bayesian import metropolis_tuned
 from VLE_model_fit import *
+from TDE_Ethane import *
 
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
@@ -154,6 +155,7 @@ else:
     iRefs = iRef
 
 iRerun = 0
+#iRerun = iRef+1 #RAM: I don't think this is actually necessary because typically I don't use the rerun number directly
 
 eps_sig_lam_refs = np.empty([nRefs,3])
     
@@ -689,9 +691,9 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun,f_ki_loaded):
     f.write(str(eps_sig_lam[2])+'\n')
     f.close()
              
-#    print('iRerun='+str(iRerun))
-#    print('iSets='+str(iSets))
-#    print('nRefs='+str(nRefs))
+    #print('iRerun='+str(iRerun))
+    #print('iSets='+str(iSets))
+    #print('nRefs='+str(nRefs))
                  
     LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis_fun)
         
@@ -745,16 +747,18 @@ def MBAR_estimates(eps_sig_lam,iRerun,basis_fun,f_ki_loaded):
         LJ_total = np.zeros([nSets,nSnaps])
 
         for iSet, enum in enumerate(iSets):
-#            print(iSet)
-#            print(enum)
+            #print(iSet)
+            #print(enum)
             frame_shift = 0
             
             for iiiRef, iiRef in enumerate(iRefs):
-#                print(iiiRef,iiRef)
-                if enum > (nRefs-1):
+                #print(iiiRef,iiRef)
+                #if enum > (nRefs-1): #RAM This had problems when iRefs[0] != 0
+                if iSet == nRefs+1-1: #RAM This should be more robust, we will only ever have one rerun that is not a reference. I included +1-1 to make it clear that it would be nRefs+1 if the index started at 1, but we need to subtract 1 for zero point index
                     LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_eps_sig_lam[iiiRef,iState], U_total_eps_sig_lam[iiiRef,iState], press_eps_sig_lam[iiiRef,iState]
-                else:    
-                    LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_basis_refs[iiiRef,enum,iState], U_total_basis_refs[iiiRef,enum,iState], press_basis_refs[iiiRef,enum,iState]
+                else: 
+                    #LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_basis_refs[iiiRef,enum,iState], U_total_basis_refs[iiiRef,enum,iState], press_basis_refs[iiiRef,enum,iState] #RAM: I don't think we want this to be enum anymore because iSets does not start at 0 
+                    LJ_total_basis_rr, U_total_basis_rr, press_basis_rr = LJ_total_basis_refs[iiiRef,iSet,iState], U_total_basis_refs[iiiRef,iSet,iState], press_basis_refs[iiiRef,iSet,iState]
                 
 #                print(LJ_total_basis_rr.shape)         
                 
@@ -1008,36 +1012,64 @@ RP_Psat = CP.PropsSI('P','T',Tfit,'Q',1,'REFPROP::'+compound)/100. #[kPa]
 
 # From TRC database
 TRC_data_rhol = np.loadtxt('/home/ram9/Elliott/Ethane_basis/TRC_data_rhoL.txt')
-T_rhol = TRC_data_rhol[:,0]
+T_rhol_data = TRC_data_rhol[:,0]
 rhol_data = TRC_data_rhol[:,1]
 
 TRC_data_Psat = np.loadtxt('/home/ram9/Elliott/Ethane_basis/TRC_data_Pv.txt')
-T_Psat = TRC_data_Psat[:,0]
+T_Psat_data = TRC_data_Psat[:,0]
 Psat_data = TRC_data_Psat[:,1]
 
 # Limit data to the range of REFPROP Tsat for isochores, could probably expand this range if needed
-rhol_data = rhol_data[(T_rhol<260) & (T_rhol>137)]
-T_rhol = T_rhol[(T_rhol<260) & (T_rhol>137)]
+rhol_data = rhol_data[(T_rhol_data<260) & (T_rhol_data>137)]
+T_rhol_data = T_rhol_data[(T_rhol_data<260) & (T_rhol_data>137)]
 
-Psat_data = Psat_data[(T_Psat<260) & (T_Psat>137)]
-T_Psat = T_Psat[(T_Psat<260) & (T_Psat>137)]
+Psat_data = Psat_data[(T_Psat_data<260) & (T_Psat_data>137)]
+T_Psat_data = T_Psat_data[(T_Psat_data<260) & (T_Psat_data>137)]
 
-#u_rhoL = rho_L_data*TDE_rel_rhol_hat(T_rho_L)/100
-#u_Psat = P_v_data*TDE_rel_Psat_hat(T_P_v)/100
-#
-#sd_rhoL = u_rhoL/2.
-#sd_Psat = u_Psat/2.
-#
-#t_rhol = 1./sd_rhoL
-#t_Psat = 1./sd_Psat                                   
+pu_rhol_data = TDE_rel_rhol_hat(T_rhol_data)
+pu_Psat_data = TDE_rel_Psat_hat(T_Psat_data)
 
-t_rhol = 0.3
-t_Psat = 0.03
+u_rhol_data = rhol_data*pu_rhol_data/100
+u_Psat_data = Psat_data*pu_Psat_data/100
+
+# Can just directly expand the TDE uncertainties
+#pu_rhol_data *= 10.
+#pu_Psat_data *= 5.
+#u_rhol_data *= 10.
+#u_Psat_data *= 5.                             
+    
+sd_rhol_data = u_rhol_data/2.
+sd_Psat_data = u_Psat_data/2.
+ 
+# Combining uncertainty for the simulations themselves    
+pu_rhol_sim = 0.01*0 
+pu_Psat_sim = 0.03*0
+    
+u_rhol_sim = rhol_data*pu_rhol_sim
+u_Psat_sim = Psat_data*pu_Psat_sim
+   
+sd_rhol_sim = u_rhol_sim/2.
+sd_Psat_sim = u_Psat_sim/2.
+    
+sd_rhol = np.sqrt(sd_rhol_data**2 + sd_rhol_sim**2)
+sd_Psat = np.sqrt(sd_Psat_data**2 + sd_Psat_sim**2)
+    
+u_rhol = 2.*sd_rhol
+u_Psat = 2.*sd_Psat
+    
+pu_rhol = u_rhol/rhol_data*100.
+pu_Psat = u_Psat/Psat_data*100.
+
+t_rhol = np.sqrt(1./sd_rhol)
+t_Psat = np.sqrt(1./sd_Psat)                                   
+
+#t_rhol = 0.3
+#t_Psat = 0.03
         
 def calc_posterior(eps, sig, basis_fun,f_ki_loaded=None,verbose=False):
     global iRerun
 
-    if eps_low < eps < eps_high and sig_low < sig < sig_high:
+    if eps_low < eps < 1.1*eps_high and sig_low < sig < sig_high:
         
         eps_sig_lam = np.array([eps,sig,lam_guess])
         
@@ -1055,11 +1087,11 @@ def calc_posterior(eps, sig, basis_fun,f_ki_loaded=None,verbose=False):
 #            rhol_fit = ITIC_fit.rholHat(Tfit)
 #            Psat_fit = ITIC_fit.PsatHat(Tfit)/1000. #[kPa] converted to kPa so that units of rhol and Psat are on same scale for t
             # When using TRC data
-            rhol_fit = ITIC_fit.rholHat(T_rhol)
-            Psat_fit = ITIC_fit.PsatHat(T_Psat)/1000. #[kPa] converted to kPa so that units of rhol and Psat are on same scale for t                        
+            rhol_fit = ITIC_fit.rholHat(T_rhol_data)
+            Psat_fit = ITIC_fit.PsatHat(T_Psat_data)/1000. #[kPa] converted to kPa so that units of rhol and Psat are on same scale for t                        
                                        
-            # Priors on a,b
-            logp = dnorm(eps, 121.25, 3.) + dnorm(sig, 0.3783, 0.002)
+            # Priors on eps,sig
+            logp = dnorm(eps, 115, 10.) + dnorm(sig, 0.375, 0.005)
             # Calculate property value for given eps, sig
             prop_hat_1 = rhol_fit
             prop_hat_2 = Psat_fit
@@ -1149,8 +1181,8 @@ def call_optimizers(opt_type,prop_type,lam_cons=lam_guess,cons_lam=True,basis_fu
 
         objective = lambda eps, sig: calc_posterior(eps,sig,basis_fun,f_ki_loaded,verbose=True)      
          
-        for iEps, eps_sim in enumerate(np.linspace(115,125,51)):
-            for iSig, sig_sim in enumerate(np.linspace(0.375,0.380,51)):
+        for iEps, eps_sim in enumerate(np.linspace(115,125,11)):
+            for iSig, sig_sim in enumerate(np.linspace(0.375,0.380,11)):
                 f_sim = objective(eps_sim,sig_sim)
                 
                 if f_sim < f_opt:
@@ -1211,8 +1243,13 @@ def main():
             if args.basis: #Perform the reruns for the basis functions
                 basis = []   
                 for iiiRef, iiRef in enumerate(iRefs):
-                    basis.append(basis_function(Temp_sim,rho_sim,iiRef,iRefs,eps_low,eps_high,sig_low,sig_high,lam_low,lam_high,False))
-                    basis[iiiRef].validate_ref()    
+                    ### Test to see if basis functions have already been generated. Alternatively, I should just include this in the basis functions class. Of course, there is the possibility that the basis functions exist but are not the correct ones.
+                    try:
+                        basis.append(basis_function(Temp_sim,rho_sim,iiRef,iRefs,eps_low,eps_high,sig_low,sig_high,lam_low,lam_high,False))
+                    except:
+                        basis.append(basis_function(Temp_sim,rho_sim,iiRef,iRefs,eps_low,eps_high,sig_low,sig_high,lam_low,lam_high,True))
+                    
+                    #basis[iiiRef].validate_refs()  #The basis function class now performs this validation automatically  
 
                 LJ_total_basis_refs, U_total_basis_refs, press_basis_refs = UP_basis_mult_refs(basis)           
 #                basis.append(basis_function(Temp_sim,rho_sim,iRef,1,eps_low,eps_high,sig_low,sig_high,12.,12.,False)) 
@@ -1242,46 +1279,6 @@ def main():
         eps_opt = 0.
         sig_opt = 0.
         lam_opt = 0.
-        
-    ### Move this to a function that checks for convergence
-
-    if eps_opt == 0. or sig_opt == 0. or lam_opt == 0.:
-        
-        conv_overall = 1
-
-    else:               
-    
-        f = open('eps_optimal','w')
-        f.write(str(eps_opt))
-        f.close()
-        
-        f = open('sig_optimal','w')
-        f.write(str(sig_opt))
-        f.close()
-
-        f = open('lam_optimal','w')
-        f.write(str(lam_opt))
-        f.close()
-        
-        f = open('eps_sig_lam_optimal','w')
-        f.write(str(eps_opt)+'\t'+str(sig_opt)+'\t'+str(lam_opt))
-        f.close()
-        
-        conv_overall = 0
-        
-        if iRef > 0:
-            eps_opt_previous = np.loadtxt('../ref'+str(iRef-1)+'/eps_optimal')
-            eps_opt_current = eps_opt
-            TOL_eps = np.loadtxt('TOL_eps')
-            sig_opt_previous = np.loadtxt('../ref'+str(iRef-1)+'/sig_optimal')
-            sig_opt_current = sig_opt
-            TOL_sig = np.loadtxt('TOL_sig')
-            if np.abs(eps_opt_previous - eps_opt_current) < TOL_eps and np.abs(sig_opt_previous - sig_opt_current) < TOL_sig:
-                conv_overall = 1
-        
-    f = open('conv_overall','w')
-    f.write(str(conv_overall))
-    f.close()
 
 if __name__ == '__main__':
     '''
