@@ -171,10 +171,10 @@ def main():
     
     # Values for Potoff model predicted from TraPPE samples
     # Taken from PCFR-ITIC
-#    Tsat = np.array([276.778, 251.3329, 221.4212, 187.5534, 149.2056])
-#    rhol = np.array([428.5761,471.4212,514.2969,557.1258,600.0072])
-#    rhov = np.array([43.59846,21.13519,7.967988,1.86442,0.143268])
-#    Psat = np.array([23.62316,12.02041,4.435127,0.938118,0.058897])
+    Tsat = np.array([276.778, 251.3329, 221.4212, 187.5534, 149.2056])
+    rhol = np.array([428.5761,471.4212,514.2969,557.1258,600.0072])
+    rhov = np.array([43.59846,21.13519,7.967988,1.86442,0.143268])
+    Psat = np.array([23.62316,12.02041,4.435127,0.938118,0.058897])
     
     # Taken from MBAR-ITIC
 #    Tsat = np.array([211.3574, 197.6162, 178.8908, 123.1425, 102.5166])
@@ -203,11 +203,23 @@ def main():
 
     # My Helium results:
     
-    Tsat = np.array([6,7,8,9,10,11]) #[K]
-    rhol = np.array([0.31871202,0.30470999,0.289710787,0.273406827,0.254900377,0.231594877])*1000. #[kg/m3]
-    rhov = np.array([0.000179161,0.000713421,0.002167491,0.004683633,0.010768837,0.019240848])*1000. #[kg/m3]
-    Psat = np.array([2.221184667,10.17843633,34.23847833,80.274382,188.3929867,337.2498733])/100. #[bar]
-    # Have to make sure that Tsat[0] is the highest value since this code was written for ITIC
+#    Tsat = np.array([6,7,8,9,10,11]) #[K]
+#    rhol = np.array([0.31871202,0.30470999,0.289710787,0.273406827,0.254900377,0.231594877])*1000. #[kg/m3]
+#    rhov = np.array([0.000179161,0.000713421,0.002167491,0.004683633,0.010768837,0.019240848])*1000. #[kg/m3]
+#    Psat = np.array([2.221184667,10.17843633,34.23847833,80.274382,188.3929867,337.2498733])/100. #[bar]
+#    # Have to make sure that Tsat[0] is the highest value since this code was written for ITIC
+#    Tsat = Tsat[::-1]
+#    rhol = rhol[::-1]
+#    rhov = rhov[::-1]
+#    Psat = Psat[::-1]
+
+   ## TraPPE-Siepmann Validation values
+    Tsat = np.array([178,197,217,256,275,279,283,288])
+    rhol = np.array([551.2,526.2,498.4,434.2,393.7,383.5,372.6,358.9])
+    rhov = np.array([2.3,5.3,11.1,35.0,59.8,64.8,73.9,90.])
+    Psat = np.array([1.11,2.72,5.98,18.8,29.75,32,35.02,39.4])
+    
+    #    # Have to make sure that Tsat[0] is the highest value since this code was written for ITIC
     Tsat = Tsat[::-1]
     rhol = rhol[::-1]
     rhov = rhov[::-1]

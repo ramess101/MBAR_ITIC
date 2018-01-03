@@ -33,13 +33,26 @@ def create_tab(nrep,natt=6.,ncoul=1.):
             U3 = 1e30
         if F3 > 1e30:
             F3 = 1e30
+
+        #if nrep > 12 and ri > rcutin:
+            #if U3 > 0:
+                #U3 = ri**-12
+                #F3 = 12 * ri ** -(12 + 1.)
+            #if U3 > 100 :
+                #U3 = ri**-12
+                #F3 = 12 * ri ** -(12 + 1.)
+        #    if U3 > 100 :
+        #        U3 = 100
+        #    if F3 > 100:
+        #        F3 = 100
+
             
         f.write(str(ri)+'\t'+str(U1)+'\t'+str(F1)+'\t'+str(U2)+'\t'+str(F2)+'\t'+str(U3)+'\t'+str(F3)+'\n')
     f.close()
     
-def convert_eps_sig_C6_Clam(eps,sig,lam,n=6.,print_Cit=True):
+def convert_eps_sig_C6_Clam(eps_K,sig,lam,n=6.,print_Cit=True):
     Ncoef = lam/(lam-n)*(lam/n)**(n/(lam-n))
-    eps *= kb * NA
+    eps = eps_K * kb * NA
     C6 = Ncoef * eps * sig ** n
     Clam = Ncoef * eps * sig ** lam
     
