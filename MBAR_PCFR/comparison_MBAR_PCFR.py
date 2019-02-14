@@ -531,7 +531,7 @@ def contour_combined_plot(eps_all,sig_all,U_direct,Z_direct,U_MBAR,Z_MBAR,U_PCFR
     plt.plot([],[],'r',label='MBAR')
     plt.plot([],[],'g',label='PCFR')
     plt.plot(0.375,98,'mx',label='Reference')
-    plt.title('RMS of $U_{dep}$ (kJ/mol)')
+    plt.title('RMS of $U^{dep}$ (kJ/mol)')
     plt.legend()
     
     subplot_2 = my_figure.add_subplot(2,1,2)
@@ -974,6 +974,7 @@ def RMS_contours_combined(eps_all,sig_all,fpathroot):
     RMSrhoL = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_rhoL_all').reshape(21,21)
+#    RMSrhoL_PCFR = np.loadtxt('PCFR_zeroth/lam12/PCFR_ref0rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_MBAR_9refs = np.loadtxt(fpathroot+'MBAR_ref8rr_RMS_rhoL_all').reshape(21,21)
     
@@ -1004,65 +1005,99 @@ def RMS_contours_combined(eps_all,sig_all,fpathroot):
 #    axarr.plot(sig_PCFs,eps_PCFs,'mx',label='Multiple references')
     axarr.legend(loc=2)
 
-    f, axarr = plt.subplots(nrows=2,ncols=1,figsize=(8,12))
+    f, axarr = plt.subplots(nrows=2,ncols=1,figsize=(10,12))
     
-    plt.tight_layout(pad=3,rect=[0,0,1,1])
+    plt.tight_layout(pad=3.5,rect=[0,0,1.04,1.02]) #This trims the unnecessary pad on the right and top
     
-    plt.text(0.3627,131,'a)') 
-    plt.text(0.3627,107,'b)')
-    
-    CS3 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL_MBAR,[5,10],label='MBAR with single reference',colors='g')
-#    CS4 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL_PCFR,[5,10],label='PCFR with single reference',colors='c')
-    CS1 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL,contour_lines,label='Direct Simulation',colors='r')
-    CS2 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL_MBAR_9refs,contour_lines,label='MBAR with multiple references',colors='b')
-    axarr[0].clabel(CS2, inline=1,fontsize=10,colors='w',fmt='%1.0f')
-#    axarr[0].clabel(CS4, inline=1,fontsize=10,colors='c',fmt='%1.0f',manual=[(0,-10),(5,10)])
-    axarr[0].clabel(CS3, inline=1,fontsize=10,colors='g',fmt='%1.0f')
-    axarr[0].clabel(CS1, inline=1,fontsize=10,colors='k',fmt='%1.0f')
-    axarr[0].set_xlabel(r'$\sigma$ (nm)')
-    axarr[0].set_ylabel(r'$\epsilon$ (K)')
-    axarr[0].set_title(r'RMS of $\rho_l$ (kg/m$^3$)')
+    plt.text(0.363,131,'a)',fontsize=22) 
+    plt.text(0.363,107,'b)',fontsize=22)
+    #linestyles: [ None | ‘solid’ | ‘dashed’ | ‘dashdot’ | ‘dotted’ ]
+    CS3 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL_MBAR,[5,10],label='MBAR with single reference',colors='g',linestyles='dashdot')
+    CS4 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL_PCFR,[5,10],label='PCFR with single reference',colors='c',linestyles='dotted')
+    CS1 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL,contour_lines,label='Direct Simulation',colors='r',linestyles='solid')
+    CS2 = axarr[0].contour(sig_plot,eps_plot,RMSrhoL_MBAR_9refs,contour_lines,label='MBAR with multiple references',colors='b',linestyles='dashed')
+    axarr[0].clabel(CS2, inline=1,fontsize=16,colors='w',fmt='%1.0f')
+    axarr[0].clabel(CS2, inline=1,fontsize=16,colors='w',fmt='%1.0f',manual=[(0.374,94),(0.37,99)])
+    axarr[0].clabel(CS4, inline=1,fontsize=16,colors='c',fmt='%1.0f',manual=[(0.371,99),(0.372,100),(0.3785,97.5),(0.3795,98)])#,manual=[(0,-10),(5,10)])
+    axarr[0].clabel(CS3, inline=1,fontsize=16,colors='g',fmt='%1.0f',manual=[(0.373,97),(0.372,95),(0.377,99),(0.377,97)])
+    axarr[0].clabel(CS1, inline=1,fontsize=16,colors='k',fmt='%1.0f')
+    axarr[0].set_xlabel(r'$\sigma_{\rm CH_3}$ (nm)',fontsize=24)
+    axarr[0].set_ylabel(r'$\epsilon_{\rm CH_3}$ (K)',fontsize=24)
+    axarr[0].set_title(r'RMS of $\rho_{\rm l}^{\rm sat}$ (kg/m$^3$)',fontsize=22)
     axarr[0].set_yticks([88,93,98,103,108])
     axarr[0].set_xticks([0.365,0.370,0.375,0.380,0.385])
-    axarr[0].plot([],[],'r',label='Direct Simulation')
-    axarr[0].plot([],[],'b',label='MBAR multiple references')
-    axarr[0].plot([],[],'g',label='MBAR single reference')
-#    axarr[0].plot([],[],'c',label='PCFR single reference')
-    axarr[0].plot(sig_PCFs,eps_PCFs,'mx',label='References')
+    axarr[0].plot([],[],'r-',label='Direct Simulation')
+    axarr[0].plot([],[],'b--',label='MBAR multiple references')
+    axarr[0].plot([],[],'g-.',label='MBAR single reference')
+    axarr[0].plot([],[],'c:',label='PCFR single reference')
+    axarr[0].plot(sig_PCFs,eps_PCFs,'bs',mfc='None',markersize=10,label='References')
     axarr[0].legend()
     #plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
     #       ncol=2, mode="expand", borderaxespad=0.)
     #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         
-    RMSPsat = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_Psat_all').reshape(21,21)
-    RMSPsat_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_Psat_all').reshape(21,21)
-    RMSPsat_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_Psat_all').reshape(21,21)
-    RMSPsat_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_Psat_all').reshape(21,21)
-    RMSPsat_MBAR_9refs = np.loadtxt(fpathroot+'MBAR_ref8rr_RMS_Psat_all').reshape(21,21)
+#    RMSPsat = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_Psat_all').reshape(21,21)
+#    RMSPsat_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_Psat_all').reshape(21,21)
+#    RMSPsat_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_Psat_all').reshape(21,21)
+#    RMSPsat_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_Psat_all').reshape(21,21)
+#    RMSPsat_MBAR_9refs = np.loadtxt(fpathroot+'MBAR_ref8rr_RMS_Psat_all').reshape(21,21)
+#    
+#    contour_lines = [0.8,1.6,2.4,3.2,4,5,6,7,8,9,10,12,15,20]
+#    
+#    CS3 = axarr[1].contour(sig_plot,eps_plot,RMSPsat_MBAR,[0.8,1.6],label='MBAR with single reference',colors='g',linestyles='dashdot')
+#    CS4 = axarr[1].contour(sig_plot,eps_plot,RMSPsat_PCFR,[0.8,1.6],label='PCFR with single reference',colors='c',linestyles='dotted')
+#    CS1 = axarr[1].contour(sig_plot,eps_plot,RMSPsat,contour_lines,label='Direct Simulation',colors='r',linestyles='solid')
+#    CS2 = axarr[1].contour(sig_plot,eps_plot,RMSPsat_MBAR_9refs,contour_lines,label='MBAR with multiple references',colors='b',linestyles='dashed')
+#    axarr[1].clabel(CS2, inline=1,fontsize=16,colors='w',fmt='%1.1f',manual=[(0.375,107),(0.375,106),(0.375,105),(0.375,104),(0.375,103),(0.375,101),(0.375,99),(0.375,97), (0.375,95),(0.375,91)])
+#    axarr[1].clabel(CS4, inline=1,fontsize=16,colors='c',fmt='%1.1f',manual=[(0.376,103),(0.376,102),(0.376,100),(0.376,99)])
+#    axarr[1].clabel(CS3, inline=1,fontsize=16,colors='g',fmt='%1.1f',manual=[(0.377,104),(0.378,102),(0.379,100),(0.3785,96)])
+#    axarr[1].clabel(CS1, inline=1,fontsize=16,colors='k',fmt='%1.1f',manual=[(0.375,107),(0.375,106),(0.375,105),(0.375,104),(0.375,103),(0.375,101),(0.375,99),(0.375,97), (0.375,95),(0.375,91)])
+#    axarr[1].set_xlabel(r'$\sigma$ (nm)')
+#    axarr[1].set_ylabel(r'$\epsilon$ (K)')
+#    axarr[1].set_title(r'RMS of $P_v^{sat}  \left(bar\right)$')
+#    axarr[1].set_yticks([88,93,98,103,108])
+#    axarr[1].set_xticks([0.365,0.370,0.375,0.380,0.385])
+#    axarr[1].plot([],[],'r-',label='Direct Simulation')
+#    axarr[1].plot([],[],'b--',label='MBAR multiple references')
+#    axarr[1].plot([],[],'g-.',label='MBAR single reference')
+#    axarr[1].plot([],[],'c:',label='PCFR single reference')
+#    axarr[1].plot(sig_PCFs,eps_PCFs,'bs',mfc='None',markersize=10,label='References')
+#    #axarr[1].legend()
+#        
+#    f.savefig('RMS_rhol_Psat_comparison.pdf')
+
+    RMSlogPsat = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_logPsat_all').reshape(21,21)
+    RMSlogPsat_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_logPsat_all').reshape(21,21)
+    RMSlogPsat_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_logPsat_all').reshape(21,21)
+#    RMSlogPsat_PCFR = np.loadtxt('PCFR_zeroth/lam12/PCFR_ref0rr_RMS_logPsat_all').reshape(21,21)
+#    RMSPsat_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_logPsat_all').reshape(21,21)
+    RMSlogPsat_MBAR_9refs = np.loadtxt(fpathroot+'MBAR_ref8rr_RMS_logPsat_all').reshape(21,21)
     
-    contour_lines = [0.8,1.6,2.4,3.2,4,5,6,7,8,9,10,12,15,20]
+    contour_lines = [0.05,0.10,0.20,0.30,0.40,0.50]
     
-    CS3 = axarr[1].contour(sig_plot,eps_plot,RMSPsat_MBAR,[0.8,1.6],label='MBAR with single reference',colors='g')
-    CS4 = axarr[1].contour(sig_plot,eps_plot,RMSPsat_PCFR,[0.8,1.6],label='PCFR with single reference',colors='c')
-    CS1 = axarr[1].contour(sig_plot,eps_plot,RMSPsat,contour_lines,label='Direct Simulation',colors='r')
-    CS2 = axarr[1].contour(sig_plot,eps_plot,RMSPsat_MBAR_9refs,contour_lines,label='MBAR with multiple references',colors='b')
-    #axarr[1].clabel(CS2, inline=1,fontsize=10,colors='w',fmt='%1.1f')
-    axarr[1].clabel(CS4, inline=1,fontsize=10,colors='c',fmt='%1.1f')
-    axarr[1].clabel(CS3, inline=1,fontsize=10,colors='g',fmt='%1.1f')
-    axarr[1].clabel(CS1, inline=0,fontsize=10,colors='k',fmt='%1.1f')
-    axarr[1].set_xlabel(r'$\sigma$ (nm)')
-    axarr[1].set_ylabel(r'$\epsilon$ (K)')
-    axarr[1].set_title(r'RMS of $P_v  \left(bar\right)$')
+    CS3 = axarr[1].contour(sig_plot,eps_plot,RMSlogPsat_MBAR,contour_lines[0:2],label='MBAR with single reference',colors='g',linestyles='dashdot')
+    CS4 = axarr[1].contour(sig_plot,eps_plot,RMSlogPsat_PCFR,contour_lines[0:2],label='PCFR with single reference',colors='c',linestyles='dotted')
+    CS1 = axarr[1].contour(sig_plot,eps_plot,RMSlogPsat,contour_lines,label='Direct Simulation',colors='r',linestyles='solid')
+    CS2 = axarr[1].contour(sig_plot,eps_plot,RMSlogPsat_MBAR_9refs,contour_lines,label='MBAR with multiple references',colors='b',linestyles='dashed')
+    axarr[1].clabel(CS2, inline=1,fontsize=16,colors='w',fmt='%1.2f',manual=[(0.383,106),(0.374,106),(0.374,104),(0.374,101),(0.374,100),(0.374,97),(0.374,95),(0.374,92),(0.374,90)])
+    axarr[1].clabel(CS3, inline=1,fontsize=16,colors='w',fmt='%1.2f',manual=[(0.374,106),(0.374,104),(0.374,101),(0.374,100)])
+    axarr[1].clabel(CS4, inline=1,fontsize=16,colors='c',fmt='%1.2f',manual=[(0.3755,105),(0.3755,103),(0.3755,100),(0.3755,99)])
+    axarr[1].clabel(CS3, inline=1,fontsize=16,colors='g',fmt='%1.2f',manual=[(0.3675,99.5),(0.3685,99),(0.370,99),(0.371,99)])
+    axarr[1].clabel(CS1, inline=1,fontsize=16,colors='k',fmt='%1.2f',manual=[(0.383,106),(0.374,106),(0.374,104),(0.374,101),(0.374,100),(0.374,97),(0.374,95),(0.374,92),(0.374,90)]) #manual=[(0.374,107),(0.374,106),(0.374,104),(0.374,101),(0.374,100),(0.374,99),(0.374,97),(0.374,96),(0.374,95),(0.374,93),(0.374,92),(0.374,91),(0.374,90)]
+    axarr[1].set_xlabel(r'$\sigma_{\rm CH_3}$ (nm)',fontsize=24)
+    axarr[1].set_ylabel(r'$\epsilon_{\rm CH_3}$ (K)',fontsize=24)
+    axarr[1].set_title(r'RMS of log$_{10}\left(P_{\rm v}^{\rm sat}\right)$',fontsize=22)
     axarr[1].set_yticks([88,93,98,103,108])
     axarr[1].set_xticks([0.365,0.370,0.375,0.380,0.385])
-    axarr[1].plot([],[],'r',label='Direct Simulation')
-    axarr[1].plot([],[],'b',label='MBAR multiple references')
-    axarr[1].plot([],[],'g',label='MBAR single reference')
-    axarr[1].plot([],[],'c',label='PCFR single reference')
-    axarr[1].plot(sig_PCFs,eps_PCFs,'mx',label='References')
+    axarr[1].plot([],[],'r-',label='Direct Simulation')
+    axarr[1].plot([],[],'b--',label='MBAR multiple references')
+    axarr[1].plot([],[],'g-.',label='MBAR single reference')
+    axarr[1].plot([],[],'c:',label='PCFR single reference')
+    axarr[1].plot(sig_PCFs,eps_PCFs,'bs',mfc='None',markersize=10,label='References')
     #axarr[1].legend()
         
-    f.savefig('RMS_rhol_Psat_comparison.pdf')
+    f.savefig('RMS_rhol_logPsat_comparison.pdf')
+
     
     f, axarr = plt.subplots(nrows=2,ncols=1,figsize=(8,12))
     
@@ -1071,14 +1106,14 @@ def RMS_contours_combined(eps_all,sig_all,fpathroot):
     plt.text(0.3627,131,'a)') 
     plt.text(0.3627,107,'b)')
     
-    RMSZ = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_Z_all').reshape(21,21)/20.
-    RMSZ_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_Z_all').reshape(21,21)/20.
-    RMSZ_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_Z_all').reshape(21,21)/20.
-    RMSZ_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_Z_all').reshape(21,21)/20.
-    RMSZ_MBAR_9refs = np.loadtxt(fpathroot+'MBAR_ref8rr_RMS_Z_all').reshape(21,21)/20.
-    RMSZ_zeroth = np.loadtxt(fpathroot+'Zeroth_ref0rr_RMS_Z_all').reshape(21,21)/20.
+    RMSZ = np.loadtxt(fpathroot+'Direct_simulation_rr_RMS_Z_all').reshape(21,21)
+    RMSZ_MBAR = np.loadtxt(fpathroot+'MBAR_ref0rr_RMS_Z_all').reshape(21,21)
+    RMSZ_PCFR = np.loadtxt(fpathroot+'PCFR_ref0rr_RMS_Z_all').reshape(21,21)
+    RMSZ_constant = np.loadtxt(fpathroot+'Constant_rr_RMS_Z_all').reshape(21,21)
+    RMSZ_MBAR_9refs = np.loadtxt(fpathroot+'MBAR_ref8rr_RMS_Z_all').reshape(21,21)
+    RMSZ_zeroth = np.loadtxt(fpathroot+'Zeroth_ref0rr_RMS_Z_all').reshape(21,21)
                           
-    contour_lines = [0.01, 0.02, 0.03,0.04,0.05,0.06,0.07]
+    contour_lines = [0.2, 0.4, 0.6,0.8,1.0,1.2,1.4]
         
     CS3 = axarr[0].contour(sig_plot,eps_plot,RMSZ_MBAR,contour_lines[0:2],label='MBAR with single reference',colors='g')
     CS4 = axarr[0].contour(sig_plot,eps_plot,RMSZ_PCFR,contour_lines[0:2],label='PCFR with single reference',colors='c')
@@ -1131,24 +1166,30 @@ def RMS_contours_combined(eps_all,sig_all,fpathroot):
     
     f.savefig('RMS_U_Z_comparison.pdf')
     
-    RMSZ = np.loadtxt('parameter_space_Mie16/Direct_simulation_rr_RMS_Z_all').reshape(21,21)/20.
-    RMSZ_PCFR = np.loadtxt('parameter_space_Mie16/Zeroth_ref0rr_RMS_Z_all').reshape(21,21)/20.
-#    RMSZ_zeroth = np.loadtxt('parameter_space_Mie16/Zeroth_ref0rr_RMS_Z_all').reshape(21,21)/20.
-    RMSZ_MBAR = np.loadtxt('parameter_space_Mie16/MBAR_ref0rr_RMS_Z_all').reshape(21,21)/20.
+    RMSZ = np.loadtxt('parameter_space_Mie16/Direct_simulation_rr_RMS_Z_all').reshape(21,21)
+    RMSZ_PCFR = np.loadtxt('parameter_space_Mie16/Zeroth_ref0rr_RMS_Z_all').reshape(21,21)
+#    RMSZ_zeroth = np.loadtxt('parameter_space_Mie16/Zeroth_ref0rr_RMS_Z_all').reshape(21,21)
+    RMSZ_MBAR = np.loadtxt('parameter_space_Mie16/MBAR_ref0rr_RMS_Z_all').reshape(21,21)
+    #RMSZ_MBAR = np.loadtxt('parameter_space_Mie16/Lam12/MBAR_ref8rr_RMS_Z_all').reshape(21,21)
+    #RMSZ_MBAR = np.loadtxt('parameter_space_Mie16/MBAR_ref8rr_RMS_Z_all').reshape(21,21)
+
                           
     RMSU = np.loadtxt('parameter_space_Mie16/Direct_simulation_rr_RMS_U_all').reshape(21,21)/20.
     RMSU_PCFR = np.loadtxt('parameter_space_Mie16/PCFR_ref0rr_RMS_U_all').reshape(21,21)/20.
 #    RMSU_zeroth = np.loadtxt('parameter_space_Mie16/Zeroth_ref0rr_RMS_U_all').reshape(21,21)/20.
     RMSU_MBAR = np.loadtxt('parameter_space_Mie16/MBAR_ref0rr_RMS_U_all').reshape(21,21)/20.
+    #RMSU_MBAR = np.loadtxt('parameter_space_Mie16/Lam12/MBAR_ref8rr_RMS_U_all').reshape(21,21)/20.
+    #RMSU_MBAR = np.loadtxt('parameter_space_Mie16/MBAR_ref8rr_RMS_U_all').reshape(21,21)/20.
+    RMSU_MBAR_11refs = np.loadtxt('parameter_space_Mie16/Lam12/MBAR_ref11rr_RMS_all',skiprows=13)[:,3].reshape(21,21)/20.
     
     f, axarr = plt.subplots(nrows=2,ncols=1,figsize=(8,12))   
     
     plt.tight_layout(pad=3,rect=[0,0,1,1])
     
-    plt.text(0.3627,151,'a)') 
-    plt.text(0.3627,127,'b)')     
+    plt.text(0.3632,151,'a)') 
+    plt.text(0.3632,127,'b)')     
     
-    contour_lines = [0.01, 0.02, 0.03,0.04,0.05,0.06,0.07]
+    contour_lines = [0.2, 0.4, 0.6,0.8,1.0,1.2,1.4]
 
     CS1 = axarr[0].contour(sig_plot,eps_plot+20.,RMSZ,contour_lines,colors='r')
 #    CS2 = axarr[0].contour(sig_plot,eps_plot+20.,RMSZ_zeroth,contour_lines,colors='m')
@@ -1173,6 +1214,7 @@ def RMS_contours_combined(eps_all,sig_all,fpathroot):
     
     contour_lines = [150/20.,300/20.,450/20.,600/20.,750/20.,900/20.]
     contour_lines = [150/20.,300/20.,450/20.]
+    contour_lines = [150/20.,300/20.]
                      
     CS1 = axarr[1].contour(sig_plot,eps_plot+20.,RMSU,contour_lines,colors='r')
 #    CS2 = axarr[1].contour(sig_plot,eps_plot+20.,RMSU_zeroth,contour_lines,colors='m')
@@ -1190,7 +1232,7 @@ def RMS_contours_combined(eps_all,sig_all,fpathroot):
     axarr[1].plot(0.3783,121.25,'kx',markersize=10,label=r'Potoff, $\lambda = 16$')
     axarr[1].set_xlabel(r'$\sigma$ (nm)')
     axarr[1].set_ylabel(r'$\epsilon$ (K)')
-    axarr[1].set_title(r'RMS of $U_{dep}$ (kJ/mol)')
+    axarr[1].set_title(r'RMS of $U^{dep}$ (kJ/mol)')
     axarr[1].set_yticks([108,113,118,123,128])
     axarr[1].set_xticks([0.365,0.370,0.375,0.380,0.385])
     axarr[1].legend(loc=3)
@@ -1198,37 +1240,144 @@ def RMS_contours_combined(eps_all,sig_all,fpathroot):
     
     RMSrhoL = np.loadtxt('parameter_space_Mie16/Direct_simulation_rr_RMS_rhoL_all').reshape(21,21)
     RMSrhoL_MBAR = np.loadtxt('parameter_space_Mie16/MBAR_ref0rr_RMS_rhoL_all').reshape(21,21)
-    RMSrhoL_PCFR = np.loadtxt('parameter_space_Mie16/Zeroth_ref0rr_RMS_rhoL_all').reshape(21,21)
+    #RMSrhoL_MBAR = np.loadtxt('parameter_space_Mie16/Lam12/MBAR_ref8rr_RMS_rhoL_all').reshape(21,21)
+    RMSrhoL_MBAR_11refs = np.loadtxt('parameter_space_Mie16/Lam12/MBAR_ref11rr_RMS_all',skiprows=13)[:,0].reshape(21,21)
+    #RMSrhoL_MBAR = np.loadtxt('parameter_space_Mie16/MBAR_ref8rr_RMS_rhoL_all').reshape(21,21)
+#    RMSrhoL_PCFR = np.loadtxt('parameter_space_Mie16/Zeroth_ref0rr_RMS_rhoL_all').reshape(21,21)
+    RMSrhoL_PCFR = np.loadtxt('PCFR_zeroth/lam16_highEps/PCFR_ref0rr_RMS_rhoL_all').reshape(21,21)
     
-    f, axarr = plt.subplots(nrows=2,ncols=1,figsize=(8,12))   
+    f, axarr = plt.subplots(nrows=2,ncols=1,figsize=(10,12))   
     
-    plt.tight_layout(pad=3,rect=[0,0,1,1])
+    plt.tight_layout(pad=3.5,rect=[0,0,1.04,1.02])
     
-#    plt.text(0.3627,151,'a)') 
-#    plt.text(0.3627,127,'b)')     
+    plt.text(0.363,151,'a)',fontsize=22) 
+    plt.text(0.363,127,'b)',fontsize=22)     
     
-    contour_lines = [5,10,20,30]
-
-    CS1 = axarr[0].contour(sig_plot,eps_plot+20.,RMSrhoL,contour_lines,colors='r')
+    contour_lines = [5,10,20]
+    
+    CS1 = axarr[0].contour(sig_plot,eps_plot+20.,RMSrhoL,contour_lines,colors='r',linestyles='solid')
 #    CS2 = axarr[0].contour(sig_plot,eps_plot+20.,RMSrhoL_zeroth,contour_lines,colors='m')
-    CS3 = axarr[0].contour(sig_plot,eps_plot+20.,RMSrhoL_PCFR,contour_lines[0:3],colors='c')
-    CS4 = axarr[0].contour(sig_plot,eps_plot+20.,RMSrhoL_MBAR,contour_lines[0:3],colors='g')
-    axarr[0].clabel(CS1, inline=1,fontsize=10,colors='r',fmt='%1.2f')
+    CS3 = axarr[0].contour(sig_plot,eps_plot+20.,RMSrhoL_PCFR,contour_lines[0:3],colors='c',linestyles='dotted')
+    CS4 = axarr[0].contour(sig_plot,eps_plot+20.,RMSrhoL_MBAR,contour_lines[0:3],colors='g',linestyles='dashdot')
+    CS5 = axarr[0].contour(sig_plot,eps_plot+20.,RMSrhoL_MBAR_11refs,contour_lines[1:4],colors='b',linestyles='dashed')
+    axarr[0].clabel(CS1, inline=1,fontsize=16,colors='r',fmt='%1.0f',manual=[(0.376,117),(0.376,122),(0.376,125),(0.375,110)])
 #    axarr[0].clabel(CS2, inline=1,fontsize=10,colors='m',fmt='%1.2f')
-    axarr[0].clabel(CS3, inline=1,fontsize=10,colors='c',fmt='%1.2f')
-    axarr[0].clabel(CS4, inline=1,fontsize=10,colors='g',fmt='%1.2f')
+    axarr[0].clabel(CS3, inline=1,fontsize=16,colors='c',fmt='%1.0f',manual=[(0.3765,119),(0.374,115),(0.374,112),(0.374,122),(0.374,126)])
+    axarr[0].clabel(CS4, inline=1,fontsize=16,colors='g',fmt='%1.0f',manual=[(0.3675,118),(0.369,118),(0.372,119),(0.373,120)])
+    axarr[0].clabel(CS5, inline=1,fontsize=16,colors='b',fmt='%1.0f',manual=[(0.3775,111),(0.3775,115),(0.369,120)])
     axarr[0].plot([],[],'r',label='Direct Simulation')
     #    axarr[0].plot([],[],'c',label='PCFR, PMF')
 #    axarr[0].plot([],[],'m',label='PCFR, zeroth')
     axarr[0].plot([],[],'g',label=r'MBAR,$\theta_{ref} =$ TraPPE-UA')
+    axarr[0].plot([],[],'b',label=r'MBAR, $\epsilon_{ref} = 118$ K')
     axarr[0].plot([],[],'c',label=r'PCFR,$\theta_{ref} =$ TraPPE-UA')
     axarr[0].plot(0.3783,121.25,'kx',markersize=10,label=r'Potoff, $\lambda = 16$')
-    axarr[0].set_xlabel(r'$\sigma$ (nm)')
-    axarr[0].set_ylabel(r'$\epsilon$ (K)')
-    axarr[0].set_title(r'RMS of $\rho_l$ (kg/m$^3$)')
+    axarr[0].set_xlabel(r'$\sigma_{\rm CH_3}$ (nm)',fontsize=24)
+    axarr[0].set_ylabel(r'$\epsilon_{\rm CH_3}$ (K)',fontsize=24)
+    axarr[0].set_title(r'RMS of $\rho_{\rm l}^{\rm sat}$ (kg/m$^3$)',fontsize=22)
     axarr[0].set_yticks([108,113,118,123,128])
     axarr[0].set_xticks([0.365,0.370,0.375,0.380,0.385])
-    axarr[0].legend(loc=2)
+    #axarr[0].legend(loc=2)
+    
+    contour_lines = [150/20.,300/20.,450/20.,600/20.,750/20.,900/20.]
+    contour_lines = [150/20.,300/20.,450/20.]
+    contour_lines = [150/20.,300/20.]
+    
+    contour_lines = [4,8,12,16]
+    contour_lines = [5,10,15]
+    contour_lines =[4.2,12]
+    #linestyles: [ None | ‘solid’ | ‘dashed’ | ‘dashdot’ | ‘dotted’ ]                 
+#    CS1 = axarr[1].contour(sig_plot,eps_plot+20.,RMSU,contour_lines,colors='r',linestyles='solid')
+##    CS2 = axarr[1].contour(sig_plot,eps_plot+20.,RMSU_zeroth,contour_lines,colors='m')
+#    CS3 = axarr[1].contour(sig_plot,eps_plot+20.,RMSU_PCFR,contour_lines,colors='c',linestyles='dotted')
+#    CS4 = axarr[1].contour(sig_plot,eps_plot+20.,RMSU_MBAR,contour_lines,colors='g',linestyles='dashdot')
+#    CS5 = axarr[1].contour(sig_plot,eps_plot+20.,RMSU_MBAR_11refs,contour_lines[0:3],colors='b',linestyles='dashed')
+#    axarr[1].clabel(CS1, inline=1,fontsize=16,colors='r',fmt='%1.0f')
+##    axarr[1].clabel(CS2, inline=1,fontsize=10,colors='m',fmt='%1.1f')
+#    axarr[1].clabel(CS3, inline=1,fontsize=16,colors='c',fmt='%1.0f')
+#    axarr[1].clabel(CS4, inline=1,fontsize=16,colors='g',fmt='%1.0f')
+#    axarr[1].clabel(CS5, inline=1,fontsize=16,colors='b',fmt='%1.0f')
+#    axarr[1].plot([],[],'r-',label='Direct Simulation')
+##    axarr[1].plot([],[],'c',label=r'PCFR,$\theta_{ref} =$ TraPPE-UA, $\lambda = 12$')
+###    axarr[1].plot([],[],'c',label='PCFR, PMF')
+###    axarr[1].plot([],[],'m',label='PCFR, zeroth')
+##    axarr[1].plot([],[],'g',label=r'MBAR,$\theta_{ref} =$ TraPPE-UA, $\lambda = 12$')
+##    axarr[1].plot([],[],'b',label=r'MBAR, $\epsilon_{ref} = 118$ K')
+#    axarr[1].plot([],[],'b--',label=r'MBAR multiple references, $\epsilon_{ref} = 118$ K')
+#    axarr[1].plot([],[],'g-.',label=r'MBAR single reference, $\theta_{ref} =$ TraPPE-UA')
+#    axarr[1].plot([],[],'c:',label=r'PCFR single reference, $\theta_{ref} =$ TraPPE-UA')
+#    axarr[1].plot(0.3783,121.25,'kx',markersize=10,label=r'Potoff, $\lambda = 16$')
+#    axarr[1].set_xlabel(r'$\sigma$ (nm)')
+#    axarr[1].set_ylabel(r'$\epsilon$ (K)')
+#    axarr[1].set_title(r'RMS of $U^{dep}$ (kJ/mol)')
+#    axarr[1].set_yticks([108,113,118,123,128])
+#    axarr[1].set_xticks([0.365,0.370,0.375,0.380,0.385])
+#    axarr[1].legend(loc=3)
+#    plt.show()
+#    
+#    f.savefig('RMS_rhol_U_comparison_lam16.pdf')
+    
+#    RMSPsat = np.loadtxt('parameter_space_Mie16/Direct_simulation_rr_RMS_Psat_all').reshape(21,21)
+#    RMSPsat_MBAR = np.loadtxt('parameter_space_Mie16/MBAR_ref0rr_RMS_Psat_all').reshape(21,21)
+#    RMSPsat_MBAR_11refs = np.loadtxt('parameter_space_Mie16/Lam12/MBAR_ref11rr_RMS_all',skiprows=13)[:,1].reshape(21,21)
+#    RMSPsat_PCFR = np.loadtxt('parameter_space_Mie16/Zeroth_ref0rr_RMS_all',skiprows=1)[:,1].reshape(21,21)
+#    
+#    contour_lines =[0.8,1.6]#,2.4,3.2,4.0]
+#    #linestyles: [ None | ‘solid’ | ‘dashed’ | ‘dashdot’ | ‘dotted’ ]                 
+#    CS1 = axarr[1].contour(sig_plot,eps_plot+20.,RMSPsat,contour_lines,colors='r',linestyles='solid')
+#    CS3 = axarr[1].contour(sig_plot,eps_plot+20.,RMSPsat_PCFR,contour_lines[0:2],colors='c',linestyles='dotted')
+#    CS4 = axarr[1].contour(sig_plot,eps_plot+20.,RMSPsat_MBAR,contour_lines[0:2],colors='g',linestyles='dashdot')
+#    CS5 = axarr[1].contour(sig_plot,eps_plot+20.,RMSPsat_MBAR_11refs,contour_lines[0:2],colors='b',linestyles='dashed')
+#    axarr[1].clabel(CS1, inline=1,fontsize=16,colors='r',fmt='%1.1f')
+##    axarr[1].clabel(CS2, inline=1,fontsize=10,colors='m',fmt='%1.1f')
+#    axarr[1].clabel(CS3, inline=1,fontsize=16,colors='c',fmt='%1.1f',manual=[(0.3775,120),(0.3775,118),(0.3775,123),(0.378,128)])
+#    axarr[1].clabel(CS4, inline=1,fontsize=16,colors='g',fmt='%1.1f',manual=[(0.373,123),(0.370,118),(0.378,110),(0.381,110)])
+#    axarr[1].clabel(CS5, inline=1,fontsize=16,colors='b',fmt='%1.1f',manual=[(0.373,123),(0.373,120),(0.373,125),(0.373,128)])
+#    axarr[1].plot([],[],'r-',label='Direct Simulation')
+#    axarr[1].plot([],[],'b--',label=r'MBAR multiple references, $\epsilon_{ref} = 118$ K')
+#    axarr[1].plot([],[],'g-.',label=r'MBAR single reference, $\theta_{ref} =$ TraPPE-UA')
+#    axarr[1].plot([],[],'c:',label=r'PCFR single reference, $\theta_{ref} =$ TraPPE-UA')
+#    axarr[1].plot(0.3783,121.25,'kx',markersize=10,label=r'Potoff, $\lambda = 16$')
+#    axarr[1].set_xlabel(r'$\sigma$ (nm)')
+#    axarr[1].set_ylabel(r'$\epsilon$ (K)')
+#    axarr[1].set_title(r'RMS of $P_v^{sat}$ (bar)')
+#    axarr[1].set_yticks([108,113,118,123,128])
+#    axarr[1].set_xticks([0.365,0.370,0.375,0.380,0.385])
+#    axarr[1].legend(loc=3)
+#    plt.show()
+#    
+#    f.savefig('RMS_rhol_Psat_comparison_lam16')
+    
+    RMSlogPsat = np.loadtxt('parameter_space_Mie16/Direct_simulation_rr_RMS_logPsat_all').reshape(21,21)
+    RMSlogPsat_MBAR = np.loadtxt('parameter_space_Mie16/MBAR_ref0rr/MBAR_ref0rr_RMS_logPsat_all').reshape(21,21)
+    RMSlogPsat_MBAR_11refs = np.loadtxt('parameter_space_Mie16/MBAR_ref11rr/MBAR_ref11rr_RMS_logPsat_all').reshape(21,21)
+    RMSlogPsat_PCFR = np.loadtxt('PCFR_zeroth/lam16_highEps/PCFR_ref0rr_RMS_logPsat_all_highT').reshape(21,21)
+    
+    contour_lines =[0.05,0.10,0.20,0.30,0.40]#,2.4,3.2,4.0]
+    #linestyles: [ None | ‘solid’ | ‘dashed’ | ‘dashdot’ | ‘dotted’ ]                 
+    CS1 = axarr[1].contour(sig_plot,eps_plot+20.,RMSlogPsat,contour_lines,colors='r',linestyles='solid')
+    CS3 = axarr[1].contour(sig_plot,eps_plot+20.,RMSlogPsat_PCFR,contour_lines[0:2],colors='c',linestyles='dotted')
+    CS4 = axarr[1].contour(sig_plot,eps_plot+20.,RMSlogPsat_MBAR,contour_lines[0:2],colors='g',linestyles='dashdot')
+    CS5 = axarr[1].contour(sig_plot,eps_plot+20.,RMSlogPsat_MBAR_11refs,contour_lines[0:2],colors='b',linestyles='dashed')
+    axarr[1].clabel(CS1, inline=1,fontsize=16,colors='r',fmt='%1.2f',manual=[(0.378,109),(0.378,112),(0.378,115),(0.378,118),(0.378,120),(0.378,123),(0.378,125),(0.380,127)])
+#    axarr[1].clabel(CS2, inline=1,fontsize=10,colors='m',fmt='%1.2f')
+    axarr[1].clabel(CS3, inline=1,fontsize=16,colors='c',fmt='%1.2f',manual=[(0.376,120),(0.376,118),(0.376,125),(0.376,127)])
+    axarr[1].clabel(CS4, inline=1,fontsize=16,colors='g',fmt='%1.2f',manual=[(0.3685,127),(0.370,123.5),(0.372,122.5)])#,manual=[(0.373,123),(0.370,118),(0.378,110),(0.381,110)])
+    axarr[1].clabel(CS5, inline=1,fontsize=16,colors='b',fmt='%1.2f',manual=[(0.3735,121),(0.3735,119),(0.3735,125),(0.3737,127)])
+    axarr[1].plot([],[],'r-',label='Direct Simulation')
+    axarr[1].plot([],[],'b--',label=r'MBAR multiple references, $\epsilon_{\rm ref} = 118$ K')
+    axarr[1].plot([],[],'g-.',label=r'MBAR single reference, $\theta_{\rm ref} = \theta_{\rm TraPPE-UA}$')
+    axarr[1].plot([],[],'c:',label=r'PCFR single reference, $\theta_{\rm ref} = \theta_{\rm TraPPE-UA}$')
+    axarr[1].plot(0.3783,121.25,'kx',markersize=10,label=r'Potoff, $\lambda_{\rm CH_3} = 16$')
+    axarr[1].set_xlabel(r'$\sigma_{\rm CH_3}$ (nm)',fontsize=24)
+    axarr[1].set_ylabel(r'$\epsilon_{\rm CH_3}$ (K)',fontsize=24)
+    axarr[1].set_title(r'RMS of log$_{10}\left(P_{\rm v}^{\rm sat}\right)$',fontsize=22)
+    axarr[1].set_yticks([108,113,118,123,128])
+    axarr[1].set_xticks([0.365,0.370,0.375,0.380,0.385])
+    axarr[1].legend(loc=3)
+    plt.show()
+    
+    f.savefig('RMS_rhol_logPsat_comparison_lam16.pdf')
     
 def embed_parity_residual_plot(prop,prop_direct,prop_hat1,prop_hat2,prop_hat3,prop_hat4,Neff,dprop_direct,dprop_hat1,dprop):
     parity = np.array([np.min(np.array([np.min(prop_direct),np.min(prop_hat1),np.min(prop_hat2)])),np.max(np.array([np.max(prop_direct),np.max(prop_hat1),np.max(prop_hat2)]))])
@@ -1421,7 +1570,7 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
     rel_dev = lambda hat, direct: abs_dev(hat,direct)/direct * 100.
                                          
     jfig = 0  
-                                                                
+
     f, axarr = plt.subplots(nrows=2,ncols=2,figsize=(16,12)) 
     
     plt.tight_layout(pad=2,rect=[0.02,0.01,0.965,0.99])
@@ -1437,8 +1586,8 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         plt.text(-19.8,11,r'b)')
         plt.text(-3.8,34,r'c)')
         plt.text(-3.8,11,r'd)')
-        plt.text(-13,35.5,r'Constant Model: LJ 12-6, $88\leq\epsilon/K\leq108, 0.365\leq\sigma/nm\leq0.385$')
-        plt.text(-19.8,35.5,r'$\theta_{ref} = \theta_{TraPPE-UA}$')
+        plt.text(-13,35.5,r'Constant Model: LJ 12-6, $88\leq\epsilon/$K$\leq108, 0.365\leq\sigma/$nm$\leq0.385$')
+        plt.text(-19.8,35.5,r'$\theta_{\rm ref} = \theta_{\rm TraPPE-UA}$')
 
     elif fpathroot == 'parameter_space_Mie16/':
 
@@ -1446,8 +1595,8 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         plt.text(-22,20,r'b)')
         plt.text(-3.8,59.5,r'c)')
         plt.text(-3.8,20,r'd)') 
-        plt.text(-13,62,r'Perturbed Model: Mie 16-6, $108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.385$')  
-        plt.text(-22,62,r'$\theta_{ref} = \theta_{TraPPE-UA}$')                              
+        plt.text(-13,62,r'Perturbed Model: Mie 16-6, $108\leq\epsilon/$K$\leq128, 0.365\leq\sigma/$nm$\leq0.385$')  
+        plt.text(-22,62,r'$\theta_{\rm ref} = \theta_{\rm TraPPE-UA}$')                              
                                              
     for prop in ['U','Z']:
         
@@ -1484,8 +1633,8 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         if prop == 'U':
             units = '(kJ/mol)'
             title = 'Residual Energy'
-            xlabel = r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation'
-            ylabel = r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Predicted'
+            xlabel = r'$U^{\rm dep} \left(\frac{\rm kJ}{\rm mol}\right)$, Direct Simulation'
+            ylabel = r'$U^{\rm dep} \left(\frac{\rm kJ}{\rm mol}\right)$, Predicted'
             dev1 = rel_dev1
             dev2 = rel_dev2
             dev3 = rel_dev3
@@ -1582,7 +1731,7 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
             cbaxes = f.add_axes([0.94,0.065,0.01,0.412])
             cb = plt.colorbar(p,ax=axarr[ifig,jfig],cax=cbaxes,format='%.1f')
 #            cb = plt.colorbar(p,ax=axarr[ifig,jfig],pad=0.02)
-            cb.set_label('log$_{10}(N_{eff})$')
+            cb.set_label(r'log$_{10}(N_{\rm eff})$')
         #cax = cb.ax
         #cax.set_position([0.5,0.5,0.5,0.5])
         a = inset_axes(axarr[ifig,jfig],width=2.5,height=2.5,loc=4)
@@ -1593,11 +1742,11 @@ def multi_prop_plot(U_direct,U_MBAR,U_PCFR,U_W1,U_rec,Z_direct,Z_MBAR,Z_PCFR,Z_W
         if fpathroot == 'parameter_space_LJ/':
             a.set_xticks([50,500,950])
             a.plot([0,1000],[0,0],'k--')
-            a.set_xlabel(r'$N_{eff}$')
+            a.set_xlabel(r'$N_{\rm eff}$')
         elif fpathroot == 'parameter_space_Mie16/':
             a.set_xticks([10,50])
             a.plot([0,55],[0,0],'k--')
-            a.set_xlabel(r'$N_{eff}$',labelpad=-5)
+            a.set_xlabel(r'$N_{\rm eff}$',labelpad=-5)
         a.xaxis.set_label_position('top')
 #        a.plot(parity,[0,0],'k--')
         #plt.xlabel('Direct Simulation '+units)
@@ -1740,8 +1889,8 @@ def multi_ref_LJ_Mie_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mie,Z_direct
     
     subplot_1.scatter(U_direct_LJ[Neff_LJ.argsort()],U_MBAR_LJ[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
     subplot_1.plot(parity_1,parity_1,'k',label='Parity')
-    subplot_1.set_xlabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation')
-    subplot_1.set_ylabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Predicted with MBAR')
+    subplot_1.set_xlabel(r'$U^{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation')
+    subplot_1.set_ylabel(r'$U^{dep} \left(\frac{kJ}{mol}\right)$, Predicted with MBAR')
     subplot_1.set_xlim([-7000/400.,-500/400.])
     subplot_1.set_ylim([-7000/400.,-500/400.])
     
@@ -1773,8 +1922,8 @@ def multi_ref_LJ_Mie_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mie,Z_direct
     subplot_3 = my_figure.add_subplot(2,2,3)
     subplot_3.scatter(U_direct_Mie[Neff_Mie.argsort()],U_MBAR_Mie[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
     subplot_3.plot(parity_3,parity_3,'k',label='Parity')
-    subplot_3.set_xlabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation')
-    subplot_3.set_ylabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Predicted with MBAR')
+    subplot_3.set_xlabel(r'$U^{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation')
+    subplot_3.set_ylabel(r'$U^{dep} \left(\frac{kJ}{mol}\right)$, Predicted with MBAR')
     subplot_3.set_xlim([-7000/400.,-500/400.])
     subplot_3.set_ylim([-7000/400.,-500/400.])
     
@@ -1847,8 +1996,8 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     
     subplot_1.scatter(U_direct_LJ[Neff_LJ.argsort()],U_MBAR_LJ[Neff_LJ.argsort()],c=np.log10(Neff_LJ[Neff_LJ.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
     subplot_1.plot(parity_1,parity_1,'k',label='Parity')
-    subplot_1.set_xlabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation',labelpad=-2)
-    subplot_1.set_ylabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Predicted with MBAR',labelpad=-4)
+    subplot_1.set_xlabel(r'$U^{\rm dep} \left(\frac{\rm kJ}{\rm mol}\right)$, Direct Simulation',labelpad=-2)
+    subplot_1.set_ylabel(r'$U^{\rm dep} \left(\frac{\rm kJ}{\rm mol}\right)$, Predicted with MBAR',labelpad=-4)
     subplot_1.set_xlim([-7000/400.,-500/400.])
     subplot_1.set_ylim([-7000/400.,-500/400.])
     
@@ -1864,7 +2013,7 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     a.set_xticks([50,1000,2000,3000])
     a.set_xlim([-200,3200])
     a.plot([0,np.max(Neff_LJ)],[0,0],'k--')
-    a.set_xlabel(r'$N_{eff}$')
+    a.set_xlabel(r'$N_{\rm eff}$')
     a.xaxis.set_label_position('top')
     
     subplot_2 = my_figure.add_subplot(3,2,2)
@@ -1887,7 +2036,7 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     a.set_xticks([50,1000,2000,3000])
     a.set_xlim([-200,3200])
     a.plot([0,np.max(Neff_LJ)],[0,0],'k--')
-    a.set_xlabel(r'$N_{eff}$')
+    a.set_xlabel(r'$N_{\rm eff}$')
     a.xaxis.set_label_position('top')
     
 #    cb = plt.colorbar(p,ax=subplot_2,pad=0.02)
@@ -1896,8 +2045,8 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     subplot_3 = my_figure.add_subplot(3,2,3)
     subplot_3.scatter(U_direct_Mie[Neff_Mie.argsort()],U_MBAR_Mie[Neff_Mie.argsort()],c=np.log10(Neff_Mie[Neff_Mie.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
     subplot_3.plot(parity_3,parity_3,'k',label='Parity')
-    subplot_3.set_xlabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation',labelpad=-2)
-    subplot_3.set_ylabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Predicted with MBAR',labelpad=-4)
+    subplot_3.set_xlabel(r'$U^{\rm dep} \left(\frac{\rm kJ}{\rm mol}\right)$, Direct Simulation',labelpad=-2)
+    subplot_3.set_ylabel(r'$U^{\rm dep} \left(\frac{\rm kJ}{\rm mol}\right)$, Predicted with MBAR',labelpad=-4)
     subplot_3.set_xlim([-7000/400.,-500/400.])
     subplot_3.set_ylim([-7000/400.,-500/400.])
     
@@ -1935,7 +2084,7 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     a.set_xticks([0,50,250])
     a.set_xlim([-50,350])
     a.plot([0,np.max(Neff_Mie)],[0,0],'k--')
-    a.set_xlabel(r'$N_{eff}$')
+    a.set_xlabel(r'$N_{\rm eff}$')
     a.xaxis.set_label_position('top')
     
 #    cb = plt.colorbar(p,ax=subplot_4,pad=0.02)
@@ -1944,8 +2093,8 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     subplot_5 = my_figure.add_subplot(3,2,5)
     subplot_5.scatter(U_direct_Mie[Neff_LJhighEps.argsort()],U_MBAR_LJhighEps[Neff_LJhighEps.argsort()],c=np.log10(Neff_LJhighEps[Neff_LJhighEps.argsort()]),cmap='rainbow',norm=normalize,label='MBAR')
     subplot_5.plot(parity_5,parity_5,'k',label='Parity')
-    subplot_5.set_xlabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Direct Simulation',labelpad=-2)
-    subplot_5.set_ylabel(r'$U_{dep} \left(\frac{kJ}{mol}\right)$, Predicted with MBAR',labelpad=-4)
+    subplot_5.set_xlabel(r'$U^{\rm dep} \left(\frac{\rm kJ}{\rm mol}\right)$, Direct Simulation',labelpad=-2)
+    subplot_5.set_ylabel(r'$U^{\rm dep} \left(\frac{\rm kJ}{\rm mol}\right)$, Predicted with MBAR',labelpad=-4)
     subplot_5.set_xlim([-7000/400.,-500/400.])
     subplot_5.set_ylim([-7000/400.,-500/400.])
     
@@ -1961,7 +2110,7 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     a.set_xticks([0,50,150])
     a.set_xlim([-20,200])
     a.plot([0,np.max(Neff_LJhighEps)],[0,0],'k--')
-    a.set_xlabel(r'$N_{eff}$')
+    a.set_xlabel(r'$N_{\rm eff}$')
     a.xaxis.set_label_position('top')
     
     subplot_6 = my_figure.add_subplot(3,2,6)
@@ -1983,19 +2132,19 @@ def multi_ref_LJ_Mie_LJhighEps_plot(U_direct_LJ,U_MBAR_LJ,U_direct_Mie,U_MBAR_Mi
     a.set_xticks([0,50,150])
     a.set_xlim([-20,200])
     a.plot([0,np.max(Neff_LJhighEps)],[0,0],'k--')
-    a.set_xlabel(r'$N_{eff}$')
+    a.set_xlabel(r'$N_{\rm eff}$')
     a.xaxis.set_label_position('top')
     
-    subplot_1.text(-17., -4., r'a) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$'+'\n'+r'Constant Model: LJ 12-6,'+'\n'+r'$88\leq\epsilon/K\leq108, 0.365\leq\sigma/nm\leq0.385$')
-    subplot_2.text(-3.8, 6, r'd) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$'+'\n'+r'Constant Model: LJ 12-6,'+'\n'+r'$88\leq\epsilon/K\leq108, 0.365\leq\sigma/nm\leq0.385$')
-    subplot_3.text(-17., -4., r'b) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.385$')
-    subplot_4.text(-3.8, 10, r'e) Multiple $\theta_{ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/nm\leq0.385$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.385$')
-    subplot_5.text(-17., -4., r'c) Multiple $\theta_{ref}$: $\epsilon = 118$ K,  $0.365\leq\sigma/nm\leq0.393$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.385$')
-    subplot_6.text(-3.8, 7.3, r'f) Multiple $\theta_{ref}$: $\epsilon = 118$ K,  $0.365\leq\sigma/nm\leq0.393$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/K\leq128, 0.365\leq\sigma/nm\leq0.385$')
+    subplot_1.text(-17., -4., r'a) Multiple $\theta_{\rm ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/$nm$\leq0.385$'+'\n'+r'Constant Model: LJ 12-6,'+'\n'+r'$88\leq\epsilon/$K$\leq108, 0.365\leq\sigma/$nm$\leq0.385$')
+    subplot_2.text(-3.8, 6, r'd) Multiple $\theta_{\rm ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/$nm$\leq0.385$'+'\n'+r'Constant Model: LJ 12-6,'+'\n'+r'$88\leq\epsilon/$K$\leq108, 0.365\leq\sigma/$nm$\leq0.385$')
+    subplot_3.text(-17., -4., r'b) Multiple $\theta_{\rm ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/$nm$\leq0.385$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/$K$\leq128, 0.365\leq\sigma/$nm$\leq0.385$')
+    subplot_4.text(-3.8, 10, r'e) Multiple $\theta_{\rm ref}$: $\epsilon = 98$ K,  $0.365\leq\sigma/$nm$\leq0.385$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/$K$\leq128, 0.365\leq\sigma/$nm$\leq0.385$')
+    subplot_5.text(-17., -4., r'c) Multiple $\theta_{\rm ref}$: $\epsilon = 118$ K,  $0.365\leq\sigma/$nm$\leq0.3925$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/$K$\leq128, 0.365\leq\sigma/$nm$\leq0.385$')
+    subplot_6.text(-3.8, 7.3, r'f) Multiple $\theta_{\rm ref}$: $\epsilon = 118$ K,  $0.365\leq\sigma/$nm$\leq0.3925$'+'\n'+r'Perturbed Model: Mie 16-6,'+'\n'+r'$108\leq\epsilon/$K$\leq128, 0.365\leq\sigma/$nm$\leq0.385$')
         
     cbaxes = my_figure.add_axes([0.945,0.035,0.01,0.925])
     cb = plt.colorbar(p,ax=subplot_6,cax=cbaxes,format='%.1f')
-    cb.set_label('log$_{10}(N_{eff})$')
+    cb.set_label(r'log$_{10}(N_{\rm eff})$')
         
     my_figure.savefig('MBAR_multi_ref_LJ_Mie_LJhighEps.pdf')
     
@@ -2078,7 +2227,7 @@ def lambda_comparison(eps_all,sig_all,fpathroot):
     plt.plot([],[],'b',label=r'$\lambda = 17$')
     plt.plot([],[],'c',label=r'$\lambda = 18$')
     plt.plot(0.375,118,'kx',label='Reference')
-    plt.title('RMS of $U_{dep}$ (kJ/mol)')
+    plt.title('RMS of $U^{dep}$ (kJ/mol)')
     plt.legend()
     
     subplot_2 = my_figure.add_subplot(2,1,2)
@@ -2258,13 +2407,13 @@ def main():
     eps_all, sig_all, eps_matrix, sig_matrix = get_parameter_sets(fpathroot)
     
 #    RMS_contours(eps_all,sig_all,fpathroot)
-#    RMS_contours_combined(eps_all,sig_all,fpathroot)
+    RMS_contours_combined(eps_all,sig_all,fpathroot)
 #    
 #
 ##    lambda_comparison(eps_all,sig_all,fpathroot)
 ##
-#    return
-    
+    return
+
     for model_type in [reference,'Direct_simulation', 'MBAR_ref8', 'PCFR_ref0','Constant_']:
         if model_type == 'TraPPE' or model_type == 'Potoff':
             U_ref, dU_ref, P_ref, dP_ref, Z_ref, dZ_ref, Neff_ref = compile_data(model_type,fpathroot)
@@ -2421,7 +2570,7 @@ def main():
     
 #    multi_ref_LJ_Mie_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask])
     
-    multi_ref_LJ_Mie_LJhighEps_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],U_MBAR_LJhighEps[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Z_MBAR_LJhighEps[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask],Neff_MBAR_LJhighEps[mask])
+#    multi_ref_LJ_Mie_LJhighEps_plot(U_direct[mask],U_MBAR[mask],U_direct_Mie[mask],U_MBAR_Mie[mask],U_MBAR_LJhighEps[mask],Z_direct[mask],Z_MBAR[mask],Z_direct_Mie[mask],Z_MBAR_Mie[mask],Z_MBAR_LJhighEps[mask],Neff_MBAR[mask],Neff_MBAR_Mie[mask],Neff_MBAR_LJhighEps[mask])
     
     #box_bar_state_plots(Neff_MBAR,Neff_min,Neff_small,mask_MBAR,mask_poor)
     #contours_Neff(Neff_MBAR,sig_all,eps_all,fpathroot)

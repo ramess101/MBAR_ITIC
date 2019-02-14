@@ -12,7 +12,7 @@ from scipy.optimize import minimize, minimize_scalar, fsolve
 
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
-compound='Octane'
+compound='Neopentane'
 #REFPROP_path='/home/ram9/REFPROP-cmake/build/' #Change this for a different system
 
 #CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH,REFPROP_path)
@@ -21,7 +21,7 @@ Mw = CP.PropsSI('M','REFPROP::'+compound) #[kg/mol]
 RP_TC = CP.PropsSI('TCRIT','REFPROP::'+compound)
 RP_Tmin =  CP.PropsSI('TMIN','REFPROP::'+compound)
 
-Nmol = 400.
+Nmol = 800.
 N_A = 6.0221409e23 #Avogadro's number [1/mol]
 conv_m3tonm3 = 1e-27 #[m3/nm3]
 

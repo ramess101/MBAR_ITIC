@@ -7,14 +7,28 @@ import time
 import scipy.integrate as integrate
 from scipy.optimize import minimize
 
-fpathroot = 'parameter_space_Mie16/Lam12/'
-nReruns = 441
+#fpathroot = 'propane_parameter_space_Mie16/'
+#fpathroot = 'H:/Basis_Functions_Propane/Mie16/Coarse/ref0_7/'
+#fpathroot = 'C2H6_parameter_space_Mie16/'
+#fpathroot = 'parameter_space_Mie16/'
+#fpathroot = 'parameter_space_Mie16/MBAR_ref0rr/'
+#fpathroot = 'parameter_space_Mie16/MBAR_ref11rr/'
+fpathroot = 'PCFR_zeroth/'
+#fpathroot = 'parameter_space_Mie16/PCFR_sample_alt_ref7/'
+#fpathroot = 'parameter_space_LJ/'
+#nReruns = 651 #For direct simulations of CH2
+nReruns = 441 #For direct simulations of CH3, PCFR, and MBAR comparison
+#nReruns = 121 #For the PCFR scans
+#nReruns=2601 # For MBAR refined
 nStates = 19
 
 #Before running script run, "pip install pymbar, pip install CoolProp"
 
 #compound='ETHANE'
 compound='Ethane'
+#compound='Propane'
+#compound='Butane'
+#compound='Octane'
 #REFPROP_path='/home/ram9/REFPROP-cmake/build/' #Change this for a different system
 #
 #CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH,REFPROP_path)
@@ -29,12 +43,6 @@ nm3_to_ml = 10**21
 nm3_to_m3 = 10**27
 bar_nm3_to_kJ_per_mole = 0.0602214086
 R_g = 8.3144598 / 1000. #[kJ/mol/K]
-
-# Simulation system specifications
-
-rc = 1.4 #[nm]
-N_sites = 2
-N_inter = N_sites**2
 
 #Read in the simulation specifications
 
@@ -58,7 +66,7 @@ Nmol_sim = np.empty(0)
 
 for run_type in ITIC:
 
-    run_type_Settings = np.loadtxt(run_type+'Settings.txt',skiprows=1)
+    run_type_Settings = np.loadtxt(fpathroot+run_type+'Settings.txt',skiprows=1)
 
     Nmol[run_type] = run_type_Settings[:,0]
     Lbox = run_type_Settings[:,1] #[nm]
@@ -248,10 +256,11 @@ def ITIC_calc(USim,ZSim):
             eq2_14 = lambda(rhov): Adep_ITIC[iIC] + Z_L - 1 + np.log(rhoL[iIC]/rhov) - 2*B2*rhov + 1.5*B3*rhov**2
             eq2_15 = lambda(rhov): rhov - rhoL[iIC]*np.exp(Adep_ITIC[iIC] + Z_L - 1 - 2*B2*rhov - 1.5*B3*rhov**2)               
             SE = lambda rhov: (eq2_15(rhov) - 0.)**2
-            guess = (0.1,)
             rho_c_RP = CP.PropsSI('RHOCRIT','REFPROP::'+compound)
-            bnds = ((0., rho_c_RP),)
-            opt = minimize(SE,guess,bounds=bnds)
+            rhov_guess = CP.PropsSI('D','T',Tsat[iIC],'Q',1,'REFPROP::'+compound) #[kg/m3]
+            guess = (rhov_guess,)
+            bnds = ((1e-10, rho_c_RP),)            
+            opt = minimize(SE,guess,bounds=bnds,tol=1e-12)
             rhov[iIC] = opt.x[0] #[kg/m3]
             
             Zv = (1. + B2*rhov[iIC] + B3*rhov[iIC]**2)
@@ -305,19 +314,32 @@ def run_analysis(fpathroot,model_type,ending):
 def calc_objective(fpathroot,model_type,ending):    
 
     for iRerun in range(nReruns):
-        if model_type != 'Constant_rr':
+        if model_type != 'Constant_rr' and model_type != 'MBAR_rr' and fpathroot != 'PCFR_zeroth/':
             iRerun += 1
         if model_type == 'MBAR_ref8rr':
             iRerun += 8
-                    
-        UPZ = np.loadtxt(fpathroot+model_type+str(iRerun)+ending)
-           
+        if model_type == 'MBAR_ref11rr':
+            iRerun += 11
+        
+        if model_type == 'MBAR_rr':
+            
+            UPZ = np.loadtxt(fpathroot+model_type+str(iRerun)+ending,skiprows=1)
+            VLE = np.loadtxt(fpathroot+'ITIC_'+str(iRerun)+ending,skiprows=1)
+            
+        elif fpathroot == 'parameter_space_Mie16/MBAR_ref0rr/' or fpathroot == 'parameter_space_Mie16/MBAR_ref11rr/' or fpathroot == 'PCFR_zeroth/':
+            
+            UPZ = np.loadtxt(fpathroot+model_type+str(iRerun)+ending)
+            VLE = np.loadtxt(fpathroot+'ITIC_'+str(iRerun)+ending,skiprows=1)
+            
+        else:
+            
+            UPZ = np.loadtxt(fpathroot+model_type+str(iRerun)+ending)
+            VLE = np.loadtxt(fpathroot+'ITIC_'+model_type+str(iRerun)+ending,skiprows=1)
+
         USim = UPZ[:,0]
         PSim = UPZ[:,2]
         ZSim = UPZ[:,4]
                 
-        VLE = np.loadtxt(fpathroot+'ITIC_'+model_type+str(iRerun)+ending,skiprows=1)
-        
         Tsat, rhoLSim, PsatSim, rhovSim = VLE[:,0], VLE[:,1], VLE[:,2], VLE[:,3]
         
         if np.any(Tsat[Tsat<RP_TC]>RP_Tmin):
@@ -328,6 +350,7 @@ def calc_objective(fpathroot,model_type,ending):
         
             devrhoL = rhoLSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhoL #In case Tsat is greater than RP_TC
             devPsat = PsatSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_Psat
+            devlogPsat = np.log10(PsatSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)]) - np.log10(RP_Psat)
             devrhov = rhovSim[np.logical_and(RP_Tmin<Tsat,Tsat<RP_TC)] - RP_rhov
                               
         else:
@@ -335,48 +358,54 @@ def calc_objective(fpathroot,model_type,ending):
             devrhoL = np.array([1e8])
             devPsat = np.array([1e8])
             devrhov = np.array([1e8])
-                         
+        devlogPsat = devlogPsat[0:3] #For PCFR don't use low temperature                  
         devU = USim - RP_U_depN
         devP = PSim - RP_P
         devZ = ZSim - RP_Z
            
         SSErhoL = np.sum(np.power(devrhoL,2))
         SSEPsat = np.sum(np.power(devPsat,2)) 
+        SSElogPsat = np.sum(np.power(devlogPsat,2))
         SSErhov = np.sum(np.power(devrhov,2)) 
-        SSEU = np.sum(np.power(devU,2))
-        SSEP = np.sum(np.power(devP,2))
-        SSEZ = np.sum(np.power(devZ,2))
+        SSEU = np.sum(np.power(devU[RP_U_depN<np.inf],2))
+        SSEP = np.sum(np.power(devP[RP_U_depN<np.inf],2))
+        SSEZ = np.sum(np.power(devZ[RP_U_depN<np.inf],2))
         
         RMSrhoL = np.sqrt(SSErhoL/len(devrhoL))
         RMSPsat = np.sqrt(SSEPsat/len(devPsat))
+        RMSlogPsat = np.sqrt(SSElogPsat/len(devlogPsat))
         RMSrhov = np.sqrt(SSErhov/len(devrhov))
-        RMSU = np.sqrt(SSEU/len(devU))
-        RMSP = np.sqrt(SSEP/len(devP))
-        RMSZ = np.sqrt(SSEZ/len(devZ))
+        RMSU = np.sqrt(SSEU/len(devU[RP_U_depN<np.inf]))
+        RMSP = np.sqrt(SSEP/len(devP[RP_U_depN<np.inf]))
+        RMSZ = np.sqrt(SSEZ/len(devZ[RP_U_depN<np.inf]))
         
-#        f = open(fpathroot+'SSE_rhoL_all','a')
-#        f.write('\n'+str(SSErhoL))
-#        f.close()
-#        
-#        f = open(fpathroot+'SSE_Psat_all','a')
-#        f.write('\n'+str(SSEPsat))
-#        f.close()
-#        
-#        f = open(fpathroot+'SSE_rhov_all','a')
-#        f.write('\n'+str(SSErhov))
-#        f.close()
-#        
-#        f = open(fpathroot+'SSE_U_all','a')
-#        f.write('\n'+str(SSEU))
-#        f.close()
-#        
-#        f = open(fpathroot+'SSE_P_all','a')
-#        f.write('\n'+str(SSEP))
-#        f.close()
-#        
-#        f = open(fpathroot+'SSE_Z_all','a')
-#        f.write('\n'+str(SSEZ))
-#        f.close() 
+        f = open(fpathroot+model_type+'_SSE_rhoL_all','a')
+        f.write('\n'+str(SSErhoL))
+        f.close()
+        
+        f = open(fpathroot+model_type+'_SSE_Psat_all','a')
+        f.write('\n'+str(SSEPsat))
+        f.close()
+
+        f = open(fpathroot+model_type+'_SSE_logPsat_all','a')
+        f.write('\n'+str(SSElogPsat))
+        f.close()
+        
+        f = open(fpathroot+model_type+'_SSE_rhov_all','a')
+        f.write('\n'+str(SSErhov))
+        f.close()
+        
+        f = open(fpathroot+model_type+'_SSE_U_all','a')
+        f.write('\n'+str(SSEU))
+        f.close()
+        
+        f = open(fpathroot+model_type+'_SSE_P_all','a')
+        f.write('\n'+str(SSEP))
+        f.close()
+        
+        f = open(fpathroot+model_type+'_SSE_Z_all','a')
+        f.write('\n'+str(SSEZ))
+        f.close() 
 
         f = open(fpathroot+model_type+'_RMS_rhoL_all','a')
         f.write('\n'+str(RMSrhoL))
@@ -384,6 +413,10 @@ def calc_objective(fpathroot,model_type,ending):
         
         f = open(fpathroot+model_type+'_RMS_Psat_all','a')
         f.write('\n'+str(RMSPsat))
+        f.close()
+        
+        f = open(fpathroot+model_type+'_RMS_logPsat_all','a')
+        f.write('\n'+str(RMSlogPsat))
         f.close()
         
         f = open(fpathroot+model_type+'_RMS_rhov_all','a')
@@ -401,14 +434,15 @@ def calc_objective(fpathroot,model_type,ending):
         f = open(fpathroot+model_type+'_RMS_Z_all','a')
         f.write('\n'+str(RMSZ))
         f.close()     
-                
+#                
 def main():
     
     ending = '_lam16_highEps'
+#    ending = ''
+#    ending = '_lam12'
+    for model_type in ['PCFR_ref0rr']: # ['MBAR_ref11rr']:# ['Direct_simulation_rr']: #['MBAR_ref8rr']: #['MBAR_ref0rr', 'PCFR_ref0rr','Constant_rr']:
     
-    for model_type in ['MBAR_ref8rr']: #['Direct_simulation_rr']: #['MBAR_ref8rr']: #['MBAR_ref0rr', 'PCFR_ref0rr','Constant_rr']:
-    
-        run_analysis(fpathroot,model_type,ending)
+#        run_analysis(fpathroot,model_type,ending)
         calc_objective(fpathroot,model_type,ending)
 
 if __name__ == '__main__':
